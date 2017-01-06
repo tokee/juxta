@@ -1,9 +1,24 @@
 # juxta
 Generates large collages of images using OpenSeadragon
 
-## Principle
-1. A list of images is provided.
-2. Each image is scaled and padded to WxH tiles of 256 pixels.
-3. The tiles are positioned on a virtual canvas, using path and file names as required by OpenSeadragon.
-4. OpenSeadragon-compatible tiles for different zoom-levels are created.
-5. A HTML page with the zoomable collage is created.
+## Requirements
+ * bash
+ * ImageMagic
+ * curl
+
+## Usage
+
+1. Create a list of images
+   `ls myimages/*.jpg > images.dat`
+
+2. Generate collage tiles
+  `./juxta.sh images.dat mycollage`
+Due to problems with downloading directly from GitHub, OpenSeadragon might have to be downloaded manually. Don't worry, the script will tell you what to do.
+
+3. View the collage in a browser
+ `firefox mycollage.html`
+
+## Limitations and bugs
+ * Only the generation of base tiles is currently threadable
+ * There are some missing tiles at the bottom of the virtual image, resulting in some visual artefacts
+

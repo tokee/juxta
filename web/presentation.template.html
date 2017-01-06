@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Juxta</title>
+    <link rel="stylesheet" type="text/css" href="$TILE_SOURCE/_resources/juxta.css" />
+    <script src="$TILE_SOURCE/_resources/openseadragon.min.js"></script>
+</head>
+
+<body>
+<h1>Juxta</h1>
+<p>Sample page. See <a href="https://github.com/tokee/juxta">the Juxta GitHub page</a> for details.</p>
+
+<div id="zoom-display" class="openseadragon"></div>
+
+<script type="text/javascript">
+  myDragon = OpenSeadragon({
+    id:            "zoom-display",
+    
+    showNavigator:  false,
+    wrapHorizontal: false,
+    tileSources:   {
+        Image: {
+            xmlns:    "http://schemas.microsoft.com/deepzoom/2008",
+            Url:      "$TILE_SOURCE/",
+            Format:   "$TILE_FORMAT", 
+            Overlap:  "2", 
+            TileSize: "256",
+            Size: {
+                Width: "$CANVAS_PIXEL_W",
+                Height:  "$CANVAS_PIXEL_H"
+            }
+        }
+    }
+  });
+</script>
+
+
+<p>Generated `date +"%Y-%m-%d %H:%M"`</p>
+
+</body>
+</html>
