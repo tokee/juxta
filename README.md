@@ -1,10 +1,11 @@
 # juxta
 Generates large collages of images using OpenSeadragon
 
+Demo at https://tokee.github.io/juxta/
+
 ## Requirements
- * bash
+ * bash, curl
  * ImageMagic
- * curl
 
 ## Usage
 
