@@ -101,11 +101,11 @@ process_base() {
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
     if [ -s $DEST/$MAX_ZOOM/${TILE_START_ROW}_${TILE_START_COL}.${TILE_FORMAT} ]; then
-        echo "    - Skipping ${ROW}x${COL} as tiles already exist for `basename $IMAGE`"
+        echo "    - Skipping ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
         return
     fi
         
-    echo "    - Creating tiles at grid ${ROW}x${COL} from `basename $IMAGE`"
+    echo "    - Creating tiles at grid ${ROW}x${COL} from `basename \"$IMAGE\"`"
     mkdir -p $DEST/$MAX_ZOOM
     
     # Resize and pad to RAW_PIXEL*, crop tiles
@@ -255,7 +255,7 @@ BATCH=`mktemp`
 ROW=0
 COL=0
 while read IMAGE; do
-    if [ ! -s $IMAGE ]; then
+    if [ ! -s "$IMAGE" ]; then
         >&2 echo "Error: The image '$IMAGE' from imagelist '$IMAGE_LIST' does not exist"
         exit 2
     fi
