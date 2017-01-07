@@ -129,6 +129,7 @@ create_zoom_levels() {
     mkdir -p $DEST/$DEST_ZOOM
     local COL=0
     local ROW=0
+    local MAX_COL=0
     while [ true ]; do
         local TILE=$DEST/$DEST_ZOOM/${COL}_${ROW}.${TILE_FORMAT}
         if [ -s $TILE ]; then
@@ -136,6 +137,10 @@ create_zoom_levels() {
                 echo -n "    - row = ${ROW}, cols="
             fi
             echo -n " ($COL)"
+            if [ $MAX_COL -lt $COL ]; then
+                local MAX_COL=$COL
+            fi
+
 #            echo "    - Skipping tile ${COL}x${ROW} as it already exists"
         else
             local SCOL=$(($COL*2))
@@ -147,13 +152,25 @@ create_zoom_levels() {
             local S11=$DEST/$SOURCE_ZOOM/$((SCOL+1))_$((SROW+1)).${TILE_FORMAT}
 
             if [ ! -s $S00 ]; then
-                if [ $COL -eq 0 ]; then
+                if [ $COL -eq 0 ]; then # Finished all for this level
                     break
+                fi
+
+                if [ $COL -le $MAX_COL ]; then
+                    # No more source images for the lower right corner, generate blank tile
+                    $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} $TILE
+                    echo -n " [$COL]"
+                    COL=$(( COL+1 ))
+                    continue
                 fi
                 COL=0
                 ROW=$((ROW+1))
                 echo ""
                 continue
+            fi
+
+            if [ $MAX_COL -lt $COL ]; then
+                local MAX_COL=$COL
             fi
             if [ $COL -eq 0 ]; then
                 echo -n "    - row = ${ROW}, cols="
