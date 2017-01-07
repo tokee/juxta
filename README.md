@@ -28,7 +28,7 @@ Due to problems with downloading directly from GitHub, OpenSeadragon might have 
 ## Advanced
 Processing can be controlled by setting environment variables. Most important options are
 
- * RAW_W / RAW_H: The size of the fully zoomed source images, measured in tiles. RAW_W=4 and RAW_H=3 means (4**256)x(3**256) = 1024x768 pixels. Default is 4 and 3.
+ * RAW_W / RAW_H: The size of the fully zoomed source images, measured in tiles. RAW_W=4 and RAW_H=3 means `(4*256)x(3*256)` = 1024x768 pixels. Default is 4 and 3.
  * THREADS: The number of threads to use when generating the tiles at full zoom level. Default is 1.
  * TILE_FORMAT: png or jpg. Default is jpg.
 
