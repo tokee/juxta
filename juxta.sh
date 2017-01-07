@@ -63,7 +63,7 @@ set_converter() {
     export CONVERT="convert"
     export MONTAGE="montage"
     if [ ! -z "`which gm`" ]; then
-        echo "- GraphicsMagic located. Using GM where possible, for better speed"
+        # TODO: Test if GM reallu is the better choise for these tasks
         export CONVERT="gm convert"
         export MONTAGE="gm montage"
     fi
@@ -113,7 +113,7 @@ process_base() {
     # http://www.imagemagick.org/Usage/crop/#crop_tile
 
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
-    convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_ROW}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_COL}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}"
+    convert "$IMAGE" -strip -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_ROW}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_COL}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}"
 }
 export -f process_base
 
