@@ -101,11 +101,11 @@ process_base() {
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
     if [ -s $DEST/$MAX_ZOOM/${TILE_START_ROW}_${TILE_START_COL}.${TILE_FORMAT} ]; then
-        echo "    - Skipping tiles at grid ${ROW}x${COL} / tile ${TILE_START_ROW}x${TILE_START_COL} as they already exist for `basename $IMAGE`"
+        echo "    - Skipping ${ROW}x${COL} as tiles already exist for `basename $IMAGE`"
         return
     fi
         
-    echo "    - Creating tiles at grid ${ROW}x${COL} / tile ${TILE_START_ROW}x${TILE_START_COL} from `basename $IMAGE`"
+    echo "    - Creating tiles at grid ${ROW}x${COL} from `basename $IMAGE`"
     mkdir -p $DEST/$MAX_ZOOM
     
     # Resize and pad to RAW_PIXEL*, crop tiles
@@ -132,7 +132,11 @@ create_zoom_levels() {
     while [ true ]; do
         local TILE=$DEST/$DEST_ZOOM/${COL}_${ROW}.${TILE_FORMAT}
         if [ -s $TILE ]; then
-            echo "    - Skipping tile ${COL}x${ROW} as it already exists"
+            if [ $COL -eq 0 ]; then
+                echo -n "    - row = ${ROW}, cols="
+            fi
+            echo -n " ($COL)"
+#            echo "    - Skipping tile ${COL}x${ROW} as it already exists"
         else
             local SCOL=$(($COL*2))
             local SROW=$(($ROW*2))
@@ -148,9 +152,14 @@ create_zoom_levels() {
                 fi
                 COL=0
                 ROW=$((ROW+1))
+                echo ""
                 continue
             fi
-            echo "    - Creating tile ${COL}x${ROW}"
+            if [ $COL -eq 0 ]; then
+                echo -n "    - row = ${ROW}, cols="
+            fi
+            echo -n " $COL"
+            #echo "    - Creating tile ${COL}x${ROW}"
             if [ -s $S11 ]; then # 2x2
                 $MONTAGE $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
             elif [ -s $S10 ]; then # 2x1
