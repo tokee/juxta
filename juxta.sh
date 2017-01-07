@@ -60,9 +60,14 @@ set_converter() {
         >&2 echo "Error: ImageMagick could be located"
         exit 3
     fi
-    export CONVERTER="convert"
+    export CONVERT="convert"
+    export MONTAGE="montage"
+    if [ ! -z "`which gm`" ]; then
+        echo "- GraphicsMagic located. Using GM where possible, for better speed"
+        export CONVERT="gm convert"
+        export MONTAGE="gm montage"
+    fi
 }
-set_converter
 
 # https://bobcopeland.com/blog/2010/09/log2-in-bash/
 log2() {
@@ -107,6 +112,7 @@ process_base() {
     # convert image.jpg -gravity center -geometry 100x200 -background blue -extent 100x200 out.png
     # http://www.imagemagick.org/Usage/crop/#crop_tile
 
+    # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_ROW}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_COL}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}"
 }
 export -f process_base
@@ -146,13 +152,13 @@ create_zoom_levels() {
             fi
             echo "    - Creating tile ${COL}x${ROW}"
             if [ -s $S11 ]; then # 2x2
-                montage $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+                $MONTAGE $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
             elif [ -s $S10 ]; then # 2x1
-                montage $S00 $S10 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+                $MONTAGE $S00 $S10 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
             elif [ -s $S01 ]; then # 1x2
-                montage $S00 $S01 -mode concatenate -tile 1x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+                $MONTAGE $S00 $S01 -mode concatenate -tile 1x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
             else # 1x1
-                convert $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+                $CONVERT $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
             fi
             # TODO: Nearly there, but the edges and the upper levels should not be forced out to 256x256
         fi
@@ -217,6 +223,7 @@ else
 fi
 
 echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_ROWS}x${RAW_IMAGE_COLS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST'"
+set_converter
 BATCH=`mktemp`
 
 ROW=0
