@@ -30,6 +30,9 @@ popd > /dev/null
 : ${CANVAS_ASPECT_W:=1}
 : ${CANVAS_ASPECT_H:=1}
 
+# Controls log level
+: ${VERBOSE:=true}
+
 : ${DEST:=tiles}
 if [ ! "." == ".$2" ]; then
     DEST="$2"
@@ -91,17 +94,19 @@ function ctemplate() {
 
 # Problem: Debug output gets jumbled with threads>1. Synchronize or just don't output?
 process_base() {
-    local ROW=`echo "$1" | cut -d\  -f1`
-    local COL=`echo "$1" | cut -d\  -f2`
+    local COL=`echo "$1" | cut -d\  -f1`
+    local ROW=`echo "$1" | cut -d\  -f2`
     local IMAGE=`echo "$1" | sed 's/[0-9]* [0-9]* \(.*\)/\1/'`
-    local TILE_START_ROW=$((ROW*RAW_W))
-    local TILE_START_COL=$((COL*RAW_H))
+    local TILE_START_COL=$((COL*RAW_W))
+    local TILE_START_ROW=$((ROW*RAW_H))
     local RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
     local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
-    if [ -s $DEST/$MAX_ZOOM/${TILE_START_ROW}_${TILE_START_COL}.${TILE_FORMAT} ]; then
-        echo "    - Skipping ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
+    if [ -s $DEST/$MAX_ZOOM/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
+        if [ "$VERBOSE" == "true" ]; then
+            echo "    - Skipping ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
+        fi
         return
     fi
         
@@ -113,9 +118,53 @@ process_base() {
     # http://www.imagemagick.org/Usage/crop/#crop_tile
 
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
-    convert "$IMAGE" -strip -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_ROW}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_COL}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}"
+    convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+    if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
+        echo "      - Error: Could not create tiles from source image. Using blank tiles instead. $IMAGE"
+        for BLC in `seq 1 $RAW_H`; do
+            for BLR in `seq 1 $RAW_W`; do
+                $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} "${DEST}/${MAX_ZOOM}/$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
+            done
+        done
+    fi
 }
 export -f process_base
+
+process_zoom() {
+    local ROW="$1"
+    local COL=0
+
+    while [ $COL -le $MAX_COL ]; do
+        local TILE=$DEST/$DEST_ZOOM/${COL}_${ROW}.${TILE_FORMAT}
+        local S00=$DEST/$SOURCE_ZOOM/$((COL*2))_$((ROW*2)).${TILE_FORMAT}
+        local S10=$DEST/$SOURCE_ZOOM/$((COL*2+1))_$((ROW*2)).${TILE_FORMAT}
+        local S01=$DEST/$SOURCE_ZOOM/$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}
+        local S11=$DEST/$SOURCE_ZOOM/$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}
+        COL=$((COL+1))
+        if [ -s $TILE ]; then
+            continue
+        fi
+        
+        if [ ! -s $S00 ]; then
+            # No more source images for the lower right corner, generate blank tile
+            $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} $TILE
+            continue
+        fi
+
+        if [ -s $S11 ]; then # 2x2
+            $MONTAGE $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+        elif [ -s $S10 ]; then # 2x1
+            $MONTAGE $S00 $S10 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+        elif [ -s $S01 ]; then # 1x2
+            $MONTAGE $S00 $S01 -mode concatenate -tile 1x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+        else # 1x1
+            $CONVERT $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+        fi
+    done
+    echo -n "$ROW "
+    
+}
+export -f process_zoom
 
 # Input SOURCE_LEVEL
 create_zoom_levels() {
@@ -124,72 +173,36 @@ create_zoom_levels() {
         return
     fi
     local DEST_ZOOM=$(( SOURCE_ZOOM-1 ))
-    echo "  - Zoom level $DEST_ZOOM"
     local HALF_TILE_SIDE=$((TILE_SIDE/2))
     mkdir -p $DEST/$DEST_ZOOM
-    local COL=0
-    local ROW=0
-    local MAX_COL=0
-    while [ true ]; do
-        local TILE=$DEST/$DEST_ZOOM/${COL}_${ROW}.${TILE_FORMAT}
-        if [ -s $TILE ]; then
-            if [ $COL -eq 0 ]; then
-                echo -n "    - row = ${ROW}, cols="
-            fi
-            echo -n " ($COL)"
-            if [ $MAX_COL -lt $COL ]; then
-                local MAX_COL=$COL
-            fi
 
-#            echo "    - Skipping tile ${COL}x${ROW} as it already exists"
-        else
-            local SCOL=$(($COL*2))
-            local SROW=$(($ROW*2))
+    MAX_ROW=`find $DEST/$SOURCE_ZOOM/ -name 0_*.${TILE_FORMAT} | wc -l`
+    MAX_ROW=$(( ( MAX_ROW - 1) / 2 ))
+    if [ $MAX_ROW -lt 0 ]; then
+        MAX_ROW=0
+    fi
 
-            local S00=$DEST/$SOURCE_ZOOM/${SCOL}_${SROW}.${TILE_FORMAT}
-            local S10=$DEST/$SOURCE_ZOOM/$((SCOL+1))_${SROW}.${TILE_FORMAT}
-            local S01=$DEST/$SOURCE_ZOOM/${SCOL}_$((SROW+1)).${TILE_FORMAT}
-            local S11=$DEST/$SOURCE_ZOOM/$((SCOL+1))_$((SROW+1)).${TILE_FORMAT}
+    MAX_COL=`find $DEST/$SOURCE_ZOOM/ -name *_0.${TILE_FORMAT} | wc -l`
+    MAX_COL=$(( ( MAX_COL - 1 ) / 2 ))
+    if [ $MAX_COL -lt 0 ]; then
+        MAX_COL=0
+    fi
+    
+    echo "  - Creating zoom level $DEST_ZOOM with $(( MAX_COL + 1 ))x$(( MAX_ROW + 1 )) tiles"
+    echo -n "    Rows: "
+    export MAX_COL
+    export DEST
+    export SOURCE_ZOOM
+    export TILE_FORMAT
+    export TILE_QUALITY
+    export DEST_ZOOM
+    export HALF_TILE_SIDE
+    export TILE_SIDE
+    export BACKGROUND
+    export VERBOSE
+    seq 0 $MAX_ROW | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_zoom "{}"'
 
-            if [ ! -s $S00 ]; then
-                if [ $COL -eq 0 ]; then # Finished all for this level
-                    break
-                fi
-
-                if [ $COL -le $MAX_COL ]; then
-                    # No more source images for the lower right corner, generate blank tile
-                    $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} $TILE
-                    echo -n " [$COL]"
-                    COL=$(( COL+1 ))
-                    continue
-                fi
-                COL=0
-                ROW=$((ROW+1))
-                echo ""
-                continue
-            fi
-
-            if [ $MAX_COL -lt $COL ]; then
-                local MAX_COL=$COL
-            fi
-            if [ $COL -eq 0 ]; then
-                echo -n "    - row = ${ROW}, cols="
-            fi
-            echo -n " $COL"
-            #echo "    - Creating tile ${COL}x${ROW}"
-            if [ -s $S11 ]; then # 2x2
-                $MONTAGE $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
-            elif [ -s $S10 ]; then # 2x1
-                $MONTAGE $S00 $S10 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
-            elif [ -s $S01 ]; then # 1x2
-                $MONTAGE $S00 $S01 -mode concatenate -tile 1x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
-            else # 1x1
-                $CONVERT $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
-            fi
-            # TODO: Nearly there, but the edges and the upper levels should not be forced out to 256x256
-        fi
-        COL=$((COL+1))
-    done
+    echo ""
     create_zoom_levels $DEST_ZOOM
 }
 
@@ -204,7 +217,9 @@ create_html() {
     unzip -q -o -j -d $TILE_SOURCE/_resources/ osd/openseadragon-bin-*.zip ${OSD_ZIP%.*}/openseadragon.min.js
 
     if [ -s $HTML ]; then
-        echo "  - Skipping generation of $HTML as it already exists"
+        if [ "$VERBOSE" == "true" ]; then
+            echo "  - Skipping generation of $HTML as it already exists"
+        fi
         return
     fi
     echo "  - Generation sample page $HTML"
@@ -232,42 +247,43 @@ CANVAS_ELEMENT_SIDE=`echo "sqrt($RAW_TILES_PER_CANVAS_ELEMENT)" | bc`
 if [ $CANVAS_ELEMENT_SIDE -eq 0 ]; then
     CANVAS_ELEMENT_SIDE=1
 fi
-RAW_IMAGE_ROWS=$((CANVAS_ELEMENT_SIDE*CANVAS_ASPECT_W/RAW_W))
-if [ $RAW_IMAGE_ROWS -eq 0 ]; then
-    RAW_IMAGE_ROWS=1
+RAW_IMAGE_COLS=$((CANVAS_ELEMENT_SIDE*CANVAS_ASPECT_W/RAW_W))
+if [ $RAW_IMAGE_COLS -eq 0 ]; then
+    RAW_IMAGE_COLS=1
 fi
-RAW_IMAGE_COLS=$((IMAGE_COUNT/RAW_IMAGE_ROWS))
-if [ $(( RAW_IMAGE_ROWS*WAR_IMAGE_COLS )) -le $IMAGE_COUNT ]; then
-    RAW_IMAGE_COLS=$(( RAW_IMAGE_COLS+1 ))
+RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
+if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
+    RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
 fi
-CANVAS_PIXEL_W=$((RAW_IMAGE_ROWS*RAW_W*TILE_SIDE))
-CANVAS_PIXEL_H=$((RAW_IMAGE_COLS*RAW_H*TILE_SIDE))
+CANVAS_PIXEL_W=$((RAW_IMAGE_COLS*RAW_W*TILE_SIDE))
+CANVAS_PIXEL_H=$((RAW_IMAGE_ROWS*RAW_H*TILE_SIDE))
 if [ $CANVAS_PIXEL_W -lt $CANVAS_PIXEL_H ]; then
     MAX_ZOOM=`log2 $CANVAS_PIXEL_H`
 else
     MAX_ZOOM=`log2 $CANVAS_PIXEL_W`
 fi
 
-echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_ROWS}x${RAW_IMAGE_COLS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST'"
+START_TIME=`date +%Y%m%d-%H%M`
+echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 set_converter
 BATCH=`mktemp`
 
-ROW=0
 COL=0
+ROW=0
 while read IMAGE; do
     if [ ! -s "$IMAGE" ]; then
         >&2 echo "Error: The image '$IMAGE' from imagelist '$IMAGE_LIST' does not exist"
         exit 2
     fi
-    echo "$ROW $COL $IMAGE" >> $BATCH
-    ROW=$(( ROW+1 ))
-    if [ $ROW -eq $RAW_IMAGE_ROWS ]; then
-        ROW=0
-        COL=$(( COL+1 ))
+    echo "$COL $ROW $IMAGE" >> $BATCH
+    COL=$(( COL+1 ))
+    if [ $COL -eq $RAW_IMAGE_COLS ]; then
+        COL=0
+        ROW=$(( ROW+1 ))
     fi
 done < $IMAGE_LIST
 
-echo "  - Base zoom level $MAX_ZOOM using $THREADS threads"
+echo "  - Creating base zoom level $MAX_ZOOM"
 export RAW_W
 export RAW_H
 export DEST
@@ -277,9 +293,11 @@ export MARGIN
 export TILE_SIDE
 export TILE_FORMAT
 export TILE_QUALITY
+export VERBOSE
 # ###
 cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
 create_zoom_levels $MAX_ZOOM
 create_html
 
 rm $BATCH
+echo "Finished montaging ${IMAGE_COUNT} images `date +%Y%m%d-%H%M` (process began ${START_TIME})"
