@@ -6,6 +6,12 @@ if [ -s juxta.conf ]; then
 fi
 JUXTA_HOME=`pwd`
 popd > /dev/null
+if [ -s juxta.conf ]; then # Also look for configuration in calling folder
+    source juxta.conf
+fi
+if [ -s "$JUXTA_CONF" ]; then # And see if the caller specified the configuration
+    source "$JUXTA_CONF"
+fi
 
 # Maximum number of threads to use for processing
 : ${THREADS:=1}
