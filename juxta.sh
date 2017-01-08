@@ -130,7 +130,7 @@ process_base() {
 
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [ "missing" != "$IMAGE" ]; then
-        echo "    - Creating tiles at grid ${ROW}x${COL} from `basename \"$IMAGE\"`"
+        echo "    - Creating tiles at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
         convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
     if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
