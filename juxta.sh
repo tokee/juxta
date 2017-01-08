@@ -220,8 +220,8 @@ create_html() {
     HTML=$DEST/../${TILE_SOURCE}.html
     
     mkdir -p $TILE_SOURCE/_resources
-    cp web/*.css $TILE_SOURCE/_resources
-    unzip -q -o -j -d $TILE_SOURCE/_resources/ osd/openseadragon-bin-*.zip ${OSD_ZIP%.*}/openseadragon.min.js
+    cp $JUXTA_HOME/web/*.css $TILE_SOURCE/_resources
+    unzip -q -o -j -d $TILE_SOURCE/_resources/ $JUXTA_HOME/osd/openseadragon-bin-*.zip ${OSD_ZIP%.*}/openseadragon.min.js
 
     if [ -s $HTML ]; then
         if [ "$VERBOSE" == "true" ]; then
@@ -230,7 +230,7 @@ create_html() {
         return
     fi
     echo "  - Generation sample page $HTML"
-    ctemplate web/presentation.template.html > $HTML
+    ctemplate $JUXTA_HOME/web/presentation.template.html > $HTML
 }
 
 if [ -z "$1" ]; then
