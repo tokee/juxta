@@ -126,7 +126,7 @@ process_base() {
     fi
     if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
         if [ "missing" == "$IMAGE" ]; then
-            echo "    - Creating blank tiles at grid ${ROW}x${COL} as there is no more source images"
+            echo "    - Creating blank tiles at grid ${ROW}x${COL} as there are no more source images"
         else
             echo "    - Error: Could not create tiles from source image. Using blank tiles instead. $IMAGE"
         fi
@@ -156,17 +156,16 @@ process_zoom() {
             continue
         fi
         
-        if [ ! -s $S00 ]; then # No more source images for the lower right corner
-            cp "$BLANK" $TILE
-        elif [ -s $S11 ]; then # 2x2
+        if [ -s $S00 -a -s $S10 -a -s $S01 -a -s $S11 ]; then # 2x2
             montage $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
-        elif [ -s $S10 ]; then # 2x1
+        elif [ -s $S00 -a -s $S10 ]; then # 2x1
             montage $S00 $S10 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
-
-        elif [ -s $S01 ]; then # 1x2
+        elif [ -s $S00 -a -s $S01 ]; then # 1x2
             montage $S00 $S01 -mode concatenate -tile 1x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
-        else # 1x1
+        elif [ -s $S00 ]; then # 1x1
             $CONVERT $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+        else # No more source images for the lower right corner
+            cp "$BLANK" $TILE
         fi
     done
     echo -n "$ROW "
