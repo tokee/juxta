@@ -159,11 +159,12 @@ process_zoom() {
         if [ ! -s $S00 ]; then # No more source images for the lower right corner
             cp "$BLANK" $TILE
         elif [ -s $S11 ]; then # 2x2
-            $MONTAGE $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            montage $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
         elif [ -s $S10 ]; then # 2x1
-            $MONTAGE $S00 $S10 $BLANK $BLANK -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            montage $S00 $S10 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+
         elif [ -s $S01 ]; then # 1x2
-            $MONTAGE $S00 $BLANK $S01 $BLANK -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            montage $S00 $S01 -mode concatenate -tile 1x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
         else # 1x1
             $CONVERT $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
         fi
@@ -184,7 +185,6 @@ create_zoom_levels() {
     mkdir -p $DEST/$DEST_ZOOM
 
     MAX_ROW=`find $DEST/$SOURCE_ZOOM/ -name 0_*.${TILE_FORMAT} | wc -l`
-    echo "mr $MAX_ROW"
     MAX_ROW=$(( ( MAX_ROW - 1) / 2 ))
     if [ $MAX_ROW -lt 0 ]; then
         MAX_ROW=0
