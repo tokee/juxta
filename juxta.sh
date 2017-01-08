@@ -39,6 +39,9 @@ fi
 # Controls log level
 : ${VERBOSE:=true}
 
+# Ignore missing source images
+: ${IGNORE_MISSING:=false}
+
 : ${DEST:=tiles}
 if [ ! "." == ".$2" ]; then
     DEST="$2"
@@ -288,8 +291,12 @@ COL=0
 ROW=0
 while read IMAGE; do
     if [ ! -s "$IMAGE" ]; then
-        >&2 echo "Error: The image '$IMAGE' from imagelist '$IMAGE_LIST' does not exist"
-        exit 2
+        if [ "true" == "$IGNORE_MISSING" ]; then
+            echo "  - Skipping unavailable image '$IMAGE'"
+        else
+            >&2 echo "Error: The image '$IMAGE' from imagelist '$IMAGE_LIST' does not exist"
+            exit 2
+        fi
     fi
     echo "$COL $ROW $IMAGE" >> $BATCH
     COL=$(( COL+1 ))
