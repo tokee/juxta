@@ -103,6 +103,10 @@ process_base() {
     local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
+    mkdir -p $DEST/$MAX_ZOOM
+    if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
+        $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} "$DEST/blank.${TILE_FORMAT}"
+    fi
     if [ -s $DEST/$MAX_ZOOM/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
         if [ "$VERBOSE" == "true" ]; then
             echo "    - Skipping ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
@@ -110,20 +114,26 @@ process_base() {
         return
     fi
         
-    echo "    - Creating tiles at grid ${ROW}x${COL} from `basename \"$IMAGE\"`"
-    mkdir -p $DEST/$MAX_ZOOM
     
     # Resize and pad to RAW_PIXEL*, crop tiles
     # convert image.jpg -gravity center -geometry 100x200 -background blue -extent 100x200 out.png
     # http://www.imagemagick.org/Usage/crop/#crop_tile
 
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
-    convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+    if [ "missing" != "$IMAGE" ]; then
+        echo "    - Creating tiles at grid ${ROW}x${COL} from `basename \"$IMAGE\"`"
+        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+    fi
     if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
-        echo "      - Error: Could not create tiles from source image. Using blank tiles instead. $IMAGE"
-        for BLC in `seq 1 $RAW_H`; do
-            for BLR in `seq 1 $RAW_W`; do
-                $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} "${DEST}/${MAX_ZOOM}/$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
+        if [ "missing" == "$IMAGE" ]; then
+            echo "    - Creating blank tiles at grid ${ROW}x${COL} as there is no more source images"
+        else
+            echo "    - Error: Could not create tiles from source image. Using blank tiles instead. $IMAGE"
+        fi
+       
+        for BLC in `seq 1 $RAW_W`; do
+            for BLR in `seq 1 $RAW_H`; do
+                cp "$DEST/blank.${TILE_FORMAT}" "${DEST}/${MAX_ZOOM}/$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
             done
         done
     fi
@@ -131,6 +141,7 @@ process_base() {
 export -f process_base
 
 process_zoom() {
+    local BLANK="$DEST/blank.${TILE_FORMAT}"
     local ROW="$1"
     local COL=0
 
@@ -145,18 +156,14 @@ process_zoom() {
             continue
         fi
         
-        if [ ! -s $S00 ]; then
-            # No more source images for the lower right corner, generate blank tile
-            $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} $TILE
-            continue
-        fi
-
-        if [ -s $S11 ]; then # 2x2
+        if [ ! -s $S00 ]; then # No more source images for the lower right corner
+            cp "$BLANK" $TILE
+        elif [ -s $S11 ]; then # 2x2
             $MONTAGE $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
         elif [ -s $S10 ]; then # 2x1
-            $MONTAGE $S00 $S10 -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            $MONTAGE $S00 $S10 $BLANK $BLANK -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
         elif [ -s $S01 ]; then # 1x2
-            $MONTAGE $S00 $S01 -mode concatenate -tile 1x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            $MONTAGE $S00 $BLANK $S01 $BLANK -mode concatenate -tile 2x miff:- | $CONVERT - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
         else # 1x1
             $CONVERT $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
         fi
@@ -177,6 +184,7 @@ create_zoom_levels() {
     mkdir -p $DEST/$DEST_ZOOM
 
     MAX_ROW=`find $DEST/$SOURCE_ZOOM/ -name 0_*.${TILE_FORMAT} | wc -l`
+    echo "mr $MAX_ROW"
     MAX_ROW=$(( ( MAX_ROW - 1) / 2 ))
     if [ $MAX_ROW -lt 0 ]; then
         MAX_ROW=0
@@ -285,6 +293,13 @@ while read IMAGE; do
         ROW=$(( ROW+1 ))
     fi
 done < $IMAGE_LIST
+if [ ! $COL -eq 0 ]; then
+    RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
+    for MISSING_COL in `seq $COL $RAW_IMAGE_MAX_COL`; do
+        echo "$MISSING_COL $ROW missing" >> $BATCH
+    done
+fi
+
 
 echo "  - Creating base zoom level $MAX_ZOOM"
 export RAW_W
