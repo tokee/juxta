@@ -293,6 +293,7 @@ while read IMAGE; do
     if [ ! -s "$IMAGE" ]; then
         if [ "true" == "$IGNORE_MISSING" ]; then
             echo "  - Skipping unavailable image '$IMAGE'"
+            continue
         else
             >&2 echo "Error: The image '$IMAGE' from imagelist '$IMAGE_LIST' does not exist"
             exit 2
