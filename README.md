@@ -15,7 +15,7 @@ The script is restart-friendly as it skips already generated tiles.
 Processing 24,000 ~1MPixel images on a laptop using 2 threads took 2½ hour and resulted in ~390,000 tiles for a total of 6.4GB with a 19GPixel canvas size (138240x138240 pixel). As scaling is practically linear `O(n+log2(sqrt(n)))`, a collage from 1 million such images would take ~4 days.
 
 ## Requirements
- * bash, curl
+ * bash, curl, unzip
  * ImageMagic
 
 ## Usage

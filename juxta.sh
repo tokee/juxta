@@ -231,10 +231,13 @@ create_html() {
     popd > /dev/null
     HTML=$DEST/../${TILE_SOURCE}.html
     
-    mkdir -p $TILE_SOURCE/_resources
-    cp $JUXTA_HOME/web/*.css $TILE_SOURCE/_resources
-    unzip -q -o -j -d $TILE_SOURCE/_resources/ $JUXTA_HOME/osd/openseadragon-bin-*.zip ${OSD_ZIP%.*}/openseadragon.min.js
+    mkdir -p $TILE_SOURCE/resources/images
+    cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
+    unzip -q -o -j -d $TILE_SOURCE/resources/ $JUXTA_HOME/osd/openseadragon-bin-*.zip ${OSD_ZIP%.*}/openseadragon.min.js
 
+    
+    unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-*.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
+    
     if [ -s $HTML ]; then
         if [ "$VERBOSE" == "true" ]; then
             echo "  - Skipping generation of $HTML as it already exists"
