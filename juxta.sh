@@ -22,9 +22,11 @@ fi
 : ${BACKGROUND:=cccccc}
 # Free space (in pixels) around each raw image
 : ${MARGIN:=5}
-: ${TILE_FORMAT:=jpg}
+: ${FORMAT:=jpg}
+: ${TILE_FORMAT:=$FORMAT}
 # Quality only applicable to JPG
-: ${TILE_QUALITY:=80}
+: ${QUALITY:=80}
+: ${TILE_QUALITY:=$QUALITY}
 
 # The size of the raw (fully zoomed) images, measured in 256x256 pixel tiles.
 # RAW_W=4 and RAW_H=3 means (4*256)x(3*256) = 1024x768 pixels.
