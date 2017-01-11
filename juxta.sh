@@ -103,9 +103,10 @@ function ctemplate() {
 
 # Problem: Debug output gets jumbled with threads>1. Synchronize or just don't output?
 process_base() {
-    local COL=`echo "$1" | cut -d\  -f1`
-    local ROW=`echo "$1" | cut -d\  -f2`
-    local IMAGE=`echo "$1" | sed 's/[0-9]* [0-9]* \(.*\)/\1/'`
+    local IMAGE_NUMBER=`echo "$1" | cut -d\  -f1`
+    local COL=`echo "$1" | cut -d\  -f2`
+    local ROW=`echo "$1" | cut -d\  -f3`
+    local IMAGE=`echo "$1" | sed 's/[0-9]* [0-9]* [0-9]* \(.*\)/\1/'`
     local TILE_START_COL=$((COL*RAW_W))
     local TILE_START_ROW=$((ROW*RAW_H))
     local RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
@@ -118,7 +119,7 @@ process_base() {
     fi
     if [ -s $DEST/$MAX_ZOOM/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
         if [ "$VERBOSE" == "true" ]; then
-            echo "    - Skipping ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
+            echo "    - Skipping #${IMAGE_NUMBER}/${IMAGE_COUNT} grid ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
         fi
         return
     fi
@@ -130,14 +131,14 @@ process_base() {
 
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [ "missing" != "$IMAGE" ]; then
-        echo "    - Creating tiles at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
+        echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
         convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
     if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
         if [ "missing" == "$IMAGE" ]; then
-            echo "    - Creating blank tiles at grid ${ROW}x${COL} as there are no more source images"
+            echo "    - Creating blank tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${ROW}x${COL} as there are no more source images"
         else
-            echo "    - Error: Could not create tiles from source image. Using blank tiles instead. $IMAGE"
+            echo "    - Error: Could not create tiles from source image #${IMAGE_NUMBER}/${IMAGE_COUNT}. Using blank tiles instead. $IMAGE"
         fi
        
         for BLC in `seq 1 $RAW_W`; do
@@ -204,7 +205,7 @@ create_zoom_levels() {
         MAX_COL=0
     fi
     
-    echo "  - Creating zoom level $DEST_ZOOM with $(( MAX_COL + 1 ))x$(( MAX_ROW + 1 )) tiles"
+    echo "  - Creating zoom level $DEST_ZOOM with $(( MAX_COL + 1 )) columns and $(( MAX_ROW + 1 )) rows of tiles"
     echo -n "    Rows: "
     export MAX_COL
     export DEST
@@ -289,6 +290,7 @@ BATCH=`mktemp`
 
 COL=0
 ROW=0
+ICOUNTER=1
 while read IMAGE; do
     if [ ! -s "$IMAGE" ]; then
         if [ "true" == "$IGNORE_MISSING" ]; then
@@ -299,13 +301,15 @@ while read IMAGE; do
             exit 2
         fi
     fi
-    echo "$COL $ROW $IMAGE" >> $BATCH
+    echo "$ICOUNTER $COL $ROW $IMAGE" >> $BATCH
+    ICOUNTER=$(( ICOUNTER+1 ))
     COL=$(( COL+1 ))
     if [ $COL -eq $RAW_IMAGE_COLS ]; then
         COL=0
         ROW=$(( ROW+1 ))
     fi
 done < $IMAGE_LIST
+
 if [ ! $COL -eq 0 ]; then
     RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
     for MISSING_COL in `seq $COL $RAW_IMAGE_MAX_COL`; do
@@ -325,6 +329,7 @@ export TILE_SIDE
 export TILE_FORMAT
 export TILE_QUALITY
 export VERBOSE
+export IMAGE_COUNT
 # ###
 cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
 create_zoom_levels $MAX_ZOOM
