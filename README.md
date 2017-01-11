@@ -20,7 +20,7 @@ Processing 24,000 ~1MPixel images on a laptop using 2 threads took 2½ hour and 
 
 ## Usage
 1. Create a list of images
-   `ls myimages/*.jpg > images.dat`
+   `find myimages -iname "*.jpg" > images.dat`
 
 2. Generate collage tiles
   `./juxta.sh images.dat mycollage`
@@ -32,12 +32,18 @@ Due to problems with downloading directly from GitHub, OpenSeadragon might have 
 ## Advanced
 Processing can be controlled by setting environment variables. Most important options are
 
- * RAW_W / RAW_H: The size of the fully zoomed source images, measured in tiles. RAW_W=4 and RAW_H=3 means `(4*256)x(3*256)` = 1024x768 pixels. Default is 4 and 3.
+ * RAW_W / RAW_H: The size of the fully zoomed individual images, measured in tiles. RAW_W=4 and RAW_H=3 means `(4*256)x(3*256)` = 1024x768 pixels. Default is 4 and 3.
  * THREADS: The number of threads to use when generating the tiles at full zoom level. Default is 1.
  * TILE_FORMAT: png or jpg. Default is jpg.
 
-Processing a bunch of photos could be done with
+Processing a bunch of photos of file size 500KB or more could be done with
 ```
-ls myimages/*.jpg > sources.dat
-RAW_W=3 RAW_H=2 THREADS=4 TILE_FORMAT=jpg ./juxta.sh sources.dat mycollage
+find myimages -iname "*.jpg" -a -size +500k  > photos.dat
+RAW_W=3 RAW_H=2 THREADS=4 TILE_FORMAT=jpg ./juxta.sh photos.dat mycollage
+```
+
+A collection of small clip art images could be
+```
+find myimages -iname "*.png" -o -iname "*.gif" > clipart.dat
+RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.dat mycollage
 ```
