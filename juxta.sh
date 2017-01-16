@@ -20,6 +20,7 @@ fi
 : ${TILE_SIDE:=256}
 # Hex RGB for background, when the aspect ration for an image does not fit
 : ${BACKGROUND:=cccccc}
+: ${TEMPLATE:="$JUXTA_HOME/web/presentation.template.html"}
 # Free space (in pixels) around each raw image
 : ${MARGIN:=5}
 : ${FORMAT:=jpg}
@@ -52,7 +53,6 @@ fi
 # Where to get OpenSeadragon
 : ${OSD_ZIP:="openseadragon-bin-1.0.0.zip"}
 : ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v1.0.0/$OSD_ZIP"}
-
 
 fetch_dragon() {
     if [ -s $JUXTA_HOME/osd/$OSD_ZIP ]; then
@@ -245,7 +245,7 @@ create_html() {
         return
     fi
     echo "  - Generation sample page $HTML"
-    ctemplate $JUXTA_HOME/web/presentation.template.html > $HTML
+    ctemplate "$TEMPLATE" > $HTML
 }
 
 if [ -z "$1" ]; then
