@@ -51,8 +51,8 @@ if [ ! "." == ".$2" ]; then
 fi
 
 # Where to get OpenSeadragon
-: ${OSD_ZIP:="openseadragon-bin-1.0.0.zip"}
-: ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v1.0.0/$OSD_ZIP"}
+: ${OSD_ZIP:="openseadragon-bin-2.2.1.zip"}
+: ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v2.2.1/$OSD_ZIP"}
 
 fetch_dragon() {
     if [ -s $JUXTA_HOME/osd/$OSD_ZIP ]; then
