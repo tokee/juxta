@@ -248,6 +248,49 @@ create_html() {
     ctemplate "$TEMPLATE" > $HTML
 }
 
+create_image_map() {
+    echo "var juxtaImageCount=$ICOUNTER;" > $DEST/imagemap.js
+    echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
+    echo "var juxtaRowCount=$ROW;" >> $DEST/imagemap.js
+
+    local BASELINE="`cat $DEST/imagelist.dat | head -n 1`"
+    local LENGTH=${#BASELINE} 
+    local PRE=$LENGTH
+    local POST=$LENGTH
+    local POST_STR=$BASELINE
+    while read IMAGE; do
+#        echo "**** ${BASELINE:0:$PRE} $BASELINE $LENGTH $PRE"
+#        echo "$IMAGE"
+        while [ $PRE -gt 0 -a ${IMAGE:0:$PRE} != ${BASELINE:0:$PRE} ]; do
+            PRE=$((PRE-1))
+        done
+
+        local CLENGTH=${#IMAGE}
+        local CSTART=$(( CLENGTH-$POST ))
+        while [ $POST -gt 0 -a ${POST_STR} != ${IMAGE:$CSTART} ]; do
+            #echo "*p* $POST  ${POST_STR} != ${IMAGE:$CSTART:$CLENGTH}"
+            local POST=$(( POST-1 ))
+
+            local PSTART=$(( LENGTH-POST ))
+            local POST_STR=${BASELINE:$PSTART}
+            local CSTART=$(( CLENGTH-$POST ))
+        done
+
+#        echo "pre=$PRE post=$POST"
+        if [ $PRE -eq 0 -a $POST -eq $LENGTH ]; then
+            #echo "break"
+            break
+        fi
+    done < $DEST/imageslist.dat
+    echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
+    echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
+    echo "var juxtaImages=["
+    local FIRST=false
+    # Continue here!
+    #echo "$PRE $POST : ${BASELINE:0:$PRE} $POST_STR"
+    #exit
+}
+
 if [ -z "$1" ]; then
     echo "Usage: ./juxta.sh imagelist [destination]"
     echo "imagelist: A file with images represented as file paths"
@@ -296,6 +339,7 @@ BATCH=`mktemp`
 COL=0
 ROW=0
 ICOUNTER=1
+echo -n "" > $DEST/imagelist.dat
 while read IMAGE; do
     if [ ! -s "$IMAGE" ]; then
         if [ "true" == "$IGNORE_MISSING" ]; then
@@ -307,6 +351,7 @@ while read IMAGE; do
         fi
     fi
     echo "$ICOUNTER $COL $ROW $IMAGE" >> $BATCH
+    echo "$IMAGE" >> $DEST/imagelist.dat
     ICOUNTER=$(( ICOUNTER+1 ))
     COL=$(( COL+1 ))
     if [ $COL -eq $RAW_IMAGE_COLS ]; then
@@ -321,6 +366,8 @@ if [ ! $COL -eq 0 ]; then
         echo "$MISSING_COL $ROW missing" >> $BATCH
     done
 fi
+create_image_map
+
 
 
 echo "  - Creating base zoom level $MAX_ZOOM"
