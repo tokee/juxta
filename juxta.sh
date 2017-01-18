@@ -33,6 +33,9 @@ fi
 # RAW_W=4 and RAW_H=3 means (4*256)x(3*256) = 1024x768 pixels.
 : ${RAW_W:=4}
 : ${RAW_H:=3}
+# Where to position the images if their aspect does not match the ideal
+# Possible values are NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
+: ${RAW_GRAVITY:=center}
 
 # The preferable aspect ratio of the virtual canvas.
 # Note that this is not guaranteed to be exact.
@@ -135,7 +138,7 @@ process_base() {
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [ "missing" != "$IMAGE" ]; then
         echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
-        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -gravity center -quality $TILE_QUALITY -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
     if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
         if [ "missing" == "$IMAGE" ]; then
@@ -401,6 +404,7 @@ create_image_map
 echo "  - Creating base zoom level $MAX_ZOOM"
 export RAW_W
 export RAW_H
+export RAW_GRAVITY
 export DEST
 export MAX_ZOOM
 export BACKGROUND
