@@ -332,7 +332,6 @@ create_image_map() {
         local FIRST=false
         while read IMAGE; do
             local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
-            echo "** $IMETA --- $IMAGE"
             if [ "false" == "$FIRST" ]; then
                 local FIRST=true
             else
