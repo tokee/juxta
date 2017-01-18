@@ -263,6 +263,7 @@ create_html() {
 }
 
 create_image_map() {
+    echo "  - Creating image map"
     echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
     echo "var juxtaRowCount=$(( ROW + 1 ));" >> $DEST/imagemap.js
     echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l`;" >> $DEST/imagemap.js
@@ -355,7 +356,7 @@ function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
   if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && imageIndex < juxtaImageCount) {
     image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
     validPos = true;
-    if (juxtaMeta) {
+    if (typeof(juxtaMeta) != 'undefined') {
       meta = juxtaMeta[imageIndex];
     }
   }
@@ -409,6 +410,7 @@ echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS}
 set_converter
 BATCH=`mktemp`
 
+echo "  - Preparing image list"
 mkdir -p $DEST
 COL=0
 ROW=0
@@ -418,6 +420,7 @@ while read IMAGE; do
     if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
         continue
     fi
+    # Slow due to system call
     IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
     IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
     if [ ! -s "$IPATH" ]; then
