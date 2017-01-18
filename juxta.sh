@@ -51,8 +51,9 @@ if [ ! "." == ".$2" ]; then
 fi
 
 # Where to get OpenSeadragon
-: ${OSD_ZIP:="openseadragon-bin-2.2.1.zip"}
-: ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v2.2.1/$OSD_ZIP"}
+: ${OSD_VERSION:=2.2.1}
+: ${OSD_ZIP:="openseadragon-bin-${OSD_VERSION}.zip"}
+: ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v${OSD_VERSION}/$OSD_ZIP"}
 
 fetch_dragon() {
     if [ -s $JUXTA_HOME/osd/$OSD_ZIP ]; then
@@ -233,10 +234,10 @@ create_html() {
     
     mkdir -p $TILE_SOURCE/resources/images
     cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
-    unzip -q -o -j -d $TILE_SOURCE/resources/ $JUXTA_HOME/osd/openseadragon-bin-*.zip ${OSD_ZIP%.*}/openseadragon.min.js
+    unzip -q -o -j -d $TILE_SOURCE/resources/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip ${OSD_ZIP%.*}/openseadragon.min.js
 
     
-    unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-*.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
+    unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
     
     if [ -s $HTML ]; then
         if [ "$VERBOSE" == "true" ]; then
@@ -249,8 +250,8 @@ create_html() {
 }
 
 create_image_map() {
-    echo "var juxtaImageCount=$ICOUNTER;" > $DEST/imagemap.js
-    echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
+    echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l`;" > $DEST/imagemap.js
+    echo "var juxtaColCount=$RAW_IMAGE_COLS;" >> $DEST/imagemap.js
     echo "var juxtaRowCount=$ROW;" >> $DEST/imagemap.js
 
     local BASELINE="`cat $DEST/imagelist.dat | head -n 1`"
@@ -273,7 +274,7 @@ create_image_map() {
 
             local PSTART=$(( LENGTH-POST ))
             local POST_STR=${BASELINE:$PSTART}
-            local CSTART=$(( CLENGTH-$POST ))
+            local CSTART=$(( CLENGTH-POST ))
         done
 
 #        echo "pre=$PRE post=$POST"
@@ -281,14 +282,37 @@ create_image_map() {
             #echo "break"
             break
         fi
-    done < $DEST/imageslist.dat
+    done < $DEST/imagelist.dat
     echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
     echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
-    echo "var juxtaImages=["
+    echo "var juxtaImages=[" >> $DEST/imagemap.js
+
     local FIRST=false
-    # Continue here!
-    #echo "$PRE $POST : ${BASELINE:0:$PRE} $POST_STR"
-    #exit
+    while read IMAGE; do
+        if [ "false" == "$FIRST" ]; then
+            local FIRST=true
+        else
+            echo ","  >> $DEST/imagemap.js
+        fi
+        local ILENGTH=${#IMAGE}
+        local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+        echo -n "\"${IMAGE:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
+    done < $DEST/imagelist.dat
+    echo "];" >> $DEST/imagemap.js
+    cat  >> $DEST/imagemap.js <<EOF
+// Override juxtaCallback to perform custom action
+function juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) { }
+
+function() juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
+  var image = "";
+  var validPos = false;
+  if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && y*juxtaColCount+x < juxtaImageCount) {
+    image = juxtaPrefix + juxtaImages[y*juxtaColCount+x] + juxtaPostfix;
+    validPos = true;
+  }
+  juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image);
+}
+EOF
 }
 
 if [ -z "$1" ]; then
@@ -336,6 +360,7 @@ echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS}
 set_converter
 BATCH=`mktemp`
 
+mkdir -p $DEST
 COL=0
 ROW=0
 ICOUNTER=1
