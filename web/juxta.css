@@ -41,4 +41,5 @@ a:active 	{ color: #f00; }
 }
 .boxtext {
     background: white;
+    pointer-events: auto;
 }
