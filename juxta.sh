@@ -234,8 +234,8 @@ create_html() {
     
     mkdir -p $TILE_SOURCE/resources/images
     cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
+    cp $JUXTA_HOME/web/*.js $TILE_SOURCE/resources/
     unzip -q -o -j -d $TILE_SOURCE/resources/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip ${OSD_ZIP%.*}/openseadragon.min.js
-
     
     unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
     
@@ -250,9 +250,12 @@ create_html() {
 }
 
 create_image_map() {
-    echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l`;" > $DEST/imagemap.js
-    echo "var juxtaColCount=$RAW_IMAGE_COLS;" >> $DEST/imagemap.js
-    echo "var juxtaRowCount=$ROW;" >> $DEST/imagemap.js
+    echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
+    echo "var juxtaRowCount=$(( ROW + 1 ));" >> $DEST/imagemap.js
+    echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l`;" >> $DEST/imagemap.js
+    echo "var juxtaTileSize=$TILE_SIDE;" >> $DEST/imagemap.js
+    echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
+    echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
 
     local BASELINE="`cat $DEST/imagelist.dat | head -n 1`"
     local LENGTH=${#BASELINE} 
@@ -301,9 +304,9 @@ create_image_map() {
     echo "];" >> $DEST/imagemap.js
     cat  >> $DEST/imagemap.js <<EOF
 // Override juxtaCallback to perform custom action
-function juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) { }
+var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) { }
 
-function() juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
+function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
   var image = "";
   var validPos = false;
   if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && y*juxtaColCount+x < juxtaImageCount) {

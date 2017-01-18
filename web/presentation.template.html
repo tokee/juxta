@@ -5,6 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Juxta</title>
     <link rel="stylesheet" type="text/css" href="$TILE_SOURCE/resources/juxta.css" />
+    <script src="$TILE_SOURCE/imagemap.js"></script>
     <script src="$TILE_SOURCE/resources/openseadragon.min.js"></script>
 </head>
 
@@ -12,10 +13,10 @@
 <h1>Juxta</h1>
 <p>Sample page. See <a href="https://github.com/tokee/juxta">the Juxta GitHub page</a> for details.</p>
 
-<div id="zoom-display" class="openseadragon"></div>
+<div id="zoom-display" class="openseadragon"><div id="infobox"></div></div>
 
 <script type="text/javascript">
-  myDragon = OpenSeadragon({
+  var myDragon = OpenSeadragon({
     id:            "zoom-display",
     
     showNavigator:  false,
@@ -27,7 +28,7 @@
             Url:      "$TILE_SOURCE/",
             Format:   "$TILE_FORMAT", 
             Overlap:  "0", 
-            TileSize: "256",
+            TileSize: "$TILE_SIDE",
             Size: {
                 Width: "$CANVAS_PIXEL_W",
                 Height:  "$CANVAS_PIXEL_H"
@@ -37,8 +38,9 @@
   });
 </script>
 
-
 <p>Generated `date +"%Y-%m-%d %H:%M"`</p>
 
+<!-- Must be below the creation of myDragon -->
+<script type="text/javascript" src="$TILE_SOURCE/resources/overlays.js"></script>
 </body>
 </html>
