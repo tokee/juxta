@@ -48,6 +48,9 @@ fi
 # Ignore missing source images
 : ${IGNORE_MISSING:=false}
 
+# If true, any pre-existing HTML file for the collage will be overwritten
+: ${OVERWRITE_HTML:=true}
+
 : ${DEST:=tiles}
 if [ ! "." == ".$2" ]; then
     DEST="$2"
@@ -243,10 +246,17 @@ create_html() {
     unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
     
     if [ -s $HTML ]; then
-        if [ "$VERBOSE" == "true" ]; then
-            echo "  - Skipping generation of $HTML as it already exists"
+        if [ "true" == "$OVERWRITE_HTML" ]; then
+            if [ "$VERBOSE" == "true" ]; then
+                echo "  - Overwriting existing $HTML"
+            fi
+            rm $HTML
+        else
+            if [ "$VERBOSE" == "true" ]; then
+                echo "  - Skipping generation of $HTML as it already exists"
+            fi
+            return
         fi
-        return
     fi
     echo "  - Generation sample page $HTML"
     ctemplate "$TEMPLATE" > $HTML
@@ -260,22 +270,28 @@ create_image_map() {
     echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
     echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
 
-    local BASELINE="`cat $DEST/imagelist.dat | head -n 1`"
+    local BASELINE="`cat $DEST/imagelist.dat | head -n 1 | cut -d'|' -f1`"
     local LENGTH=${#BASELINE} 
     local PRE=$LENGTH
     local POST=$LENGTH
     local POST_STR=$BASELINE
+    local ANY_META=false
     while read IMAGE; do
+        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+        if [ "." != ".$IMETA" ]; then
+            ANY_META=true
+        fi
 #        echo "**** ${BASELINE:0:$PRE} $BASELINE $LENGTH $PRE"
 #        echo "$IMAGE"
-        while [ $PRE -gt 0 -a ${IMAGE:0:$PRE} != ${BASELINE:0:$PRE} ]; do
+        while [ $PRE -gt 0 -a ${IPATH:0:$PRE} != ${BASELINE:0:$PRE} ]; do
             PRE=$((PRE-1))
         done
 
-        local CLENGTH=${#IMAGE}
+        local CLENGTH=${#IPATH}
         local CSTART=$(( CLENGTH-$POST ))
-        while [ $POST -gt 0 -a ${POST_STR} != ${IMAGE:$CSTART} ]; do
-            #echo "*p* $POST  ${POST_STR} != ${IMAGE:$CSTART:$CLENGTH}"
+        while [ $POST -gt 0 -a ${POST_STR} != ${IPATH:$CSTART} ]; do
+            #echo "*p* $POST  ${POST_STR} != ${IPATH:$CSTART:$CLENGTH}"
             local POST=$(( POST-1 ))
 
             local PSTART=$(( LENGTH-POST ))
@@ -291,32 +307,59 @@ create_image_map() {
     done < $DEST/imagelist.dat
     echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
     echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
-    echo "var juxtaImages=[" >> $DEST/imagemap.js
 
+    # All the images
+    echo "var juxtaImages=[" >> $DEST/imagemap.js
     local FIRST=false
     while read IMAGE; do
+        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
         if [ "false" == "$FIRST" ]; then
             local FIRST=true
         else
             echo ","  >> $DEST/imagemap.js
         fi
-        local ILENGTH=${#IMAGE}
+        local ILENGTH=${#IPATH}
         local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
-        echo -n "\"${IMAGE:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
+        echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
     done < $DEST/imagelist.dat
     echo "];" >> $DEST/imagemap.js
+
+    # And their meta data (if available)
+    if [ "true" == "$ANY_META" ]; then
+        echo "var juxtaMeta=[" >> $DEST/imagemap.js
+        local FIRST=false
+        while read IMAGE; do
+            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+            echo "** $IMETA --- $IMAGE"
+            if [ "false" == "$FIRST" ]; then
+                local FIRST=true
+            else
+                echo ","  >> $DEST/imagemap.js
+            fi
+        echo -n "\"${IMETA}\"" >> $DEST/imagemap.js
+        done < $DEST/imagelist.dat
+        echo "];" >> $DEST/imagemap.js
+    fi
+
+    # functions to use the data
     cat  >> $DEST/imagemap.js <<EOF
 // Override juxtaCallback to perform custom action
 var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) { }
 
 function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
   var image = "";
+  var meta = "";
   var validPos = false;
-  if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && y*juxtaColCount+x < juxtaImageCount) {
-    image = juxtaPrefix + juxtaImages[y*juxtaColCount+x] + juxtaPostfix;
+  imageIndex = y*juxtaColCount+x;
+  if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && imageIndex < juxtaImageCount) {
+    image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
     validPos = true;
+    if (juxtaMeta) {
+      meta = juxtaMeta[imageIndex];
+    }
   }
-  juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image);
+  juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
 }
 EOF
 }
@@ -372,16 +415,21 @@ ROW=0
 ICOUNTER=1
 echo -n "" > $DEST/imagelist.dat
 while read IMAGE; do
-    if [ ! -s "$IMAGE" ]; then
+    if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
+        continue
+    fi
+    IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+    IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+    if [ ! -s "$IPATH" ]; then
         if [ "true" == "$IGNORE_MISSING" ]; then
-            echo "  - Skipping unavailable image '$IMAGE'"
+            echo "  - Skipping unavailable image '$IPATH'"
             continue
         else
-            >&2 echo "Error: The image '$IMAGE' from imagelist '$IMAGE_LIST' does not exist"
+            >&2 echo "Error: The image '$IPATH' from imagelist '$IMAGE_LIST' does not exist"
             exit 2
         fi
     fi
-    echo "$ICOUNTER $COL $ROW $IMAGE" >> $BATCH
+    echo "$ICOUNTER $COL $ROW $IPATH" >> $BATCH
     echo "$IMAGE" >> $DEST/imagelist.dat
     ICOUNTER=$(( ICOUNTER+1 ))
     COL=$(( COL+1 ))
@@ -398,8 +446,6 @@ if [ ! $COL -eq 0 ]; then
     done
 fi
 create_image_map
-
-
 
 echo "  - Creating base zoom level $MAX_ZOOM"
 export RAW_W

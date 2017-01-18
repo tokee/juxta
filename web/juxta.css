@@ -39,7 +39,6 @@ a:active 	{ color: #f00; }
     overflow: hidden;
     visibility: hidden;
 }
-.boxtext {
+#boxtext {
     background: white;
-    pointer-events: auto;
 }
