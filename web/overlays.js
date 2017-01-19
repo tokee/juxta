@@ -51,9 +51,8 @@ var createFooter = function(image, meta) {
   return meta;
 }
 
-//var showFooter = function(image, meta) {
 var showFooter = function(image, meta) {
-  return true;
+  return (typeof(juxtaMeta) != 'undefined'):
 }
 
 juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
