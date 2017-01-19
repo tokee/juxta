@@ -245,6 +245,7 @@ create_html() {
     TILE_SOURCE=$(basename `pwd`)
     popd > /dev/null
     HTML=$DEST/../${TILE_SOURCE}.html
+    TOTAL_IMAGES=`cat $DEST/imagelist.dat | wc -l`
     
     mkdir -p $TILE_SOURCE/resources/images
     cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
