@@ -14,7 +14,7 @@ if [ -s "$JUXTA_CONF" ]; then # And see if the caller specified the configuratio
 fi
 
 # Maximum number of threads to use for processing
-: ${THREADS:=1}
+: ${THREADS:=3}
 
 # Don't change this unless you know what you are doing
 : ${TILE_SIDE:=256}
@@ -113,7 +113,6 @@ function ctemplate() {
     rm $TMP
 }
 
-# Problem: Debug output gets jumbled with threads>1. Synchronize or just don't output?
 process_base() {
     local IMAGE_NUMBER=`echo "$1" | cut -d\  -f1`
     local COL=`echo "$1" | cut -d\  -f2`
