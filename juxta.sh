@@ -51,6 +51,9 @@ fi
 # If true, any pre-existing HTML file for the collage will be overwritten
 : ${OVERWRITE_HTML:=true}
 
+# If true, no images are processed if any destination-images exist
+: ${AGGRESSIVE_IMAGE_SKIP:=false}
+
 : ${DEST:=tiles}
 if [ ! "." == ".$2" ]; then
     DEST="$2"
@@ -122,6 +125,7 @@ process_base() {
     local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
+    
     mkdir -p $DEST/$MAX_ZOOM
     if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
         $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} "$DEST/blank.${TILE_FORMAT}"
@@ -200,6 +204,10 @@ create_zoom_levels() {
     fi
     local DEST_ZOOM=$(( SOURCE_ZOOM-1 ))
     local HALF_TILE_SIDE=$((TILE_SIDE/2))
+    if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$DEST_ZOOM ]; then
+        echo "  - Skipping creation of zoom level $DEST_ZOOM as it already exists"
+        return
+    fi
     mkdir -p $DEST/$DEST_ZOOM
 
     MAX_ROW=`find $DEST/$SOURCE_ZOOM/ -name 0_*.${TILE_FORMAT} | wc -l`
@@ -463,7 +471,12 @@ export TILE_QUALITY
 export VERBOSE
 export IMAGE_COUNT
 # ###
-cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
+
+if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
+    echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
+else
+    cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
+fi
 create_zoom_levels $MAX_ZOOM
 create_html
 
