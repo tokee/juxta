@@ -43,15 +43,21 @@ myDragon.addHandler('open', function() {
     tracker.setTracking(true);  
 });
 
-createHeader = function(image, meta) {
+var createHeader = function(image, meta) {
   return image;
 }
 
-createFooter = function(image, meta) {
+var createFooter = function(image, meta) {
   return meta;
 }
 
+//var showFooter = function(image, meta) {
+var showFooter = function(image, meta) {
+  return true;
+}
+
 juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
+  var sf = showFooter(image, meta);
   if (validPos) {
     infobox.style.visibility='visible';
 
@@ -70,7 +76,16 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
     footer.style.top = (boxY+boxHeight) + 'px';
     footer.style.width = (boxWidth-32) + 'px';
     footer.innerHTML = createFooter(image, meta);
-
+    if (sf) {
+        infobox.style.borderBottom = 'none';
+        infobox.borderBottomLeftRadius = '0';
+        infobox.borderBottomRightRadius = '0';
+    } else {
+        footer.style.visibility = 'hidden';
+        infobox.style.borderBottom = '3px solid red';
+        infobox.borderBottomLeftRadius = '10px';
+        infobox.borderBottomRightRadius = '10px';
+    }
     if ( boxWidth < 200 ) {
 //      header.style.pointerEvents = 'none';
       header.style.visibility = 'hidden';
@@ -80,9 +95,14 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
     } else {
 //      header.style.pointerEvents = 'auto';
       header.style.visibility = 'visible';
-      footer.style.visibility = 'visible';
+      if (sf) {
+        footer.style.visibility = 'visible';
+      }      
       infobox.style.borderTop = 'none';
-      infobox.style.borderBottom = 'none';
+      if (sf) {  
+        infobox.style.borderBottom = 'none';
+        console.log('hidings');
+      }  
     }
   } else {
     infobox.style.visibility='hidden';
