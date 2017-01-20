@@ -70,7 +70,7 @@ fetch_dragon() {
     fi
     mkdir -p $JUXTA_HOME/osd/
     echo "  - Fetching $OSD_ZIP from $OSD_URL"
-    curl -m 3600 "$OSD_URL" > $JUXTA_HOME/osd/$OSD_ZIP
+    wget "$OSD_URL" -O  $JUXTA_HOME/osd/$OSD_ZIP
     if [ ! -s $JUXTA_HOME/osd/$OSD_ZIP ]; then
         >&2 echo "Error: Unable to fetch OpenSeadragon from $OSD_URL"
         >&2 echo "Please download is manually and store it in $JUXTA_HOME/osd/"
@@ -177,15 +177,25 @@ process_zoom() {
         if [ -s $TILE ]; then
             continue
         fi
-        
-        if [ -s $S00 -a -s $S10 -a -s $S01 -a -s $S11 ]; then # 2x2
-            montage $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+
+        # We use box + scale as we are binning: http://www.imagemagick.org/Usage/filter/#box
+        # Or is the box-filter not used? http://stackoverflow.com/questions/8517304/what-is-the-difference-for-sample-resample-scale-resize-adaptive-resize-thumbnai
+
+
+
+        if [ -s $S00 -a -s $S01 -a -s $S10 -a -s $S11 ]; then # 2x2 
+            # If we are not at the edge, montage is easy. Still need the source existence check above.
+            if [ $COL -lt $MAX_COL -a $ROW -lt $MAX_ROW ]; then
+                montage $S00 $S10 $S01 $S11 -background "#$BACKGROUND" -geometry 128x128 -tile 2x2 -quality ${TILE_QUALITY} $TILE
+            else
+                montage $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
+            fi
         elif [ -s $S00 -a -s $S10 ]; then # 2x1
-            montage $S00 $S10 -mode concatenate -tile 2x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            montage $S00 $S10 -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
         elif [ -s $S00 -a -s $S01 ]; then # 1x2
-            montage $S00 $S01 -mode concatenate -tile 1x miff:- | convert - -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            montage $S00 $S01 -mode concatenate -tile 1x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
         elif [ -s $S00 ]; then # 1x1
-            $CONVERT $S00 -geometry 50%x50% -quality ${TILE_QUALITY} $TILE
+            $CONVERT $S00 -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
         else # No more source images for the lower right corner
             cp "$BLANK" $TILE
         fi
@@ -224,6 +234,7 @@ create_zoom_levels() {
     echo "  - Creating zoom level $DEST_ZOOM with $(( MAX_COL + 1 )) columns and $(( MAX_ROW + 1 )) rows of tiles"
     echo -n "    Rows: "
     export MAX_COL
+    export MAX_ROW
     export DEST
     export SOURCE_ZOOM
     export TILE_FORMAT
