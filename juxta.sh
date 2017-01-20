@@ -277,7 +277,7 @@ create_html() {
             return
         fi
     fi
-    echo "  - Generation sample page $HTML"
+    echo "  - Generating sample page $HTML"
     ctemplate "$TEMPLATE" > $HTML
 }
 
@@ -483,13 +483,13 @@ export VERBOSE
 export IMAGE_COUNT
 # ###
 
+create_html
 if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
     cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
 fi
 create_zoom_levels $MAX_ZOOM
-create_html
 
 rm $BATCH
 echo "Finished montaging ${IMAGE_COUNT} images `date +%Y%m%d-%H%M` (process began ${START_TIME})"
