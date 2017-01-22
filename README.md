@@ -1,5 +1,5 @@
 # juxta
-Generates a large collage of a given set of images, for display on a webpage using the deep zoom tool OpenSeadragon.
+Generates a collage of a given set of images, for display on a webpage using the deep zoom tool OpenSeadragon.
 
 Demo at https://tokee.github.io/juxta/
 
