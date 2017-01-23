@@ -100,7 +100,6 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
       infobox.style.borderTop = 'none';
       if (sf) {  
         infobox.style.borderBottom = 'none';
-        console.log('hidings');
       }  
     }
   } else {
