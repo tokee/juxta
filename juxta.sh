@@ -37,6 +37,13 @@ fi
 # Possible values are NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
 : ${RAW_GRAVITY:=center}
 
+# If either of these are defines, a fixed width or height layout is used
+# If none are defined, the canvas aspect is used
+# If both are defined, the ROWS is ignored
+: ${RAW_IMAGE_COLS:=$COLS}
+: ${RAW_IMAGE_ROWS:=$ROWS}
+# If true, the special case ROWS=1 or COLS=1 are handled so no empty tiles are created
+: ${AUTO_CROP:=true}
 # The preferable aspect ratio of the virtual canvas.
 # Note that this is not guaranteed to be exact.
 : ${CANVAS_ASPECT_W:=1}
@@ -384,26 +391,45 @@ EOF
 }
 
 resolve_dimensions() {
-    IMAGE_COUNT=`cat "$IMAGE_LIST" | grep -v "^#.*" | grep -v "^$" | wc -l`
-    RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
-    RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
-    
-    RAW_TILES_PER_CANVAS_ELEMENT=$(( IMAGE_COUNT*RAW_W*RAW_H/(CANVAS_ASPECT_W*CANVAS_ASPECT_H) ))
-    CANVAS_ELEMENT_SIDE=`echo "sqrt($RAW_TILES_PER_CANVAS_ELEMENT)" | bc`
-    if [ $CANVAS_ELEMENT_SIDE -eq 0 ]; then
-        CANVAS_ELEMENT_SIDE=1
+    IMAGE_COUNT=`cat "$DEST/imagelist_onlyimages.dat" | grep -v "^#.*" | grep -v "^$" | wc -l`
+    if [ "." != ".$RAW_IMAGE_COLS" ]; then # Fixed width
+        if [ "true" == "$AUTO_CROP" -a $RAW_IMAGE_COLS -gt $IMAGE_COUNT ]; then
+            RAW_IMAGE_COLS=$IMAGE_COUNT
+        fi
+        RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
+        if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
+            RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
+        fi
+    elif [ "." != ".$RAW_IMAGE_ROWS" ]; then # Fixed height
+        if [ "true" == "$AUTO_CROP" -a $RAW_IMAGE_ROWS -gt $IMAGE_COUNT ]; then
+            RAW_IMAGE_ROWS=$IMAGE_COUNT
+        fi
+        RAW_IMAGE_COLS=$((IMAGE_COUNT/RAW_IMAGE_ROWS))
+        if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
+            RAW_IMAGE_COLS=$(( RAW_IMAGE_COLS+1 ))
+        fi
+    else
+        local RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
+        local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
+        
+        local RAW_TILES_PER_CANVAS_ELEMENT=$(( IMAGE_COUNT*RAW_W*RAW_H/(CANVAS_ASPECT_W*CANVAS_ASPECT_H) ))
+        local CANVAS_ELEMENT_SIDE=`echo "sqrt($RAW_TILES_PER_CANVAS_ELEMENT)" | bc`
+        if [ $CANVAS_ELEMENT_SIDE -eq 0 ]; then
+            local CANVAS_ELEMENT_SIDE=1
+        fi
+        if [ $(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W )) -lt $CANVAS_ELEMENT_SIDE ]; then
+            local CANVAS_ELEMENT_SIDE=$(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W + RAW_W ))
+        fi
+        RAW_IMAGE_COLS=$((CANVAS_ELEMENT_SIDE*CANVAS_ASPECT_W/RAW_W))
+        if [ $RAW_IMAGE_COLS -eq 0 ]; then
+            RAW_IMAGE_COLS=1
+        fi
+        RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
+        if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
+            RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
+        fi
     fi
-    if [ $(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W )) -lt $CANVAS_ELEMENT_SIDE ]; then
-        CANVAS_ELEMENT_SIDE=$(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W + RAW_W ))
-    fi
-    RAW_IMAGE_COLS=$((CANVAS_ELEMENT_SIDE*CANVAS_ASPECT_W/RAW_W))
-    if [ $RAW_IMAGE_COLS -eq 0 ]; then
-        RAW_IMAGE_COLS=1
-    fi
-    RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
-    if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
-        RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
-    fi
+
     CANVAS_PIXEL_W=$((RAW_IMAGE_COLS*RAW_W*TILE_SIDE))
     CANVAS_PIXEL_H=$((RAW_IMAGE_ROWS*RAW_H*TILE_SIDE))
     if [ $CANVAS_PIXEL_W -lt $CANVAS_PIXEL_H ]; then
