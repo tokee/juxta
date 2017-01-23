@@ -48,6 +48,14 @@ fi
 # Note that this is not guaranteed to be exact.
 : ${CANVAS_ASPECT_W:=1}
 : ${CANVAS_ASPECT_H:=1}
+# If true, structures are provided for resolving the source image belonging to the
+# tiles that are hovered
+: ${INCLUDE_ORIGIN:=true}
+# If true, a JavaScript-array for the meta-data in the image list will be created.
+# This can be used to display image.specific information.
+# Meta-data is specified on the image list by extending entries with |<meta>
+# Sample: myfolder/myimage.jpg|My meta-data
+: ${INCLUDE_META:=true}
 
 # Controls log level
 : ${VERBOSE:=true}
@@ -297,6 +305,7 @@ create_image_map() {
     echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
     echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
 
+    # Derive shared pre- and post-fix for all images for light image compression
     local BASELINE="`cat $DEST/imagelist.dat | head -n 1 | cut -d'|' -f1`"
     local LENGTH=${#BASELINE} 
     local PRE=$LENGTH
@@ -335,25 +344,27 @@ create_image_map() {
     echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
     echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
 
-    # All the images
-    echo "var juxtaImages=[" >> $DEST/imagemap.js
-    local FIRST=false
-    while read IMAGE; do
-        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
-        if [ "false" == "$FIRST" ]; then
-            local FIRST=true
-        else
-            echo ","  >> $DEST/imagemap.js
-        fi
-        local ILENGTH=${#IPATH}
+    # Use the shared pre- and post-fixes to build a lightly compressed image list
+    if [ "true" == "$INCLUDE_ORIGIN" ]; then
+        echo "var juxtaImages=[" >> $DEST/imagemap.js
+        local FIRST=false
+        while read IMAGE; do
+            local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+            if [ "false" == "$FIRST" ]; then
+                local FIRST=true
+            else
+                echo ","  >> $DEST/imagemap.js
+            fi
+            local ILENGTH=${#IPATH}
         local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
         echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
-    done < $DEST/imagelist.dat
-    echo "];" >> $DEST/imagemap.js
-
-    # And their meta data (if available)
-    if [ "true" == "$ANY_META" ]; then
+        done < $DEST/imagelist.dat
+        echo "];" >> $DEST/imagemap.js
+    fi
+    
+    # Meta-data are added directly (if available & enabled)
+    if [ "true" == "$INCLUDE_META" -a "true" == "$ANY_META" ]; then
         echo "var juxtaMeta=[" >> $DEST/imagemap.js
         local FIRST=false
         while read IMAGE; do
@@ -375,12 +386,13 @@ var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, im
 
 function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
   var image = "";
-  var meta = "";
   var validPos = false;
   imageIndex = y*juxtaColCount+x;
   if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && imageIndex < juxtaImageCount) {
-    image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
     validPos = true;
+    if (typeof(juxtaImages) != 'undefined') {
+      image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
+    }
     if (typeof(juxtaMeta) != 'undefined') {
       meta = juxtaMeta[imageIndex];
     }

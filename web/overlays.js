@@ -43,20 +43,22 @@ myDragon.addHandler('open', function() {
     tracker.setTracking(true);  
 });
 
-var createHeader = function(image, meta) {
-  return image;
+var createHeader = function(x, y, image, meta) {
+    return image == "" ? '(' + x + ', ' + y + ')' : image;
 }
-
-var createFooter = function(image, meta) {
+var createFooter = function(x, y, image, meta) {
   return meta;
 }
 
-var showFooter = function(image, meta) {
+var showFullInfo = function(boxWidth, boxHeight) {
+    return boxWidth >= 150;
+}
+var showFooter = function(x, y, image, meta) {
     return (typeof(juxtaMeta) != 'undefined');
 }
 
 juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
-  var sf = showFooter(image, meta);
+  var sf = showFooter(x, y, image, meta);
   if (validPos) {
     infobox.style.visibility='visible';
 
@@ -67,14 +69,14 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
 
     header.style.width = (boxWidth-16) + 'px';
     header.style.height = '1em';
-    header.innerHTML= createHeader(image, meta);
+      header.innerHTML= createHeader(x, y, image, meta);
     header.style.left = boxX + 'px';
     header.style.top = (boxY-header.clientHeight) + 'px';
 
     footer.style.left = boxX + 'px';
     footer.style.top = (boxY+boxHeight) + 'px';
     footer.style.width = (boxWidth-32) + 'px';
-    footer.innerHTML = createFooter(image, meta);
+      footer.innerHTML = createFooter(x, y, image, meta);
     if (sf) {
         infobox.style.borderBottom = 'none';
         infobox.borderBottomLeftRadius = '0';
@@ -85,7 +87,7 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
         infobox.borderBottomLeftRadius = '10px';
         infobox.borderBottomRightRadius = '10px';
     }
-    if ( boxWidth < 200 ) {
+      if ( !showFullInfo(boxWidth, boxHeight) ) {
 //      header.style.pointerEvents = 'none';
       header.style.visibility = 'hidden';
       footer.style.visibility = 'hidden';
