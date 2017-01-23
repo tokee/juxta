@@ -420,21 +420,27 @@ usage() {
     exit $1
 }
 
-create_image_list() {
-    BATCH=`mktemp`
-    echo "  - Preparing image list"
+sanitize_input() {
+    if [ -z "$1" ]; then
+        usage
+    fi
+    IMAGE_LIST="$1"
+    if [ ! -s $IMAGE_LIST ]; then
+        >&2 echo "Error: Unable to access imagelist '$IMAGE_LIST'"
+        usage 1
+    fi
+
+    echo "  - Verifying images availability"
     mkdir -p $DEST
-    COL=0
-    ROW=0
-    ICOUNTER=1
+    local ICOUNTER=1
     echo -n "" > $DEST/imagelist.dat
     while read IMAGE; do
         if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
             continue
         fi
         # Slow due to system call
-        IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-        IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
         if [ ! -s "$IPATH" ]; then
             if [ "true" == "$IGNORE_MISSING" ]; then
                 echo "  - Skipping unavailable image '$IPATH'"
@@ -444,15 +450,27 @@ create_image_list() {
                 exit 2
             fi
         fi
-        echo "$ICOUNTER $COL $ROW $IPATH" >> $BATCH
         echo "$IMAGE" >> $DEST/imagelist.dat
+        echo "$IPATH" >> $DEST/imagelist_onlyimages.dat
+        ICOUNTER=$(( ICOUNTER+1 ))
+    done < $IMAGE_LIST
+}
+
+prepare_batch() {
+    BATCH=`mktemp`
+    echo "  - Preparing batch job"
+    COL=0
+    ROW=0
+    ICOUNTER=1
+    while read IMAGE; do
+        echo "$ICOUNTER $COL $ROW $IMAGE" >> $BATCH
         ICOUNTER=$(( ICOUNTER+1 ))
         COL=$(( COL+1 ))
         if [ $COL -eq $RAW_IMAGE_COLS ]; then
             COL=0
             ROW=$(( ROW+1 ))
         fi
-    done < $IMAGE_LIST
+    done < $DEST/imagelist_onlyimages.dat
 
     if [ ! $COL -eq 0 ]; then
         RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
@@ -464,18 +482,11 @@ create_image_list() {
 }
 
 START_TIME=`date +%Y%m%d-%H%M`
-if [ -z "$1" ]; then
-    usage
-fi
-IMAGE_LIST="$1"
-if [ ! -s $IMAGE_LIST ]; then
-    >&2 echo "Error: Unable to access imagelist '$IMAGE_LIST'"
-    usage 1
-fi
+sanitize_input $@
 resolve_dimensions
 echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 set_converter
-create_image_list
+prepare_batch
 create_image_map
 create_html
 
