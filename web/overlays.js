@@ -69,7 +69,7 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
 
     header.style.width = (boxWidth-16) + 'px';
     header.style.height = '1em';
-      header.innerHTML= createHeader(x, y, image, meta);
+    header.innerHTML= createHeader(x, y, image, meta);
     header.style.left = boxX + 'px';
     header.style.top = (boxY-header.clientHeight) + 'px';
 
