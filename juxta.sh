@@ -254,7 +254,7 @@ create_html() {
     pushd $DEST > /dev/null
     TILE_SOURCE=$(basename `pwd`)
     popd > /dev/null
-    HTML=$DEST/../${TILE_SOURCE}.html
+    HTML=$DEST/index.html
     TOTAL_IMAGES=`cat $DEST/imagelist.dat | wc -l`
     
     mkdir -p $TILE_SOURCE/resources/images
