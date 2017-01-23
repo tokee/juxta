@@ -457,7 +457,8 @@ create_image_list() {
     if [ ! $COL -eq 0 ]; then
         RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
         for MISSING_COL in `seq $COL $RAW_IMAGE_MAX_COL`; do
-            echo "$MISSING_COL $ROW missing" >> $BATCH
+            echo "$ICOUNTER $MISSING_COL $ROW missing" >> $BATCH
+            ICOUNTER=$(( ICOUNTER+1 ))
         done
     fi
 }
