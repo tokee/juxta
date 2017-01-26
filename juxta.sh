@@ -56,6 +56,23 @@ fi
 # Meta-data is specified on the image list by extending entries with |<meta>
 # Sample: myfolder/myimage.jpg|My meta-data
 : ${INCLUDE_META:=true}
+# If 'dzi', image tiles are stored in folders fully compatible with DZI, directly usable
+# OpenSeadragon and similar. This is highly recommended as long as the number of tiles
+# making up the collage is "low" (think 10K and below). When the number of tiles gets
+# "high", some file systems experience performance problems.
+# If 'limit', a custom layout is used where the number of tiles in a single folder is
+# kept at a level that ensures fine performance by common file systems. This layout is
+# not dzi-compatible and requires a custom tile-provider for OpenSeadragon (automatically
+# generated for the demo page). Using 'limit' with 10K tiles or less has no performance
+# benefits.
+# If 'auto', juxta uses dzi, unless the tile-count exceeds $AUTO_FOLDER_LIMIT, in which
+# case it uses 'high'. The AUTO_FOLDER_LIMIT is intentionally high (1M) to promote
+# standard layout. A more performance-oriented choice would be 100K.
+: ${FOLDER_LAYOUT:=auto}
+: ${AUTO_FOLDER_LIMIT:=1000000}
+# The approximate maximum number of elements in the tile folders if the folder layout is
+# set to 'limit'. Depending on total tile-count, this might lead to multiple sub-folders.
+: ${AUTO_FOLDER_ELEMENTS:=1000}
 
 # Controls log level
 : ${VERBOSE:=true}
@@ -126,6 +143,11 @@ function ctemplate() {
     echo 'END_OF_TEXT'       >> $TMP
     . $TMP
     rm $TMP
+}
+
+# Input: Root, zoom level, raw_x, raw_y
+get_tile_folder() {
+    if [ "dzi"
 }
 
 process_base() {
@@ -490,8 +512,46 @@ sanitize_input() {
         fi
         echo "$IMAGE" >> $DEST/imagelist.dat
         echo "$IPATH" >> $DEST/imagelist_onlyimages.dat
-        ICOUNTER=$(( ICOUNTER+1 ))
+        local ICOUNTER=$(( ICOUNTER+1 ))
     done < $IMAGE_LIST
+
+    local TILE_COUNT=$((ICOUNTER*RAW_W*RAW_H))
+    if [ "auto" == "$FOLDER_LAYOUT" ]; then
+        if [ $TILE_COUNT -le $AUTO_FOLDER_LIMIT ]; then
+            echo "  - Auto-selecting FOLDER_LAYOUT=dzi with expected ${TILE_COUNT} base tiles from $ICOUNTER images"
+            FOLDER_LAYOUT="dzi"
+        else
+            echo "  - Auto-selecting FOLDER_LAYOUT=limit with expected ${TILE_COUNT} base tiles from $ICOUNTER images"
+            FOLDER_LAYOUT="limit"
+        fi
+    elif [ "dzi" == "$FOLDER_LAYOUT" ]; then
+        echo "  - Using folder layout 'dzi' with expected ${TILE_COUNT} base tiles from $ICOUNTER images"
+        if [ $TILE_COUNT -gt $AUTO_FOLDER_LIMIT ]; then
+            echo "    - Warning: This is a high tile count. Consider using the custom layout 'limit' with FOLDER_LAYOUT=limit for performance reasons"
+        fi
+    elif [ "limit" == "$FOLDER_LAYOUT" ]; then
+        echo "  - Using folder layout 'limit' with expected ${TILE_COUNT} base tiles from $ICOUNTER images"
+        if [ $TILE_COUNT -le $AUTO_FOLDER_LIMIT ]; then
+            echo "    - Warning: This is not an excessively high tile count. Consider using the DZI-compatible layout with FOLDER_LAYOUT=dzi for compatibility reasons"
+        fi
+    fi
+
+    # Determine the number of sub-folders
+    if [ "limit" == "$FOLDER_LAYOUT" ]; then
+        FOLDERS_LEVELS=1
+        local MAX=$AUTO_FOLDER_ELEMENTS
+        while [ $MAX -gt $TILE_COUNT ]; do
+            FOLDER_LEVELS=$(( FOLDER_LEVELS+1 ))
+            MAX=$(( MAX*MAX ))
+        done
+        FOLDER_MODULO=$(( AUTO_FOLDER_ELEMENTS/(RAW_W*RAW_H) ))
+        if [ FOLDER_MODULO -le 1 ]; then
+            FOLDER_MODULO=2
+        fi
+        
+        export FOLDER_MODULO
+        export FOLDER_LEVELS
+    fi
 }
 
 prepare_batch() {
@@ -552,3 +612,4 @@ create_zoom_levels $MAX_ZOOM
 
 rm $BATCH
 echo "Finished montaging ${IMAGE_COUNT} images `date +%Y%m%d-%H%M` (process began ${START_TIME})"
+echo "Sample page available at $HTML"
