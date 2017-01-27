@@ -37,10 +37,25 @@ fi
 # Possible values are NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
 : ${RAW_GRAVITY:=center}
 
+# If either of these are defines, a fixed width or height layout is used
+# If none are defined, the canvas aspect is used
+# If both are defined, the ROWS is ignored
+: ${RAW_IMAGE_COLS:=$COLS}
+: ${RAW_IMAGE_ROWS:=$ROWS}
+# If true, the special case ROWS=1 or COLS=1 are handled so no empty tiles are created
+: ${AUTO_CROP:=true}
 # The preferable aspect ratio of the virtual canvas.
 # Note that this is not guaranteed to be exact.
 : ${CANVAS_ASPECT_W:=1}
 : ${CANVAS_ASPECT_H:=1}
+# If true, structures are provided for resolving the source image belonging to the
+# tiles that are hovered
+: ${INCLUDE_ORIGIN:=true}
+# If true, a JavaScript-array for the meta-data in the image list will be created.
+# This can be used to display image.specific information.
+# Meta-data is specified on the image list by extending entries with |<meta>
+# Sample: myfolder/myimage.jpg|My meta-data
+: ${INCLUDE_META:=true}
 
 # Controls log level
 : ${VERBOSE:=true}
@@ -254,7 +269,7 @@ create_html() {
     pushd $DEST > /dev/null
     TILE_SOURCE=$(basename `pwd`)
     popd > /dev/null
-    HTML=$DEST/../${TILE_SOURCE}.html
+    HTML=$DEST/index.html
     TOTAL_IMAGES=`cat $DEST/imagelist.dat | wc -l`
     
     mkdir -p $TILE_SOURCE/resources/images
@@ -277,7 +292,7 @@ create_html() {
             return
         fi
     fi
-    echo "  - Generation sample page $HTML"
+    echo "  - Generating sample page $HTML"
     ctemplate "$TEMPLATE" > $HTML
 }
 
@@ -290,6 +305,7 @@ create_image_map() {
     echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
     echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
 
+    # Derive shared pre- and post-fix for all images for light image compression
     local BASELINE="`cat $DEST/imagelist.dat | head -n 1 | cut -d'|' -f1`"
     local LENGTH=${#BASELINE} 
     local PRE=$LENGTH
@@ -328,25 +344,27 @@ create_image_map() {
     echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
     echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
 
-    # All the images
-    echo "var juxtaImages=[" >> $DEST/imagemap.js
-    local FIRST=false
-    while read IMAGE; do
-        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
-        if [ "false" == "$FIRST" ]; then
-            local FIRST=true
-        else
-            echo ","  >> $DEST/imagemap.js
-        fi
-        local ILENGTH=${#IPATH}
+    # Use the shared pre- and post-fixes to build a lightly compressed image list
+    if [ "true" == "$INCLUDE_ORIGIN" ]; then
+        echo "var juxtaImages=[" >> $DEST/imagemap.js
+        local FIRST=false
+        while read IMAGE; do
+            local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+            if [ "false" == "$FIRST" ]; then
+                local FIRST=true
+            else
+                echo ","  >> $DEST/imagemap.js
+            fi
+            local ILENGTH=${#IPATH}
         local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
         echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
-    done < $DEST/imagelist.dat
-    echo "];" >> $DEST/imagemap.js
-
-    # And their meta data (if available)
-    if [ "true" == "$ANY_META" ]; then
+        done < $DEST/imagelist.dat
+        echo "];" >> $DEST/imagemap.js
+    fi
+    
+    # Meta-data are added directly (if available & enabled)
+    if [ "true" == "$INCLUDE_META" -a "true" == "$ANY_META" ]; then
         echo "var juxtaMeta=[" >> $DEST/imagemap.js
         local FIRST=false
         while read IMAGE; do
@@ -368,12 +386,13 @@ var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, im
 
 function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
   var image = "";
-  var meta = "";
   var validPos = false;
   imageIndex = y*juxtaColCount+x;
   if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && imageIndex < juxtaImageCount) {
-    image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
     validPos = true;
+    if (typeof(juxtaImages) != 'undefined') {
+      image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
+    }
     if (typeof(juxtaMeta) != 'undefined') {
       meta = juxtaMeta[imageIndex];
     }
@@ -383,92 +402,132 @@ function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
 EOF
 }
 
-if [ -z "$1" ]; then
+resolve_dimensions() {
+    IMAGE_COUNT=`cat "$DEST/imagelist_onlyimages.dat" | grep -v "^#.*" | grep -v "^$" | wc -l`
+    if [ "." != ".$RAW_IMAGE_COLS" ]; then # Fixed width
+        if [ "true" == "$AUTO_CROP" -a $RAW_IMAGE_COLS -gt $IMAGE_COUNT ]; then
+            RAW_IMAGE_COLS=$IMAGE_COUNT
+        fi
+        RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
+        if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
+            RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
+        fi
+    elif [ "." != ".$RAW_IMAGE_ROWS" ]; then # Fixed height
+        if [ "true" == "$AUTO_CROP" -a $RAW_IMAGE_ROWS -gt $IMAGE_COUNT ]; then
+            RAW_IMAGE_ROWS=$IMAGE_COUNT
+        fi
+        RAW_IMAGE_COLS=$((IMAGE_COUNT/RAW_IMAGE_ROWS))
+        if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
+            RAW_IMAGE_COLS=$(( RAW_IMAGE_COLS+1 ))
+        fi
+    else
+        local RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
+        local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
+        
+        local RAW_TILES_PER_CANVAS_ELEMENT=$(( IMAGE_COUNT*RAW_W*RAW_H/(CANVAS_ASPECT_W*CANVAS_ASPECT_H) ))
+        local CANVAS_ELEMENT_SIDE=`echo "sqrt($RAW_TILES_PER_CANVAS_ELEMENT)" | bc`
+        if [ $CANVAS_ELEMENT_SIDE -eq 0 ]; then
+            local CANVAS_ELEMENT_SIDE=1
+        fi
+        if [ $(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W )) -lt $CANVAS_ELEMENT_SIDE ]; then
+            local CANVAS_ELEMENT_SIDE=$(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W + RAW_W ))
+        fi
+        RAW_IMAGE_COLS=$((CANVAS_ELEMENT_SIDE*CANVAS_ASPECT_W/RAW_W))
+        if [ $RAW_IMAGE_COLS -eq 0 ]; then
+            RAW_IMAGE_COLS=1
+        fi
+        RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
+        if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
+            RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
+        fi
+    fi
+
+    CANVAS_PIXEL_W=$((RAW_IMAGE_COLS*RAW_W*TILE_SIDE))
+    CANVAS_PIXEL_H=$((RAW_IMAGE_ROWS*RAW_H*TILE_SIDE))
+    if [ $CANVAS_PIXEL_W -lt $CANVAS_PIXEL_H ]; then
+        MAX_ZOOM=`log2 $CANVAS_PIXEL_H`
+    else
+        MAX_ZOOM=`log2 $CANVAS_PIXEL_W`
+    fi
+}
+
+usage() {
     echo "Usage: ./juxta.sh imagelist [destination]"
     echo "imagelist: A file with images represented as file paths"
     echo "destination: Where to store the generated tiles"
-    exit
-fi
-IMAGE_LIST="$1"
-if [ ! -s $IMAGE_LIST ]; then
-    >&2 echo "Error: Unable to access imagelist '$IMAGE_LIST'"
-    exit 1
-fi
+    exit $1
+}
 
-IMAGE_COUNT=`cat "$IMAGE_LIST" | grep -v "^#.*" | grep -v "^$" | wc -l`
-RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
-RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
+sanitize_input() {
+    if [ -z "$1" ]; then
+        usage
+    fi
+    IMAGE_LIST="$1"
+    if [ ! -s $IMAGE_LIST ]; then
+        >&2 echo "Error: Unable to access imagelist '$IMAGE_LIST'"
+        usage 1
+    fi
 
-RAW_TILES_PER_CANVAS_ELEMENT=$(( IMAGE_COUNT*RAW_W*RAW_H/(CANVAS_ASPECT_W*CANVAS_ASPECT_H) ))
-CANVAS_ELEMENT_SIDE=`echo "sqrt($RAW_TILES_PER_CANVAS_ELEMENT)" | bc`
-if [ $CANVAS_ELEMENT_SIDE -eq 0 ]; then
-    CANVAS_ELEMENT_SIDE=1
-fi
-if [ $(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W )) -lt $CANVAS_ELEMENT_SIDE ]; then
-    CANVAS_ELEMENT_SIDE=$(( CANVAS_ELEMENT_SIDE / RAW_W * RAW_W + RAW_W ))
-fi
-RAW_IMAGE_COLS=$((CANVAS_ELEMENT_SIDE*CANVAS_ASPECT_W/RAW_W))
-if [ $RAW_IMAGE_COLS -eq 0 ]; then
-    RAW_IMAGE_COLS=1
-fi
-RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
-if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt $IMAGE_COUNT ]; then
-    RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
-fi
-CANVAS_PIXEL_W=$((RAW_IMAGE_COLS*RAW_W*TILE_SIDE))
-CANVAS_PIXEL_H=$((RAW_IMAGE_ROWS*RAW_H*TILE_SIDE))
-if [ $CANVAS_PIXEL_W -lt $CANVAS_PIXEL_H ]; then
-    MAX_ZOOM=`log2 $CANVAS_PIXEL_H`
-else
-    MAX_ZOOM=`log2 $CANVAS_PIXEL_W`
-fi
+    echo "  - Verifying images availability"
+    mkdir -p $DEST
+    local ICOUNTER=1
+    echo -n "" > $DEST/imagelist.dat
+    while read IMAGE; do
+        if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
+            continue
+        fi
+        # Slow due to system call
+        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+        if [ ! -s "$IPATH" ]; then
+            if [ "true" == "$IGNORE_MISSING" ]; then
+                echo "  - Skipping unavailable image '$IPATH'"
+                continue
+            else
+                >&2 echo "Error: The image '$IPATH' from imagelist '$IMAGE_LIST' does not exist"
+                exit 2
+            fi
+        fi
+        echo "$IMAGE" >> $DEST/imagelist.dat
+        echo "$IPATH" >> $DEST/imagelist_onlyimages.dat
+        ICOUNTER=$(( ICOUNTER+1 ))
+    done < $IMAGE_LIST
+}
+
+prepare_batch() {
+    BATCH=`mktemp`
+    echo "  - Preparing batch job"
+    COL=0
+    ROW=0
+    ICOUNTER=1
+    while read IMAGE; do
+        echo "$ICOUNTER $COL $ROW $IMAGE" >> $BATCH
+        ICOUNTER=$(( ICOUNTER+1 ))
+        COL=$(( COL+1 ))
+        if [ $COL -eq $RAW_IMAGE_COLS ]; then
+            COL=0
+            ROW=$(( ROW+1 ))
+        fi
+    done < $DEST/imagelist_onlyimages.dat
+
+    if [ ! $COL -eq 0 ]; then
+        RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
+        for MISSING_COL in `seq $COL $RAW_IMAGE_MAX_COL`; do
+            echo "$ICOUNTER $MISSING_COL $ROW missing" >> $BATCH
+            ICOUNTER=$(( ICOUNTER+1 ))
+        done
+    fi
+}
 
 START_TIME=`date +%Y%m%d-%H%M`
+sanitize_input $@
+resolve_dimensions
 echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 set_converter
-BATCH=`mktemp`
-
-echo "  - Preparing image list"
-mkdir -p $DEST
-COL=0
-ROW=0
-ICOUNTER=1
-echo -n "" > $DEST/imagelist.dat
-while read IMAGE; do
-    if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
-        continue
-    fi
-    # Slow due to system call
-    IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-    IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
-    if [ ! -s "$IPATH" ]; then
-        if [ "true" == "$IGNORE_MISSING" ]; then
-            echo "  - Skipping unavailable image '$IPATH'"
-            continue
-        else
-            >&2 echo "Error: The image '$IPATH' from imagelist '$IMAGE_LIST' does not exist"
-            exit 2
-        fi
-    fi
-    echo "$ICOUNTER $COL $ROW $IPATH" >> $BATCH
-    echo "$IMAGE" >> $DEST/imagelist.dat
-    ICOUNTER=$(( ICOUNTER+1 ))
-    COL=$(( COL+1 ))
-    if [ $COL -eq $RAW_IMAGE_COLS ]; then
-        COL=0
-        ROW=$(( ROW+1 ))
-    fi
-done < $IMAGE_LIST
-
-if [ ! $COL -eq 0 ]; then
-    RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
-    for MISSING_COL in `seq $COL $RAW_IMAGE_MAX_COL`; do
-        echo "$MISSING_COL $ROW missing" >> $BATCH
-    done
-fi
+prepare_batch
 create_image_map
+create_html
 
-echo "  - Creating base zoom level $MAX_ZOOM"
 export RAW_W
 export RAW_H
 export RAW_GRAVITY
@@ -486,10 +545,10 @@ export IMAGE_COUNT
 if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
+    echo "  - Creating base zoom level $MAX_ZOOM"
     cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
 fi
 create_zoom_levels $MAX_ZOOM
-create_html
 
 rm $BATCH
 echo "Finished montaging ${IMAGE_COUNT} images `date +%Y%m%d-%H%M` (process began ${START_TIME})"
