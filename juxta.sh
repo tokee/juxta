@@ -374,7 +374,9 @@ create_image_map() {
             else
                 echo ","  >> $DEST/imagemap.js
             fi
-        echo -n "\"${IMETA}\"" >> $DEST/imagemap.js
+            echo -n "\"" >> $DEST/imagemap.js
+            echo -n "${IMETA}" | sed -e 's/&/&amp;/g' -e 's/"/\&quot;/g'  >> $DEST/imagemap.js
+            echo -n "\"" >> $DEST/imagemap.js
         done < $DEST/imagelist.dat
         echo "];" >> $DEST/imagemap.js
     fi
@@ -385,6 +387,7 @@ create_image_map() {
 var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) { }
 
 function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
+  var meta="";
   var image = "";
   var validPos = false;
   imageIndex = y*juxtaColCount+x;
