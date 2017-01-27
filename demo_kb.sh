@@ -53,8 +53,8 @@ download_collection() {
     local PAGE=1
     rm -f downloads/$COLLECTION/sources.dat
     while [ $(( (PAGE-1)*PAGE_SIZE )) -lt $MAX_IMAGES ]; do
-        echo "  - Fetching page $PAGE"
         local URL="${SEARCH_URL_PREFIX}page=${PAGE}&subject=${SUBJECT_ID}"
+        echo "  - Fetching page ${PAGE}: $URL"
         curl -s -m 60 "$URL" | xmllint --format - > $T
         local HITS=$( cat $T | grep totalResults | sed 's/.\+>\([0-9]\+\)<.*/\1/' )
         IFS=$'\n'
@@ -80,6 +80,7 @@ download_collection() {
         fi
         PAGE=$(( PAGE+1 ))
     done
+    rm $T
 }
 
 if [ "list" == "$COMMAND" ]; then
