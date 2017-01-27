@@ -48,3 +48,10 @@ A collection of small clip art images could be
 find myimages -iname "*.png" -o -iname "*.gif" > clipart.dat
 BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.dat mycollage
 ```
+
+## Demos
+The script ./demo_kb.sh fetches openly available images from kb.dk and generates a collage
+with linkback to the image pages at kb.dk. Sample run of the script:
+```
+MAX_IMAGES=100 ./demo_kb.sh create subject2109
+```

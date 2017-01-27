@@ -1,0 +1,60 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>KB billedsamling</title>
+    <link rel="stylesheet" type="text/css" href="resources/juxta.css" />
+    <script src="imagemap.js"></script>
+    <script src="resources/openseadragon.min.js"></script>
+    <!-- Kontaktperson: toes@kb.dk -->
+</head>
+
+<body>
+<h1>KB billedsamling</h1>
+<p>Proof of concept for præsentation af billeder fra <a href="http://www.kb.dk/maps/kortsa/2012/jul/kortatlas/da/">Det Kgl. Bibliotek</a>. Kun til intern brug på Det Kgl. Bibliotek.</p>
+
+<div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
+
+<script type="text/javascript">
+  var myDragon = OpenSeadragon({
+    id:            "zoom-display",
+
+    zoomPerScroll: 2.0,    
+    showNavigator:  false,
+    wrapHorizontal: false,
+    prefixUrl: "resources/images/",
+    tileSources:   {
+        Image: { 
+           xmlns:    "http://schemas.microsoft.com/deepzoom/2008",
+            Url:      "",
+            Format:   "$TILE_FORMAT", 
+            Overlap:  "0", 
+            TileSize: "$TILE_SIDE",
+            Size: {
+                Width: "$CANVAS_PIXEL_W",
+                Height:  "$CANVAS_PIXEL_H"
+            }
+        }
+    }
+  });
+</script>
+
+<p>Generated `date +"%Y-%m-%d %H:%M"`</p>
+
+<!-- Must be below the creation of myDragon -->
+<script type="text/javascript" src="resources/overlays.js"></script>
+<script type="text/javascript">
+createHeader = function(x, y, image, meta) {
+  imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
+  imageLink = meta.split("§")[0];
+  linkText = meta.split("§")[1];
+  return '<a href="' + imageLink + '">' + linkText + '</a>';
+}
+
+var createFooter = function(x, y, image, meta) {
+  return meta.split("§")[2];
+}
+</script>
+</body>
+</html>
