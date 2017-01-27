@@ -55,6 +55,10 @@ var showFooter = function(image, meta) {
     return (typeof(juxtaMeta) != 'undefined');
 }
 
+var showBox = function(x, y, boxWidth, boxHeight) {
+    return boxWidth > 150;
+}
+
 juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
   var sf = showFooter(image, meta);
   if (validPos) {
@@ -85,7 +89,7 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
         infobox.borderBottomLeftRadius = '10px';
         infobox.borderBottomRightRadius = '10px';
     }
-    if ( boxWidth < 200 ) {
+      if ( !showBox(x, y, boxWidth, boxHeight) ) {
 //      header.style.pointerEvents = 'none';
       header.style.visibility = 'hidden';
       footer.style.visibility = 'hidden';
