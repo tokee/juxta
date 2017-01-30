@@ -61,6 +61,7 @@ fi
 : ${ASYNC_META_SIDE:=50}
 # The number of meta-data-chunks to keep cached in the browser.
 : ${ASYNC_META_CACHE:=10}
+# TODO: ${INCLUDE_ORIGIN_IN_META:=true}
 
 # Controls log level
 : ${VERBOSE:=true}
