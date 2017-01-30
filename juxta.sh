@@ -56,6 +56,11 @@ fi
 # Meta-data is specified on the image list by extending entries with |<meta>
 # Sample: myfolder/myimage.jpg|My meta-data
 : ${INCLUDE_META:=true}
+# Meta-data are resolved using async calls for arrays. To avoid flooding the server,
+# they are stored in chunks, where each chunk contains ASYNC_META_SIDE^2 entries.
+: ${ASYNC_META_SIDE:=50}
+# The number of meta-data-chunks to keep cached in the browser.
+: ${ASYNC_META_CACHE:=10}
 
 # Controls log level
 : ${VERBOSE:=true}
@@ -380,29 +385,6 @@ create_image_map() {
         done < $DEST/imagelist.dat
         echo "];" >> $DEST/imagemap.js
     fi
-
-    # functions to use the data
-    cat  >> $DEST/imagemap.js <<EOF
-// Override juxtaCallback to perform custom action
-var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) { }
-
-function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
-  var meta="";
-  var image = "";
-  var validPos = false;
-  imageIndex = y*juxtaColCount+x;
-  if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && imageIndex < juxtaImageCount) {
-    validPos = true;
-    if (typeof(juxtaImages) != 'undefined') {
-      image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
-    }
-    if (typeof(juxtaMeta) != 'undefined') {
-      meta = juxtaMeta[imageIndex];
-    }
-  }
-  juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
-}
-EOF
 }
 
 resolve_dimensions() {
