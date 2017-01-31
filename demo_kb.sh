@@ -10,6 +10,8 @@
 # http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/subject2109/en/?itemsPerPage=5
 : ${SEARCH_URL_PREFIX:="http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/"}
 : ${SEARCH_URL_INFIX:="/${KB_LANGUAGE}/?itemsPerPage=$PAGE_SIZE&orderBy=notBefore&"}
+# Valid values are 'intensity' and 'none'
+: ${IMAGE_SORT:="intensity"}
 
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
@@ -91,6 +93,7 @@ download_collection() {
         PAGE=$(( PAGE+1 ))
     done
     rm $T
+    ./intensity_sort.sh downloads/$COLLECTION/sources.dat downloads/$COLLECTION/sources_intensity.dat
 }
 
 if [ "list" == "$COMMAND" ]; then
@@ -99,4 +102,9 @@ if [ "list" == "$COMMAND" ]; then
 fi
 
 download_collection
-BACKGROUND=000000 ROW_W=4 ROW_H=4 TEMPLATE=demo_kb.template.html ./juxta.sh downloads/$COLLECTION/sources.dat $COLLECTION
+if [ "intensity" == "$IMAGE_SORT" ]; then
+    SORTED_SOURCE="downloads/$COLLECTION/sources.dat"
+else
+    SORTED_SOURCE="downloads/$COLLECTION/sources_intensity.dat"
+fi
+BACKGROUND=000000 ROW_W=4 ROW_H=4 TEMPLATE=demo_kb.template.html ./juxta.sh $SORTED_SOURCE $COLLECTION
