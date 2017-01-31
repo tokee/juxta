@@ -62,3 +62,26 @@ Scale testing can be done with ./demo_scale.sh. Sample runs:
 MAX_IMAGES=100 ./demo_scale.sh
 RAW_W=1 RAW_H=1 MAX_IMAGES=1000 ./demo_scale.sh
 ```
+
+## Custom million-images collage with links
+1. Download the images to a local folder
+2. Create a file `myimages.dat` with the images listed in the wanted order.
+
+   Each line in the file holds one image and optional meta-data divided by `|`. In this example, the meta-data are links to the original image. Example line: `myimages/someimage_25232.png|http://example.com/someimage_23232.png`  
+3. Create a template `mytemplate.html` with a JavaScript snippet for generating a link.
+
+   The template `demo_kb.template.html` can be used as a starting point. Override either of `createHeader` and `createFooter`. In this example, it could be  
+   
+   ```
+createHeader = function(x, y, image, meta) {
+  imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
+  return '<a href="' + meta + '">' + imageID + '</a>';
+}
+showFooter(x, y, image, meta) {
+  return false;
+}
+```
+4. Determine the aspect ratio and implicitly the size of the images making up the collage using `RAW_W` and `RAW_H`
+5. Start juxta: `RAW_W=2 RAW_H=2 TEMPLATE=mytemplate.html ./juxta.sh myimages.dat mycollage`
+
+   It is of course advisable to start with a few hundred images to see that everything works as intended.  
