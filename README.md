@@ -2,7 +2,7 @@
 Generates a collage of a given set of images, for display on a webpage using the deep zoom tool OpenSeadragon.
 Each source image can have associated meta-data, which is displayed on mouse-over.
 
-Demo at https://tokee.github.io/juxta/
+Demo at https://tokee.github.io/juxta/demo/
 
 ## Technical notes
 juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel image file. The tile generation is threaded and localized to the individual source images. This means that memory overhead is independent of the total collage size. The difference between generating a collage of 10 vs. 10 million images is only CPU time. Associated meta-data are stored in chunks and only requested on mouse-over, keeping browser page-open time and memory requirements independent of collage size.
