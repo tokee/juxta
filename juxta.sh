@@ -572,3 +572,4 @@ create_zoom_levels $MAX_ZOOM
 
 rm $BATCH
 echo "Finished montaging ${IMAGE_COUNT} images `date +%Y%m%d-%H%M` (process began ${START_TIME})"
+echo "Sample page available at $HTML"
