@@ -323,9 +323,9 @@ create_meta_files() {
             IFS=$'|' TOKENS=($IMAGE)
             local IMETA=${TOKENS[1]}
             # Use bash replace instead
-            local IMETA="`echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
             unset IFS
         fi
+        local IMETA="`echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
         local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
         if [ ! -s $DM ]; then
             echo -n "{\"meta\": ["$'\n'"\"$IMETA\"" >> $DM
@@ -491,7 +491,7 @@ sanitize_input() {
     echo "  - Verifying images availability"
     mkdir -p $DEST
     local ICOUNTER=1
-    echo -n "" > $DEST/imagelist.dat
+    rm -rf $DEST/imagelist.dat $DEST/imagelist_onlyimages.dat
     while read IMAGE; do
         if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
             continue
