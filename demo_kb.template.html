@@ -3,29 +3,30 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Juxta</title>
+    <title>Images from kb.dk - ${COLLECTION}</title>
     <link rel="stylesheet" type="text/css" href="resources/juxta.css" />
     <script src="imagemap.js"></script>
     <script src="resources/openseadragon.min.js"></script>
+    <!-- Kontaktperson: toes@kb.dk -->
 </head>
 
 <body>
-<h1>Juxta</h1>
-<p>Sample page with ${TOTAL_IMAGES} images. See <a href="https://github.com/tokee/juxta">the Juxta GitHub page</a> for details.</p>
+<h1>Images from kb.dk - ${COLLECTION}</h1>
+<p>Juxta-demo of publicly available images from <a href="http://www.kb.dk/images/billed/2010/okt/billeder/subject2109/da/">kb.dk</a>. Please see the kb.dk-pages for license information.</p>
 
-<div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer">sss</div></div>
+<div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
 
 <script type="text/javascript">
   var myDragon = OpenSeadragon({
     id:            "zoom-display",
-    
-    zoomPerScroll: 2.0,
+
+    zoomPerScroll: 2.0,    
     showNavigator:  false,
     wrapHorizontal: false,
-    prefixUrl: "$TILE_SOURCE/resources/images/",
+    prefixUrl: "resources/images/",
     tileSources:   {
-        Image: {
-            xmlns:    "http://schemas.microsoft.com/deepzoom/2008",
+        Image: { 
+           xmlns:    "http://schemas.microsoft.com/deepzoom/2008",
             Url:      "",
             Format:   "$TILE_FORMAT", 
             Overlap:  "0", 
@@ -43,5 +44,17 @@
 
 <!-- Must be below the creation of myDragon -->
 <script type="text/javascript" src="resources/overlays.js"></script>
+<script type="text/javascript">
+createHeader = function(x, y, image, meta) {
+  imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
+  imageLink = meta.split("§")[0];
+  linkText = meta.split("§")[1];
+  return '<a href="' + imageLink + '">' + linkText + '</a>';
+}
+
+var createFooter = function(x, y, image, meta) {
+  return meta.split("§")[2];
+}
+</script>
 </body>
 </html>
