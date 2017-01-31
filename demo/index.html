@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Juxta demo</title>
+    <link rel="stylesheet" type="text/css" href="resources/juxta.css" />
+    <script src="imagemap.js"></script>
+    <script src="resources/openseadragon.min.js"></script>
+</head>
+
+<body>
+<h1>Juxta</h1>
+<p>See <a href="https://github.com/tokee/juxta">the Juxta GitHub page</a> for details.</p>
+<p>Contains 280 images, represented with 4600 tile files for a total of 35MB. Generated from 5MPixel+ sources in 2 minutes using the commands</p>
+<pre>
+ls macro/*.jpg > images.lst ; RAW_IMAGE_COLS=14 BACKGROUND=F5DEB3 TILE_QUALITY=50 THREADS=4 time ./juxta.sh images.lst demo
+</pre>
+<div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer">sss</div></div>
+
+<script type="text/javascript">
+  var myDragon = OpenSeadragon({
+    id:            "zoom-display",
+    
+    zoomPerScroll: 2.0,
+    showNavigator:  false,
+    wrapHorizontal: false,
+    prefixUrl: "resources/images/",
+    tileSources:   {
+        Image: {
+            xmlns:    "http://schemas.microsoft.com/deepzoom/2008",
+            Url:      "",
+            Format:   "jpg", 
+            Overlap:  "0", 
+            TileSize: "256",
+            Size: {
+                Width: "14336",
+                Height:  "15360"
+            }
+        }
+    }
+  });
+</script>
+
+<p>Generated 2017-01-31 16:22</p>
+
+<!-- Must be below the creation of myDragon -->
+<script type="text/javascript" src="resources/overlays.js"></script>
+</body>
+</html>

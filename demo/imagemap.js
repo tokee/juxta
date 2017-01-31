@@ -1,0 +1,10 @@
+var juxtaColCount=14;
+var juxtaRowCount=21;
+var juxtaImageCount=280;
+var juxtaTileSize=256;
+var juxtaRawW=4;
+var juxtaRawH=3;
+var juxtaAsyncMetaSide=50;
+var juxtaMetaIncludesOrigin=true;
+var juxtaPrefix="macro/20";
+var juxtaPostfix=".jpg";
