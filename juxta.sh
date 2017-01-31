@@ -540,6 +540,7 @@ prepare_batch() {
     fi
 }
 
+START_S=`date +%s`
 START_TIME=`date +%Y%m%d-%H%M`
 sanitize_input $@
 resolve_dimensions
@@ -569,7 +570,12 @@ else
     cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
 fi
 create_zoom_levels $MAX_ZOOM
-
+END_S=`date +%s`
+SPEND_S=$((END_S-START_S))
 rm $BATCH
-echo "Finished montaging ${IMAGE_COUNT} images `date +%Y%m%d-%H%M` (process began ${START_TIME})"
-echo "Sample page available at $HTML"
+ICOUNT=`cat $DEST/imagelist_onlyimages.dat | wc -l`
+
+echo "Procefirefox ss started $START_TIME and ended `date +%Y%m%d-%H%M`"
+echo "juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
+echo "Average speed was $((SPEND_S/ICOUNT)) seconds/image or $((ICOUNT/SPEND_S)) images/second"
+echo "HTML-page available at $HTML"
