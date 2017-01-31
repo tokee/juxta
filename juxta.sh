@@ -129,9 +129,13 @@ function ctemplate() {
 }
 
 process_base() {
-    local IMAGE_NUMBER=`echo "$1" | cut -d\  -f1`
-    local COL=`echo "$1" | cut -d\  -f2`
-    local ROW=`echo "$1" | cut -d\  -f3`
+    local TOKENS
+    IFS=$' ' TOKENS=($1)
+    local IMAGE_NUMBER=${TOKENS[0]}
+    local COL=${TOKENS[1]}
+    local ROW=${TOKENS[2]}
+    unset IFS
+    # TODO: Use a bash-regexp instead
     local IMAGE=`echo "$1" | sed 's/[0-9]* [0-9]* [0-9]* \(.*\)/\1/'`
     local TILE_START_COL=$((COL*RAW_W))
     local TILE_START_ROW=$((ROW*RAW_H))
@@ -167,7 +171,6 @@ process_base() {
         else
             echo "    - Error: Could not create tiles from source image #${IMAGE_NUMBER}/${IMAGE_COUNT}. Using blank tiles instead. $IMAGE"
         fi
-       
         for BLC in `seq 1 $RAW_W`; do
             for BLR in `seq 1 $RAW_H`; do
                 cp "$DEST/blank.${TILE_FORMAT}" "${DEST}/${MAX_ZOOM}/$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
@@ -297,15 +300,19 @@ create_html() {
 }
 
 create_meta_files() {
+    echo "  - Creating meta files"
     rm -f $DEST/meta/*.json
     mkdir -p $DEST/meta
     local ROW=0
     local COL=0
+    local TOKENS
     while read IMAGE; do
         if [ "true" == "$INCLUDE_ORIGIN" ]; then
             if [ $PRE -gt 0 -o $POST -gt 0 ]; then
-                local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-                local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+                IFS=$'|' TOKENS=($IMAGE)
+                local IPATH=${TOKENS[0]}
+                local IMETA=${TOKENS[1]}
+                unset IFS
                 local ILENGTH=${#IPATH}
                 local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
                 local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
@@ -313,7 +320,11 @@ create_meta_files() {
                 local IMETA="$IMAGE"
             fi
         else
-            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2 | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
+            IFS=$'|' TOKENS=($IMAGE)
+            local IMETA=${TOKENS[1]}
+            # Use bash replace instead
+            local IMETA="`echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
+            unset IFS
         fi
         local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
         if [ ! -s $DM ]; then
@@ -331,7 +342,7 @@ create_meta_files() {
 }
 
 create_image_map() {
-    echo "  - Creating image map"
+    echo "  - Analyzing collection meta data"
     echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
     echo "var juxtaRowCount=$(( ROW + 1 ));" >> $DEST/imagemap.js
     echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l`;" >> $DEST/imagemap.js
@@ -349,8 +360,10 @@ create_image_map() {
     local POST_STR=$BASELINE
     local ANY_META=false
     while read IMAGE; do
-        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+        IFS=$'|' TOKENS=($IMAGE)
+        local IPATH=${TOKENS[0]}
+        local IMETA=${TOKENS[1]}
+        unset IFS
         if [ "." != ".$IMETA" ]; then
             ANY_META=true
         fi
@@ -387,8 +400,10 @@ create_image_map() {
         echo "var juxtaImages=[" >> $DEST/imagemap.js
         local FIRST=false
         while read IMAGE; do
-            local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+            IFS=$'|' TOKENS=($IMAGE)
+            local IPATH=${TOKENS[0]}
+            local IMETA=${TOKENS[1]}
+            unset IFS
             if [ "false" == "$FIRST" ]; then
                 local FIRST=true
             else
@@ -481,9 +496,10 @@ sanitize_input() {
         if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
             continue
         fi
-        # Slow due to system call
-        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+        IFS=$'|' TOKENS=($IMAGE)
+        local IPATH=${TOKENS[0]}
+        local IMETA=${TOKENS[1]}
+        unset IFS
         if [ ! -s "$IPATH" ]; then
             if [ "true" == "$IGNORE_MISSING" ]; then
                 echo "  - Skipping unavailable image '$IPATH'"
