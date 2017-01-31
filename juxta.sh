@@ -51,17 +51,11 @@ fi
 # If true, structures are provided for resolving the source image belonging to the
 # tiles that are hovered
 : ${INCLUDE_ORIGIN:=true}
-# If true, a JavaScript-array for the meta-data in the image list will be created.
-# This can be used to display image.specific information.
-# Meta-data is specified on the image list by extending entries with |<meta>
-# Sample: myfolder/myimage.jpg|My meta-data
-: ${INCLUDE_META:=true}
 # Meta-data are resolved using async calls for arrays. To avoid flooding the server,
 # they are stored in chunks, where each chunk contains ASYNC_META_SIDE^2 entries.
 : ${ASYNC_META_SIDE:=50}
 # The number of meta-data-chunks to keep cached in the browser.
 : ${ASYNC_META_CACHE:=10}
-# TODO: ${INCLUDE_ORIGIN_IN_META:=true}
 
 # Controls log level
 : ${VERBOSE:=true}
@@ -302,6 +296,40 @@ create_html() {
     ctemplate "$TEMPLATE" > $HTML
 }
 
+create_meta_files() {
+    rm -f $DEST/meta/*.json
+    mkdir -p $DEST/meta
+    local ROW=0
+    local COL=0
+    while read IMAGE; do
+        if [ "true" == "$INCLUDE_ORIGIN" ]; then
+            if [ $PRE -gt 0 -o $POST -gt 0 ]; then
+                local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
+                local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+                local ILENGTH=${#IPATH}
+                local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+                local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
+            else
+                local IMETA="$IMAGE"
+            fi
+        else
+            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2 | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
+        fi
+        local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
+        if [ ! -s $DM ]; then
+            echo -n "{\"meta\": ["$'\n'"\"$IMETA\"" >> $DM
+        else
+            echo -n ","$'\n'"\"$IMETA\"" >> $DM
+        fi
+        COL=$(( COL+1 ))
+        if [ $COL -ge $RAW_IMAGE_COLS ]; then
+            ROW=$(( ROW+1 ))
+            COL=0
+        fi
+    done < $DEST/imagelist.dat
+    find $DEST/meta/ -name "*.json" -exec bash -c "echo ']}' >> {}" \;
+}
+
 create_image_map() {
     echo "  - Creating image map"
     echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
@@ -310,12 +338,14 @@ create_image_map() {
     echo "var juxtaTileSize=$TILE_SIDE;" >> $DEST/imagemap.js
     echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
     echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
+    echo "var juxtaAsyncMetaSide=$ASYNC_META_SIDE;" >> $DEST/imagemap.js
+    echo "var juxtaMetaIncludesOrigin=$INCLUDE_ORIGIN;" >> $DEST/imagemap.js
 
     # Derive shared pre- and post-fix for all images for light image compression
     local BASELINE="`cat $DEST/imagelist.dat | head -n 1 | cut -d'|' -f1`"
     local LENGTH=${#BASELINE} 
-    local PRE=$LENGTH
-    local POST=$LENGTH
+    PRE=$LENGTH
+    POST=$LENGTH
     local POST_STR=$BASELINE
     local ANY_META=false
     while read IMAGE; do
@@ -337,7 +367,7 @@ create_image_map() {
             local POST=$(( POST-1 ))
 
             local PSTART=$(( LENGTH-POST ))
-            local POST_STR=${BASELINE:$PSTART}
+            POST_STR=${BASELINE:$PSTART}
             local CSTART=$(( CLENGTH-POST ))
         done
 
@@ -350,8 +380,10 @@ create_image_map() {
     echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
     echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
 
+    # DEPRECATED: Images are now (optionally) stored with the async meta-data
     # Use the shared pre- and post-fixes to build a lightly compressed image list
-    if [ "true" == "$INCLUDE_ORIGIN" ]; then
+    if [ "true" == "false" ]; then
+    #if [ "true" == "$INCLUDE_ORIGIN" ]; then
         echo "var juxtaImages=[" >> $DEST/imagemap.js
         local FIRST=false
         while read IMAGE; do
@@ -363,28 +395,15 @@ create_image_map() {
                 echo ","  >> $DEST/imagemap.js
             fi
             local ILENGTH=${#IPATH}
-        local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
-        echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
+            local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+            echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
         done < $DEST/imagelist.dat
         echo "];" >> $DEST/imagemap.js
     fi
     
     # Meta-data are added directly (if available & enabled)
-    if [ "true" == "$INCLUDE_META" -a "true" == "$ANY_META" ]; then
-        echo "var juxtaMeta=[" >> $DEST/imagemap.js
-        local FIRST=false
-        while read IMAGE; do
-            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
-            if [ "false" == "$FIRST" ]; then
-                local FIRST=true
-            else
-                echo ","  >> $DEST/imagemap.js
-            fi
-            echo -n "\"" >> $DEST/imagemap.js
-            echo -n "${IMETA}" | sed -e 's/&/&amp;/g' -e 's/"/\&quot;/g'  >> $DEST/imagemap.js
-            echo -n "\"" >> $DEST/imagemap.js
-        done < $DEST/imagelist.dat
-        echo "];" >> $DEST/imagemap.js
+    if [ "true" == "$INCLUDE_ORIGIN" -o "true" == "$ANY_META" ]; then
+        create_meta_files
     fi
 }
 
@@ -526,7 +545,6 @@ export TILE_FORMAT
 export TILE_QUALITY
 export VERBOSE
 export IMAGE_COUNT
-# ###
 
 if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"

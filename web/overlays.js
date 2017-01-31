@@ -54,7 +54,9 @@ var showFullInfo = function(boxWidth, boxHeight) {
     return boxWidth >= 150;
 }
 var showFooter = function(x, y, image, meta) {
-    return (typeof(juxtaMeta) != 'undefined');
+    // No longer valid
+    //return (typeof(juxtaMeta) != 'undefined');
+    return meta != "";
 }
 
 juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
@@ -111,7 +113,6 @@ juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image,
   }
 };
 
-var asyncSide = 50;
 var metaCacheMax = 10;
 var metaCache = [];
 var result = {
@@ -137,16 +138,34 @@ function tryFire() {
     if (result.fired) {
         return true
     }
-    var metaSource = Math.floor(result.x/asyncSide) + '_' + Math.floor(result.y/asyncSide) + '.json';
+    var metaSource = Math.floor(result.x/juxtaAsyncMetaSide) + '_' + Math.floor(result.y/juxtaAsyncMetaSide) + '.json';
     var arrayLength = metaCache.length;
+
+    // Determine the width of the async box (might be on the right edge)
+    var aSide = juxtaAsyncMetaSide;
+    var fullHASyncs = Math.floor(juxtaColCount/juxtaAsyncMetaSide);
+    if ( juxtaColCount%juxtaAsyncMetaSide != 0 && result.x >= fullHASyncs*juxtaAsyncMetaSide ) { // On the edge
+        aSide = juxtaColCount-fullHASyncs*juxtaAsyncMetaSide;
+    }
+    var origoX=result.x%juxtaAsyncMetaSide;
+    var origoY=result.y%juxtaAsyncMetaSide;
     for (var i = 0; i < arrayLength; i++) {
         if (metaCache[i].source == metaSource) {
             if (metaCache[i].status == 'ready') {
-                result.meta = metaCache[i].meta[(result.y%asyncSide)*asyncSide+(result.x%asyncSide)];
+                var index = origoY*aSide +origoX;
+                var full = metaCache[i].meta[index];
+                if (juxtaMetaIncludesOrigin) {
+                    result.image = juxtaPrefix + full.split('|')[0] + juxtaPostfix;
+                    // TODO: Create a better splitter that handles multiple |
+                    result.meta = full.split('|')[1];
+                } else {
+                    result.meta = full;
+                }
+//                console.log("Firing x=" + result.x + ", y=" + result.y + ", aside=" + aSide + ", index=" + index + ", meta=" + result.meta);
                 fireResult();
                 return true;
             }
-            console.log("Returning due to pending " + metaSource);
+//            console.log("Returning due to pending " + metaSource);
             // In transit, so the async call should return at some point. Note that result is set!
             // TODO: Ensure that timed out requests are handled properly
             return true;
@@ -160,7 +179,7 @@ function tryFire() {
 // is updated.
 // If there is no pending request for the block, notifyMeta is updated and a new
 // async request is initiated.
-function prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) {
+function prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos) {
     if (!validPos) {
         // TODO: Set meta to "" and fire event
         return
@@ -175,21 +194,23 @@ function prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) {
     result.boxWidth = boxWidth;
     result.boxHeight = boxHeight;
     result.validPos = validPos;
-    result.image = image;
-
+    result.image = '';
+    result.meta = '';
+    
     if (tryFire()) {
         return;
     }
 
     // Create an async call to get the meta data
-    var metaSource = Math.floor(x/asyncSide) + '_' + Math.floor(y/asyncSide) + '.json';
+    var metaSource = Math.floor(x/juxtaAsyncMetaSide) + '_' + Math.floor(y/juxtaAsyncMetaSide) + '.json';
+//    console.log("x=" + x + ", juxtaAsyncMetaSide=" + juxtaAsyncMetaSide);
     var cacheEntry = {
         status: 'pending',
         source: metaSource
     };
     metaCache.push(cacheEntry);
     if (metaCache.length > metaCacheMax) {
-        console.log("Cache full, pruning");
+//        console.log("Cache full, pruning");
         metaCache.shift();
     }
     
@@ -206,8 +227,8 @@ function prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) {
             tryFire();
 //            console.log("Check that result is still covered by this response and if so, fire it");
         } else {
-            console.log("Unable to get response for " + cacheEntry.source + " with status " + xhttp.status +
-                        ". Perhaps this is running from the file system?");
+            console.log("Unable to get response for " + cacheEntry.source + " with status " + xhttp.status);
+            // TODO: Figure out how to signal the error to the GUI - maybe "N/A" as image & meta?
             var arrayLength = metaCache.length;
             for (var i = 0; i < arrayLength; i++) {
                 if (metaCache[i].source == metaSource) {
@@ -218,7 +239,7 @@ function prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) {
         }
     }
     xhttp.cacheEntry = cacheEntry;
-    console.log("Requesting meta/" + metaSource);
+//    console.log("Requesting meta/" + metaSource);
     xhttp.open("GET", "meta/" + metaSource, true);
     xhttp.send();
 }
@@ -230,14 +251,14 @@ function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
   imageIndex = y*juxtaColCount+x;
   if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && imageIndex < juxtaImageCount) {
     validPos = true;
-    if (typeof(juxtaImages) != 'undefined') {
-      image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
-    }
+//    if (typeof(juxtaImages) != 'undefined') {
+//      image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
+//    }
     
-    if (typeof(juxtaMeta) != 'undefined') {
-      meta = juxtaMeta[imageIndex];
-    }
+//    if (typeof(juxtaMeta) != 'undefined') {
+//      meta = juxtaMeta[imageIndex];
+//    }
   }
 //  juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
-  prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image);
+  prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos);
 }
