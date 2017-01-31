@@ -56,3 +56,9 @@ with linkback to the image pages at kb.dk. Sample run of the script:
 ```
 MAX_IMAGES=200 ./demo_kb.sh create subject2210
 ```
+
+Scale testing can be done with ./demo_scale.sh. Sample runs:
+```
+MAX_IMAGES=100 ./demo_scale.sh
+RAW_W=1 RAW_H=1 MAX_IMAGES=1000 ./demo_scale.sh
+```
