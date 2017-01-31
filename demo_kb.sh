@@ -7,7 +7,9 @@
 : ${BROWSE_URL:="http://www.kb.dk/images/billed/2010/okt/billeder"}
 : ${PAGE_SIZE:=40}
 : ${KB_LANGUAGE:=da}
-: ${SEARCH_URL_PREFIX:="http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/${KB_LANGUAGE}/?itemsPerPage=$PAGE_SIZE&orderBy=notBefore&"}
+# http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/subject2109/en/?itemsPerPage=5
+: ${SEARCH_URL_PREFIX:="http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/"}
+: ${SEARCH_URL_INFIX:="/${KB_LANGUAGE}/?itemsPerPage=$PAGE_SIZE&orderBy=notBefore&"}
 
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
@@ -31,7 +33,7 @@ if [ "list" != "$COMMAND" -a "create" != "$COMMAND" ]; then
     >&2 echo "Error: Unknown command '$COMMAND'"
     usage 1
 fi
-COLLECTION="$2"
+export COLLECTION="$2"
 if [ "create" == "$COMMAND" -a "." == ".$COLLECTION" ]; then
     >&2 echo "Error: A collection must be provided"
     usage 2
@@ -54,7 +56,8 @@ download_collection() {
     local PAGE=1
     rm -f downloads/$COLLECTION/sources.dat
     while [ $(( (PAGE-1)*PAGE_SIZE )) -lt $MAX_IMAGES ]; do
-        local URL="${SEARCH_URL_PREFIX}page=${PAGE}&subject=${SUBJECT_ID}"
+        local URL="${SEARCH_URL_PREFIX}${COLLECTION}${SEARCH_URL_INFIX}page=${PAGE}"
+        #&subject=${SUBJECT_ID}"
         echo "  - Fetching page ${PAGE}: $URL"
         # TODO: Seems to be limited to 400 total entries
         # http://www.kb.dk/maps/kortsa/2012/jul/kortatlas/subject233/da/?orderBy=notBefore&page=2
