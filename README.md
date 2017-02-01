@@ -63,7 +63,7 @@ MAX_IMAGES=100 ./demo_scale.sh
 RAW_W=1 RAW_H=1 MAX_IMAGES=1000 ./demo_scale.sh
 ```
 
-## Custom million-images collage with links
+## Custom collage with links
 1. Download the images to a local folder
 2. Create a file `myimages.dat` with the images listed in the wanted order.
 
@@ -85,3 +85,17 @@ showFooter(x, y, image, meta) {
 5. Start juxta: `RAW_W=2 RAW_H=2 TEMPLATE=mytemplate.html ./juxta.sh myimages.dat mycollage`
 
    It is of course advisable to start with a few hundred images to see that everything works as intended.  
+
+## Performance
+The script `demo_scale.sh` creates a few sample images and a collage of arbitrary size by repeating those images.
+
+### i5 desktop machine with `RAW_W=1 RAW_H=1` (smallest possible images)
+|images|seconds|img/s|MPixels|files|  MB|
+|  ---:|   ---:| ---:    ---:| ---:|---:|
+|    50|      1|   50       3|  146|   5|
+|   500|     12|   41      33|  759|  10|
+|  5000|    115|   43     330|   7K|  66|
+| 50000|   1384|   36    3288|  67K| 621|
+|500000|  43064|   11   32804| 668K|6166|
+
+As can be seen, performance drops markedly as the image-count goes up. Theoretically there should be near-zero change in performance, so there is a problem somewhere. As both file-count and file-size are fairly linear to image-count, the current culprit is the file system.
