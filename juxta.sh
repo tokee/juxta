@@ -56,6 +56,7 @@ fi
 # Meta-data is specified on the image list by extending entries with |<meta>
 # Sample: myfolder/myimage.jpg|My meta-data
 : ${INCLUDE_META:=true}
+
 # If 'dzi', image tiles are stored in folders fully compatible with DZI, directly usable
 # OpenSeadragon and similar. This is highly recommended as long as the number of tiles
 # making up the collage is "low" (think 10K and below). When the number of tiles gets
@@ -65,14 +66,14 @@ fi
 # not dzi-compatible and requires a custom tile-provider for OpenSeadragon (automatically
 # generated for the demo page). Using 'limit' with 10K tiles or less has no performance
 # benefits.
-# If 'auto', juxta uses dzi, unless the tile-count exceeds $AUTO_FOLDER_LIMIT, in which
+# If 'auto', juxta uses 'dzi', unless the tile-count exceeds $AUTO_FOLDER_LIMIT, in which
 # case it uses 'high'. The AUTO_FOLDER_LIMIT is intentionally high (1M) to promote
 # standard layout. A more performance-oriented choice would be 100K.
 : ${FOLDER_LAYOUT:=auto}
 : ${AUTO_FOLDER_LIMIT:=1000000}
 # The approximate maximum number of elements in the tile folders if the folder layout is
 # set to 'limit'. Depending on total tile-count, this might lead to multiple sub-folders.
-: ${AUTO_FOLDER_ELEMENTS:=1000}
+: ${AUTO_FOLDER_ELEMENTS:=10000}
 
 # Controls log level
 : ${VERBOSE:=true}
@@ -145,10 +146,18 @@ function ctemplate() {
     rm $TMP
 }
 
-# Input: Root, zoom level, raw_x, raw_y
-get_tile_folder() {
-    if [ "dzi"
+# Input: raw_x, raw_y, raw_cols
+get_tile_subfolder() {
+    local RAW_X=$1
+    local RAW_Y=$2
+    local RAW_COLS=$3
+    if [ "dzi" == "$FOLDER_LAYOUT" ]; then
+        echo ""
+        return
+    fi
+    echo $(( (RAW_Y*RAW_COLS+RAW_X)/FOLDER_RAW_SIZE))
 }
+export -f get_tile_subfolder
 
 process_base() {
     local IMAGE_NUMBER=`echo "$1" | cut -d\  -f1`
@@ -161,12 +170,13 @@ process_base() {
     local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
-    
-    mkdir -p $DEST/$MAX_ZOOM
+
+    local TILE_SUB=`get_tile_subfolder $COL $ROW $RAW_IMAGE_COLS`
+    mkdir -p $DEST/$MAX_ZOOM/$TILE_SUB
     if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
         $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} "$DEST/blank.${TILE_FORMAT}"
     fi
-    if [ -s $DEST/$MAX_ZOOM/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
+    if [ -s $DEST/$MAX_ZOOM/${TILE_SUB}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
         if [ "$VERBOSE" == "true" ]; then
             echo "    - Skipping #${IMAGE_NUMBER}/${IMAGE_COUNT} grid ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
         fi
@@ -181,9 +191,9 @@ process_base() {
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [ "missing" != "$IMAGE" ]; then
         echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
-        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
-    if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
+    if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
         if [ "missing" == "$IMAGE" ]; then
             echo "    - Creating blank tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${ROW}x${COL} as there are no more source images"
         else
@@ -192,7 +202,7 @@ process_base() {
        
         for BLC in `seq 1 $RAW_W`; do
             for BLR in `seq 1 $RAW_H`; do
-                cp "$DEST/blank.${TILE_FORMAT}" "${DEST}/${MAX_ZOOM}/$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
+                cp "$DEST/blank.${TILE_FORMAT}" "${DEST}/${MAX_ZOOM}/${TILE_SUB}/$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
             done
         done
     fi
@@ -203,13 +213,19 @@ process_zoom() {
     local BLANK="$DEST/blank.${TILE_FORMAT}"
     local ROW="$1"
     local COL=0
+    local COL_COUNT=$((MAX_COL+1))
 
     while [ $COL -le $MAX_COL ]; do
-        local TILE=$DEST/$DEST_ZOOM/${COL}_${ROW}.${TILE_FORMAT}
-        local S00=$DEST/$SOURCE_ZOOM/$((COL*2))_$((ROW*2)).${TILE_FORMAT}
-        local S10=$DEST/$SOURCE_ZOOM/$((COL*2+1))_$((ROW*2)).${TILE_FORMAT}
-        local S01=$DEST/$SOURCE_ZOOM/$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}
-        local S11=$DEST/$SOURCE_ZOOM/$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}
+        ###
+        local TILE_SOURCE_SUB=`get_tile_subfolder $((COL*2)) $((ROW*2)) $((COL_COUNT*2))`
+        local TILE_DEST_SUB=`get_tile_subfolder $COL $ROW $COL_COUNT`
+        mkdir -p $DEST/$DEST_ZOOM/$TILE_SOURCE_SUB
+        
+        local TILE=$DEST/$DEST_ZOOM/$TILE_DEST_SUB/${COL}_${ROW}.${TILE_FORMAT}
+        local S00=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2))_$((ROW*2)).${TILE_FORMAT}
+        local S10=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2+1))_$((ROW*2)).${TILE_FORMAT}
+        local S01=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}
+        local S11=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}
         COL=$((COL+1))
         if [ -s $TILE ]; then
             continue
@@ -471,6 +487,8 @@ resolve_dimensions() {
     else
         MAX_ZOOM=`log2 $CANVAS_PIXEL_W`
     fi
+    export RAW_IMAGE_COLS;
+    export RAW_IMAGE_ROWS;
 }
 
 usage() {
@@ -515,6 +533,7 @@ sanitize_input() {
         local ICOUNTER=$(( ICOUNTER+1 ))
     done < $IMAGE_LIST
 
+    # Determine folder layout
     local TILE_COUNT=$((ICOUNTER*RAW_W*RAW_H))
     if [ "auto" == "$FOLDER_LAYOUT" ]; then
         if [ $TILE_COUNT -le $AUTO_FOLDER_LIMIT ]; then
@@ -538,19 +557,11 @@ sanitize_input() {
 
     # Determine the number of sub-folders
     if [ "limit" == "$FOLDER_LAYOUT" ]; then
-        FOLDERS_LEVELS=1
-        local MAX=$AUTO_FOLDER_ELEMENTS
-        while [ $MAX -gt $TILE_COUNT ]; do
-            FOLDER_LEVELS=$(( FOLDER_LEVELS+1 ))
-            MAX=$(( MAX*MAX ))
-        done
-        FOLDER_MODULO=$(( AUTO_FOLDER_ELEMENTS/(RAW_W*RAW_H) ))
-        if [ FOLDER_MODULO -le 1 ]; then
-            FOLDER_MODULO=2
+        FOLDER_RAW_SIZE=$(( AUTO_FOLDER_ELEMENTS/(RAW_W*RAW_H) ))
+        if [ $FOLDER_RAW_SIZE -le 1 ]; then
+            FOLDER_RAW_SIZE=2
         fi
-        
-        export FOLDER_MODULO
-        export FOLDER_LEVELS
+        export FOLDER_RAW_SIZE
     fi
 }
 
