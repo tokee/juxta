@@ -9,7 +9,7 @@ juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel i
 
 One downside to storing tiles as individual files is that the folder holding the tiles for the deepest zoom level will contain a lot of tiles: At least one per source image. This is a performance problem for some file systems, as well as some backup systems.
 
-Another downside happens if `jpg` is used as the output format. As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`. The artefacts from the JPEG compression compounds, although but the effect is mitigated by down scaling.
+Another downside happens if `jpg` is used as the output format. As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`. The artefacts from the JPEG compression compounds, although the effect is mitigated by down scaling.
 
 The script is restart-friendly as it skips already generated tiles.
 
