@@ -90,6 +90,7 @@ showFooter(x, y, image, meta) {
 The script `demo_scale.sh` creates a few sample images and a collage of arbitrary size by repeating those images.
 
 ### i5 desktop machine with `RAW_W=1 RAW_H=1` (smallest possible images)
+```
 |images|seconds|img/s|MPixels|files|  MB|
 |  ---:|   ---:| ---:    ---:| ---:|---:|
 |    50|      1|   50       3|  146|   5|
@@ -97,5 +98,6 @@ The script `demo_scale.sh` creates a few sample images and a collage of arbitrar
 |  5000|    115|   43     330|   7K|  66|
 | 50000|   1384|   36    3288|  67K| 621|
 |500000|  43064|   11   32804| 668K|6166|
+```
 
 As can be seen, performance drops markedly as the image-count goes up. Theoretically there should be near-zero change in performance, so there is a problem somewhere. As both file-count and file-size are fairly linear to image-count, the current culprit is the file system.
