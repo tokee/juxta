@@ -100,4 +100,6 @@ The script `demo_scale.sh` creates a few sample images and a collage of arbitrar
 |500000|  43064|   11   32804| 668K|6166|
 ```
 
-As can be seen, performance drops markedly as the image-count goes up. Theoretically there should be near-zero change in performance, so there is a problem somewhere. As both file-count and file-size are fairly linear to image-count, the current culprit is the file system.
+As can be seen, performance drops markedly as the image-count goes up. Theoretically there should be near-zero change in performance.
+
+Temporarily modifying the script to delete the generated base tiles immediately after creation and skip upper-level tile generations resulted in average speeds 50, 55, 60, 64 and 64 images/second for the test-cases above. This makes a strong case for issue #5, which aims to limit the number of files in any given folder.
