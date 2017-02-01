@@ -500,13 +500,15 @@ sanitize_input() {
         local IPATH=${TOKENS[0]}
         local IMETA=${TOKENS[1]}
         unset IFS
-        if [ ! -s "$IPATH" ]; then
-            if [ "true" == "$IGNORE_MISSING" ]; then
-                echo "  - Skipping unavailable image '$IPATH'"
-                continue
-            else
-                >&2 echo "Error: The image '$IPATH' from imagelist '$IMAGE_LIST' does not exist"
-                exit 2
+        if [ "http://" != ${IPATH:0:7} -a "https://" != ${IPATH:0:8} ]; then
+            if [ ! -s "$IPATH" ]; then
+                if [ "true" == "$IGNORE_MISSING" ]; then
+                    echo "  - Skipping unavailable image '$IPATH'"
+                    continue
+                else
+                    >&2 echo "Error: The image '$IPATH' from imagelist '$IMAGE_LIST' does not exist"
+                    exit 2
+                fi
             fi
         fi
         echo "$IMAGE" >> $DEST/imagelist.dat
