@@ -217,13 +217,14 @@ export -f process_base
 process_zoom() {
     local BLANK="$DEST/blank.${TILE_FORMAT}"
     local ROW="$1"
+    local RAW_ROW=$((ROW/RAW_H))
     local COL=0
     local COL_COUNT=$((MAX_COL+1))
 
     while [ $COL -le $MAX_COL ]; do
-        ###
-        local TILE_SOURCE_SUB=`get_tile_subfolder $((COL*2)) $((ROW*2))`
-        local TILE_DEST_SUB=`get_tile_subfolder $COL $ROW`
+        local RAW_COL=$((COL/RAW_W))
+        local TILE_SOURCE_SUB=`get_tile_subfolder $((RAW_COL*2)) $((RAW_ROW*2))`
+        local TILE_DEST_SUB=`get_tile_subfolder $RAW_COL $RAW_ROW`
         mkdir -p $DEST/$DEST_ZOOM/$TILE_DEST_SUB
         
         local TILE=$DEST/$DEST_ZOOM/${TILE_DEST_SUB}${COL}_${ROW}.${TILE_FORMAT}
@@ -319,9 +320,38 @@ create_html() {
     cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
     cp $JUXTA_HOME/web/*.js $TILE_SOURCE/resources/
     unzip -q -o -j -d $TILE_SOURCE/resources/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip ${OSD_ZIP%.*}/openseadragon.min.js
-    
     unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
-    
+
+    ###
+
+    if [ "limit" == "$FOLDER_LAYOUT" ]; then
+        TILE_SOURCES="    tileSources:   {
+        height: $CANVAS_PIXEL_H,
+        width: $CANVAS_PIXEL_W,
+        tileSize: 256,
+        getTileUrl: function( level, x, y ){
+            return level + \"/\" + (Math.floor(Math.floor(x/juxtaRawW)/juxtaLimitFolderSide)*juxtaLimitFolderSide) +
+                    \"_\" + (Math.floor(Math.floor(y/juxtaRawH)/juxtaLimitFolderSide)*juxtaLimitFolderSide) + \"/\" +
+                    x + \"_\" + y + \".jpg\";
+        }
+    }"
+    else
+        TILE_SOURCES="tileSources:   {
+    Image: {
+        xmlns:    \"http://schemas.microsoft.com/deepzoom/2008\",
+        Url:      \"\",
+        Format:   \"$TILE_FORMAT\", 
+        Overlap:  \"0\", 
+        TileSize: \"$TILE_SIDE\",
+        Size: {
+            Width: \"$CANVAS_PIXEL_W\",
+            Height:  \"$CANVAS_PIXEL_H\"
+        }
+    }
+}"
+    fi
+
+    export TILE_SOURCE
     if [ -s $HTML ]; then
         if [ "true" == "$OVERWRITE_HTML" ]; then
             if [ "$VERBOSE" == "true" ]; then
@@ -391,7 +421,7 @@ create_image_map() {
     echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
     echo "var juxtaAsyncMetaSide=$ASYNC_META_SIDE;" >> $DEST/imagemap.js
     echo "var juxtaMetaIncludesOrigin=$INCLUDE_ORIGIN;" >> $DEST/imagemap.js
-    echo "var juxtaFolderLayout=$FOLDER_LAYOUT;" >> $DEST/imagemap.js
+    echo "var juxtaFolderLayout=\"$FOLDER_LAYOUT\";" >> $DEST/imagemap.js
     echo "var juxtaLimitFolderSide=$LIMIT_FOLDER_SIDE;" >> $DEST/imagemap.js
 
     # Derive shared pre- and post-fix for all images for light image compression

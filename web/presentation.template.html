@@ -23,19 +23,7 @@
     showNavigator:  false,
     wrapHorizontal: false,
     prefixUrl: "resources/images/",
-    tileSources:   {
-        Image: {
-            xmlns:    "http://schemas.microsoft.com/deepzoom/2008",
-            Url:      "",
-            Format:   "$TILE_FORMAT", 
-            Overlap:  "0", 
-            TileSize: "$TILE_SIDE",
-            Size: {
-                Width: "$CANVAS_PIXEL_W",
-                Height:  "$CANVAS_PIXEL_H"
-            }
-        }
-    }
+    ${TILE_SOURCES}
   });
 </script>
 
