@@ -4,16 +4,19 @@
 #
 # Intended for scale testing
 
-: ${MAX_IMAGES:=1000}
 : ${BACKGROUND:=000000}
 : ${RAW_W:=4}
 : ${RAW_H:=3}
 
 usage() {
     echo "Usage:"
-    echo "MAX_IMAGES=100 ./demo_scale.sh"
+    echo "./demo_scale.sh images"
     exit $1
 }
+MAX_IMAGES="$1"
+if [ "." == ".$MAX_IMAGES" ]; then
+    usage 1
+fi
 
 DEST=downloads/scale_${RAW_W}x${RAW_H}
 JDEST=scale_${RAW_W}x${RAW_H}_${MAX_IMAGES}
