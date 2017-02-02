@@ -4,6 +4,7 @@
 #
 # Intended for scale testing
 
+: ${MAX_IMAGES:="$1"}
 : ${BACKGROUND:=000000}
 : ${RAW_W:=4}
 : ${RAW_H:=3}
@@ -13,7 +14,7 @@ usage() {
     echo "./demo_scale.sh images"
     exit $1
 }
-MAX_IMAGES="$1"
+
 if [ "." == ".$MAX_IMAGES" ]; then
     usage 1
 fi
