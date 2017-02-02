@@ -95,7 +95,7 @@ showFooter(x, y, image, meta) {
 The script `demo_scale.sh` creates a few sample images and a collage of arbitrary size by repeating those images.
 
 ### Old-ish Xeon server machine `RAW_W=1 RAW_H=1` (smallest possible images)
-```
+
 |images|seconds|img/s|MPixels|files|  MB|
 |  ---:|   ---:| ---:|   ---:| ---:|---:|
 |    50|      3|   16|      3|  140|   2|
@@ -103,7 +103,6 @@ The script `demo_scale.sh` creates a few sample images and a collage of arbitrar
 |  5000|    195|   25|    330|   7K|  63|
 | 50000|   2002|   25|   3288|  67K| 618|
 |500000|  19652|   25|  32804| 669K|6158|
-```
 
 This was measured after issue #5 (limit the number of files/folder) was completed. As can be seen, performance is linear with the number of images.
 
