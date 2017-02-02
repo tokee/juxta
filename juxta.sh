@@ -51,11 +51,11 @@ fi
 # If true, structures are provided for resolving the source image belonging to the
 # tiles that are hovered
 : ${INCLUDE_ORIGIN:=true}
-# If true, a JavaScript-array for the meta-data in the image list will be created.
-# This can be used to display image.specific information.
-# Meta-data is specified on the image list by extending entries with |<meta>
-# Sample: myfolder/myimage.jpg|My meta-data
-: ${INCLUDE_META:=true}
+# Meta-data are resolved using async calls for arrays. To avoid flooding the server,
+# they are stored in chunks, where each chunk contains ASYNC_META_SIDE^2 entries.
+: ${ASYNC_META_SIDE:=50}
+# The number of meta-data-chunks to keep cached in the browser.
+: ${ASYNC_META_CACHE:=10}
 
 # If 'dzi', image tiles are stored in folders fully compatible with DZI, directly usable
 # OpenSeadragon and similar. This is highly recommended as long as the number of tiles
@@ -70,10 +70,12 @@ fi
 # case it uses 'high'. The AUTO_FOLDER_LIMIT is intentionally high (1M) to promote
 # standard layout. A more performance-oriented choice would be 100K.
 : ${FOLDER_LAYOUT:=auto}
-: ${AUTO_FOLDER_LIMIT:=1000000}
-# The approximate maximum number of elements in the tile folders if the folder layout is
-# set to 'limit'. Depending on total tile-count, this might lead to multiple sub-folders.
-: ${AUTO_FOLDER_ELEMENTS:=10000}
+: ${AUTO_FOLDER_LIMIT:=20000}
+# The edge length of the raw grid blocks for creating sub-folders when FOLDER_LAYOUT=limit.
+# The number of tiles in each folder will be AUTO_FOLDER_SIDE^2*RAW_W*RAW_H.
+# With the default values that is 40^2 * 4 * 3 = 19,200.
+# Note that ext2 has a limit of 32,768 files/folder, an fat32's limit is 65,536.
+: ${LIMIT_FOLDER_SIDE:=40}
 
 # Controls log level
 : ${VERBOSE:=true}
@@ -146,7 +148,7 @@ function ctemplate() {
     rm $TMP
 }
 
-# Input: raw_x, raw_y, raw_cols
+# Input: raw_x, raw_y
 get_tile_subfolder() {
     local RAW_X=$1
     local RAW_Y=$2
@@ -155,14 +157,18 @@ get_tile_subfolder() {
         echo ""
         return
     fi
-    echo $(( (RAW_Y*RAW_COLS+RAW_X)/FOLDER_RAW_SIZE))
+    echo $((RAW_X/LIMIT_FOLDER_SIDE*LIMIT_FOLDER_SIDE))_$((RAW_Y/LIMIT_FOLDER_SIDE*LIMIT_FOLDER_SIDE))/
 }
 export -f get_tile_subfolder
 
 process_base() {
-    local IMAGE_NUMBER=`echo "$1" | cut -d\  -f1`
-    local COL=`echo "$1" | cut -d\  -f2`
-    local ROW=`echo "$1" | cut -d\  -f3`
+    local TOKENS
+    IFS=$' ' TOKENS=($1)
+    local IMAGE_NUMBER=${TOKENS[0]}
+    local COL=${TOKENS[1]}
+    local ROW=${TOKENS[2]}
+    unset IFS
+    # TODO: Use a bash-regexp instead
     local IMAGE=`echo "$1" | sed 's/[0-9]* [0-9]* [0-9]* \(.*\)/\1/'`
     local TILE_START_COL=$((COL*RAW_W))
     local TILE_START_ROW=$((ROW*RAW_H))
@@ -171,12 +177,12 @@ process_base() {
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
 
-    local TILE_SUB=`get_tile_subfolder $COL $ROW $RAW_IMAGE_COLS`
+    local TILE_SUB=`get_tile_subfolder $COL $ROW`
     mkdir -p $DEST/$MAX_ZOOM/$TILE_SUB
     if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
         $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} "$DEST/blank.${TILE_FORMAT}"
     fi
-    if [ -s $DEST/$MAX_ZOOM/${TILE_SUB}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
+    if [ -s $DEST/$MAX_ZOOM/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
         if [ "$VERBOSE" == "true" ]; then
             echo "    - Skipping #${IMAGE_NUMBER}/${IMAGE_COUNT} grid ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
         fi
@@ -191,18 +197,17 @@ process_base() {
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [ "missing" != "$IMAGE" ]; then
         echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
-        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}/%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
-    if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}/${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
+    if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
         if [ "missing" == "$IMAGE" ]; then
             echo "    - Creating blank tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${ROW}x${COL} as there are no more source images"
         else
             echo "    - Error: Could not create tiles from source image #${IMAGE_NUMBER}/${IMAGE_COUNT}. Using blank tiles instead. $IMAGE"
         fi
-       
         for BLC in `seq 1 $RAW_W`; do
             for BLR in `seq 1 $RAW_H`; do
-                cp "$DEST/blank.${TILE_FORMAT}" "${DEST}/${MAX_ZOOM}/${TILE_SUB}/$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
+                cp "$DEST/blank.${TILE_FORMAT}" "${DEST}/${MAX_ZOOM}/${TILE_SUB}$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
             done
         done
     fi
@@ -217,15 +222,15 @@ process_zoom() {
 
     while [ $COL -le $MAX_COL ]; do
         ###
-        local TILE_SOURCE_SUB=`get_tile_subfolder $((COL*2)) $((ROW*2)) $((COL_COUNT*2))`
-        local TILE_DEST_SUB=`get_tile_subfolder $COL $ROW $COL_COUNT`
-        mkdir -p $DEST/$DEST_ZOOM/$TILE_SOURCE_SUB
+        local TILE_SOURCE_SUB=`get_tile_subfolder $((COL*2)) $((ROW*2))`
+        local TILE_DEST_SUB=`get_tile_subfolder $COL $ROW`
+        mkdir -p $DEST/$DEST_ZOOM/$TILE_DEST_SUB
         
-        local TILE=$DEST/$DEST_ZOOM/$TILE_DEST_SUB/${COL}_${ROW}.${TILE_FORMAT}
-        local S00=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2))_$((ROW*2)).${TILE_FORMAT}
-        local S10=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2+1))_$((ROW*2)).${TILE_FORMAT}
-        local S01=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}
-        local S11=$DEST/$SOURCE_ZOOM/$TILE_SOURCE_SUB/$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}
+        local TILE=$DEST/$DEST_ZOOM/${TILE_DEST_SUB}${COL}_${ROW}.${TILE_FORMAT}
+        local S00=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2))_$((ROW*2)).${TILE_FORMAT}
+        local S10=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2+1))_$((ROW*2)).${TILE_FORMAT}
+        local S01=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}
+        local S11=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}
         COL=$((COL+1))
         if [ -s $TILE ]; then
             continue
@@ -334,25 +339,73 @@ create_html() {
     ctemplate "$TEMPLATE" > $HTML
 }
 
+create_meta_files() {
+    echo "  - Creating meta files"
+    rm -f $DEST/meta/*.json
+    mkdir -p $DEST/meta
+    local ROW=0
+    local COL=0
+    local TOKENS
+    while read IMAGE; do
+        if [ "true" == "$INCLUDE_ORIGIN" ]; then
+            if [ $PRE -gt 0 -o $POST -gt 0 ]; then
+                IFS=$'|' TOKENS=($IMAGE)
+                local IPATH=${TOKENS[0]}
+                local IMETA=${TOKENS[1]}
+                unset IFS
+                local ILENGTH=${#IPATH}
+                local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+                local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
+            else
+                local IMETA="$IMAGE"
+            fi
+        else
+            IFS=$'|' TOKENS=($IMAGE)
+            local IMETA=${TOKENS[1]}
+            # Use bash replace instead
+            unset IFS
+        fi
+        local IMETA="`echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
+        local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
+        if [ ! -s $DM ]; then
+            echo -n "{\"meta\": ["$'\n'"\"$IMETA\"" >> $DM
+        else
+            echo -n ","$'\n'"\"$IMETA\"" >> $DM
+        fi
+        COL=$(( COL+1 ))
+        if [ $COL -ge $RAW_IMAGE_COLS ]; then
+            ROW=$(( ROW+1 ))
+            COL=0
+        fi
+    done < $DEST/imagelist.dat
+    find $DEST/meta/ -name "*.json" -exec bash -c "echo ']}' >> {}" \;
+}
+
 create_image_map() {
-    echo "  - Creating image map"
+    echo "  - Analyzing collection meta data"
     echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
     echo "var juxtaRowCount=$(( ROW + 1 ));" >> $DEST/imagemap.js
     echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l`;" >> $DEST/imagemap.js
     echo "var juxtaTileSize=$TILE_SIDE;" >> $DEST/imagemap.js
     echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
     echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
+    echo "var juxtaAsyncMetaSide=$ASYNC_META_SIDE;" >> $DEST/imagemap.js
+    echo "var juxtaMetaIncludesOrigin=$INCLUDE_ORIGIN;" >> $DEST/imagemap.js
+    echo "var juxtaFolderLayout=$FOLDER_LAYOUT;" >> $DEST/imagemap.js
+    echo "var juxtaLimitFolderSide=$LIMIT_FOLDER_SIDE;" >> $DEST/imagemap.js
 
     # Derive shared pre- and post-fix for all images for light image compression
     local BASELINE="`cat $DEST/imagelist.dat | head -n 1 | cut -d'|' -f1`"
     local LENGTH=${#BASELINE} 
-    local PRE=$LENGTH
-    local POST=$LENGTH
+    PRE=$LENGTH
+    POST=$LENGTH
     local POST_STR=$BASELINE
     local ANY_META=false
     while read IMAGE; do
-        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+        IFS=$'|' TOKENS=($IMAGE)
+        local IPATH=${TOKENS[0]}
+        local IMETA=${TOKENS[1]}
+        unset IFS
         if [ "." != ".$IMETA" ]; then
             ANY_META=true
         fi
@@ -369,7 +422,7 @@ create_image_map() {
             local POST=$(( POST-1 ))
 
             local PSTART=$(( LENGTH-POST ))
-            local POST_STR=${BASELINE:$PSTART}
+            POST_STR=${BASELINE:$PSTART}
             local CSTART=$(( CLENGTH-POST ))
         done
 
@@ -382,62 +435,33 @@ create_image_map() {
     echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
     echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
 
+    # DEPRECATED: Images are now (optionally) stored with the async meta-data
     # Use the shared pre- and post-fixes to build a lightly compressed image list
-    if [ "true" == "$INCLUDE_ORIGIN" ]; then
+    if [ "true" == "false" ]; then
+    #if [ "true" == "$INCLUDE_ORIGIN" ]; then
         echo "var juxtaImages=[" >> $DEST/imagemap.js
         local FIRST=false
         while read IMAGE; do
-            local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
+            IFS=$'|' TOKENS=($IMAGE)
+            local IPATH=${TOKENS[0]}
+            local IMETA=${TOKENS[1]}
+            unset IFS
             if [ "false" == "$FIRST" ]; then
                 local FIRST=true
             else
                 echo ","  >> $DEST/imagemap.js
             fi
             local ILENGTH=${#IPATH}
-        local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
-        echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
+            local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+            echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
         done < $DEST/imagelist.dat
         echo "];" >> $DEST/imagemap.js
     fi
     
     # Meta-data are added directly (if available & enabled)
-    if [ "true" == "$INCLUDE_META" -a "true" == "$ANY_META" ]; then
-        echo "var juxtaMeta=[" >> $DEST/imagemap.js
-        local FIRST=false
-        while read IMAGE; do
-            local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
-            if [ "false" == "$FIRST" ]; then
-                local FIRST=true
-            else
-                echo ","  >> $DEST/imagemap.js
-            fi
-        echo -n "\"${IMETA}\"" >> $DEST/imagemap.js
-        done < $DEST/imagelist.dat
-        echo "];" >> $DEST/imagemap.js
+    if [ "true" == "$INCLUDE_ORIGIN" -o "true" == "$ANY_META" ]; then
+        create_meta_files
     fi
-
-    # functions to use the data
-    cat  >> $DEST/imagemap.js <<EOF
-// Override juxtaCallback to perform custom action
-var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image) { }
-
-function juxtaExpand(x, y, boxX, boxY, boxWidth, boxHeight) {
-  var image = "";
-  var validPos = false;
-  imageIndex = y*juxtaColCount+x;
-  if (x >= 0 && x < juxtaColCount && y >= 0 && y < juxtaRowCount && imageIndex < juxtaImageCount) {
-    validPos = true;
-    if (typeof(juxtaImages) != 'undefined') {
-      image = juxtaPrefix + juxtaImages[imageIndex] + juxtaPostfix;
-    }
-    if (typeof(juxtaMeta) != 'undefined') {
-      meta = juxtaMeta[imageIndex];
-    }
-  }
-  juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
-}
-EOF
 }
 
 resolve_dimensions() {
@@ -511,21 +535,24 @@ sanitize_input() {
     echo "  - Verifying images availability"
     mkdir -p $DEST
     local ICOUNTER=1
-    echo -n "" > $DEST/imagelist.dat
+    rm -rf $DEST/imagelist.dat $DEST/imagelist_onlyimages.dat
     while read IMAGE; do
         if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
             continue
         fi
-        # Slow due to system call
-        local IPATH="`echo \"$IMAGE\" | cut -d'|' -f1`"
-        local IMETA="`echo \"$IMAGE\" | cut -s -d'|' -f2`"
-        if [ ! -s "$IPATH" ]; then
-            if [ "true" == "$IGNORE_MISSING" ]; then
-                echo "  - Skipping unavailable image '$IPATH'"
-                continue
-            else
-                >&2 echo "Error: The image '$IPATH' from imagelist '$IMAGE_LIST' does not exist"
-                exit 2
+        IFS=$'|' TOKENS=($IMAGE)
+        local IPATH=${TOKENS[0]}
+        local IMETA=${TOKENS[1]}
+        unset IFS
+        if [ "http://" != ${IPATH:0:7} -a "https://" != ${IPATH:0:8} ]; then
+            if [ ! -s "$IPATH" ]; then
+                if [ "true" == "$IGNORE_MISSING" ]; then
+                    echo "  - Skipping unavailable image '$IPATH'"
+                    continue
+                else
+                    >&2 echo "Error: The image '$IPATH' from imagelist '$IMAGE_LIST' does not exist"
+                    exit 2
+                fi
             fi
         fi
         echo "$IMAGE" >> $DEST/imagelist.dat
@@ -554,15 +581,8 @@ sanitize_input() {
             echo "    - Warning: This is not an excessively high tile count. Consider using the DZI-compatible layout with FOLDER_LAYOUT=dzi for compatibility reasons"
         fi
     fi
-
-    # Determine the number of sub-folders
-    if [ "limit" == "$FOLDER_LAYOUT" ]; then
-        FOLDER_RAW_SIZE=$(( AUTO_FOLDER_ELEMENTS/(RAW_W*RAW_H) ))
-        if [ $FOLDER_RAW_SIZE -le 1 ]; then
-            FOLDER_RAW_SIZE=2
-        fi
-        export FOLDER_RAW_SIZE
-    fi
+    export FOLDER_LAYOUT
+    export LIMIT_FOLDER_SIDE
 }
 
 prepare_batch() {
@@ -590,6 +610,7 @@ prepare_batch() {
     fi
 }
 
+START_S=`date +%s`
 START_TIME=`date +%Y%m%d-%H%M`
 sanitize_input $@
 resolve_dimensions
@@ -611,7 +632,6 @@ export TILE_FORMAT
 export TILE_QUALITY
 export VERBOSE
 export IMAGE_COUNT
-# ###
 
 if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
@@ -620,7 +640,13 @@ else
     cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
 fi
 create_zoom_levels $MAX_ZOOM
-
+END_S=`date +%s`
+SPEND_S=$((END_S-START_S))
 rm $BATCH
-echo "Finished montaging ${IMAGE_COUNT} images `date +%Y%m%d-%H%M` (process began ${START_TIME})"
-echo "Sample page available at $HTML"
+ICOUNT=`cat $DEST/imagelist_onlyimages.dat | wc -l`
+
+echo "Process started $START_TIME and ended `date +%Y%m%d-%H%M`"
+echo "juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
+echo "Average speed was $((SPEND_S/ICOUNT)) seconds/image or $((ICOUNT/SPEND_S)) images/second"
+echo "HTML-page available at $HTML"
+
