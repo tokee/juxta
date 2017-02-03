@@ -36,7 +36,6 @@ rainbow_bucket() {
     IFS=$',' RGB_A=($RGB)
     local RGB_A=($RGB)
     unset IFS
-    local T=`mktemp`
 
     # https://en.wikipedia.org/wiki/Color_difference#Euclidean
     local BEST=0
@@ -61,7 +60,7 @@ rainbow_bucket() {
 echo "- Determining average RGB and assigning rainbow-index for images in $IN"
 
 TOTAL=`cat "$IN" | wc -l`
-UNSORTED=`mktemp`
+UNSORTED=`mktemp /tmp/juxta_rainbow_sort.XXXXXXXX`
 COUNTER=1
 while read IMAGE; do
     IFS=$'|' TOKENS=($IMAGE)

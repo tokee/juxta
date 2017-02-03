@@ -33,7 +33,7 @@ fi
 echo "- Image intensity sorting $IN"
 
 TOTAL=`cat "$IN" | wc -l`
-UNSORTED=`mktemp`
+UNSORTED=`mktemp /tmp/juxta_intensity_sort.XXXXXXXX`
 COUNTER=1
 while read IMAGE; do
     IFS=$'|' TOKENS=($IMAGE)
