@@ -278,13 +278,13 @@ create_zoom_levels() {
     fi
     mkdir -p $DEST/$DEST_ZOOM
 
-    MAX_ROW=`find $DEST/$SOURCE_ZOOM/ -name 0_*.${TILE_FORMAT} | wc -l`
+    MAX_ROW=`find $DEST/$SOURCE_ZOOM/ -name 0_*.${TILE_FORMAT} | wc -l | tr -d ' '`
     MAX_ROW=$(( ( MAX_ROW - 1) / 2 ))
     if [ $MAX_ROW -lt 0 ]; then
         MAX_ROW=0
     fi
 
-    MAX_COL=`find $DEST/$SOURCE_ZOOM/ -name *_0.${TILE_FORMAT} | wc -l`
+    MAX_COL=`find $DEST/$SOURCE_ZOOM/ -name *_0.${TILE_FORMAT} | wc -l | tr -d ' '`
     MAX_COL=$(( ( MAX_COL - 1 ) / 2 ))
     if [ $MAX_COL -lt 0 ]; then
         MAX_COL=0
@@ -313,7 +313,7 @@ create_html() {
     TILE_SOURCE=$(basename `pwd`)
     popd > /dev/null
     HTML=$DEST/index.html
-    TOTAL_IMAGES=`cat $DEST/imagelist.dat | wc -l`
+    TOTAL_IMAGES=`cat $DEST/imagelist.dat | wc -l | tr -d ' '`
     
     mkdir -p $TILE_SOURCE/resources/images
     cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
@@ -414,7 +414,7 @@ create_image_map() {
     echo "  - Analyzing collection meta data"
     echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
     echo "var juxtaRowCount=$(( ROW + 1 ));" >> $DEST/imagemap.js
-    echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l`;" >> $DEST/imagemap.js
+    echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l | tr -d ' '`;" >> $DEST/imagemap.js
     echo "var juxtaTileSize=$TILE_SIDE;" >> $DEST/imagemap.js
     echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
     echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
@@ -494,7 +494,7 @@ create_image_map() {
 }
 
 resolve_dimensions() {
-    IMAGE_COUNT=`cat "$DEST/imagelist_onlyimages.dat" | grep -v "^#.*" | grep -v "^$" | wc -l`
+    IMAGE_COUNT=`cat "$DEST/imagelist_onlyimages.dat" | grep -v "^#.*" | grep -v "^$" | wc -l | tr -d ' '`
     if [ "." != ".$RAW_IMAGE_COLS" ]; then # Fixed width
         if [ "true" == "$AUTO_CROP" -a $RAW_IMAGE_COLS -gt $IMAGE_COUNT ]; then
             RAW_IMAGE_COLS=$IMAGE_COUNT
@@ -674,7 +674,7 @@ create_zoom_levels $MAX_ZOOM
 END_S=`date +%s`
 SPEND_S=$((END_S-START_S))
 rm $BATCH
-ICOUNT=`cat $DEST/imagelist_onlyimages.dat | wc -l`
+ICOUNT=`cat $DEST/imagelist_onlyimages.dat | wc -l | tr -d ' '`
 
 echo "Process started $START_TIME and ended `date +%Y%m%d-%H%M`"
 echo "juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
