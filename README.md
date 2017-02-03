@@ -19,11 +19,15 @@ The theoretical limits for collage size / source image count are dictated by bas
 
 The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size if `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see issue #5); but that is solvable, should the case arise.
 
+Depending on browser, mouse-over meta-data will not be shown when opening the collage from the local file system. This is a security decision (CORS). It should work when accessing the collage through a webserver.
+
 
 ## Requirements
  * bash and friends (unzip, sed, tr...)
  * ImageMagic
  * wget optional (OpenSeadragon must be downloaded manually if it is not there)
+
+Developed and tested under Ubuntu 16.04. As of 2017-02-03 it worked under OS X, with some glitches in meta-data.
 
 ## Usage
 1. Create a list of images
