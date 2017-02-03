@@ -303,7 +303,7 @@ create_zoom_levels() {
     export TILE_SIDE
     export BACKGROUND
     export VERBOSE
-    ( for (( R=0 ; R<=$MAX_ROW ; R++ )); do echo $R ; done ) | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_zoom "{}"'
+    ( for (( R=0 ; R<=$MAX_ROW ; R++ )); do echo $R ; done ) | xargs -P $THREADS -n 1 -I {} bash -c 'process_zoom "{}"'
     echo ""
     create_zoom_levels $DEST_ZOOM
 }
@@ -666,7 +666,9 @@ if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
     echo "  - Creating base zoom level $MAX_ZOOM"
-    cat $BATCH | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_base "{}"'
+    IFS='\n'
+    cat $BATCH | xargs -P $THREADS -n 1 -I {} bash -c 'process_base "{}"'
+    unset IFS
 fi
 create_zoom_levels $MAX_ZOOM
 END_S=`date +%s`
