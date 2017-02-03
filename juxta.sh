@@ -122,7 +122,7 @@ set_converter() {
     export CONVERT="convert"
     export MONTAGE="montage"
     if [ ! -z "`which gm`" ]; then
-        # TODO: Test if GM reallu is the better choise for these tasks
+        # TODO: Test if GM really is the better choise for these tasks
         export CONVERT="gm convert"
         export MONTAGE="gm montage"
     fi
@@ -303,7 +303,7 @@ create_zoom_levels() {
     export TILE_SIDE
     export BACKGROUND
     export VERBOSE
-    ( for (( R=0 ; R<=$MAX_ROW ; R++ )); do echo $R ; done ) | xargs -P $THREADS -n 1 -I {} bash -c 'process_zoom "{}"'
+    ( for (( R=0 ; R<=$MAX_ROW ; R++ )); do echo $R ; done ) | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'process_zoom "{}"'
     echo ""
     create_zoom_levels $DEST_ZOOM
 }
@@ -643,7 +643,7 @@ START_S=`date +%s`
 START_TIME=`date +%Y%m%d-%H%M`
 sanitize_input $@
 resolve_dimensions
-echo "- Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
+echo "  - Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 set_converter
 prepare_batch
 create_image_map
@@ -666,9 +666,7 @@ if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
     echo "  - Creating base zoom level $MAX_ZOOM"
-    IFS='\n'
-    cat $BATCH | xargs -P $THREADS -n 1 -I {} bash -c 'process_base "{}"'
-    unset IFS
+    cat $BATCH | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'process_base "{}"'
 fi
 create_zoom_levels $MAX_ZOOM
 END_S=`date +%s`
