@@ -54,7 +54,7 @@ download_collection() {
     echo "- Downloading a maximum of $MAX_IMAGES images from collection ${COLLECTION}"
     local SUBJECT_ID=`echo $COLLECTION | grep -o "[0-9]*"`
     mkdir -p downloads/$COLLECTION
-    local T=`mktemp /tmp/juxta_demo_kb_XXXXXXXX.tmp`
+    local T=`mktemp /tmp/juxta_demo_kb_XXXXXXXX`
     local PAGE=1
     rm -f downloads/$COLLECTION/sources.dat
     while [ $(( (PAGE-1)*PAGE_SIZE )) -lt $MAX_IMAGES ]; do

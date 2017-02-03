@@ -140,7 +140,7 @@ log2() {
 # http://stackoverflow.com/questions/14434549/how-to-expand-shell-variables-in-a-text-file
 # Input: template-file
 function ctemplate() {
-    local TMP=`mktemp /tmp/juxta_XXXXXXXX.sh`
+    local TMP=`mktemp /tmp/juxta_XXXXXXXX`
     echo 'cat <<END_OF_TEXT' >  $TMP
     cat  "$1"                >> $TMP
     echo 'END_OF_TEXT'       >> $TMP
@@ -616,7 +616,7 @@ sanitize_input() {
 }
 
 prepare_batch() {
-    BATCH=`mktemp /tmp/juxta_XXXXXXXX.tmp`
+    BATCH=`mktemp /tmp/juxta_XXXXXXXX`
     echo "  - Preparing batch job"
     COL=0
     ROW=0
