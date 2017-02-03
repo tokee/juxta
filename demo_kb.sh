@@ -65,9 +65,9 @@ download_collection() {
         # http://www.kb.dk/maps/kortsa/2012/jul/kortatlas/subject233/da/?orderBy=notBefore&page=2
         # Seems to allow for paging all the way to the end of the search result
         curl -s -m 60 "$URL" | xmllint --format - > $T
-        local HITS=$( cat $T | grep totalResults | sed 's/.\+>\([0-9]\+\)<.*/\1/' )
+        local HITS=$( cat $T | grep totalResults | sed 's/.*>\([0-9]*\)<.*/\1/' )
         IFS=$'\n'
-        for ITEM in $( cat $T | tr '\n' ' ' | sed 's/<item /\n<item /g' | grep "<item " ); do
+        for ITEM in $( cat $T | tr '\n' ' ' | sed $'s/<item /\\\n<item /g' | grep "<item " ); do
             local LINK=$( echo "$ITEM" | grep -o '<link>[^<]*</link>' | sed ' s/<\/\?link>//g' )
             local DESCRIPTION=$( echo "$ITEM" | grep -o '<description>[^<]*</description>' | sed ' s/<\/\?description>//g' )
             local TITLE=$( echo "$ITEM" | grep -o '<title>[^<]*</title>' | sed ' s/<\/\?title>//g' )
