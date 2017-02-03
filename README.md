@@ -9,7 +9,7 @@ juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel i
 
 As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`, if `jpg` is used as tile format. The artefacts from the JPEG compression compounds, although the effect is mitigated by down scaling.
 
-Another artefact from the `4 tiles → join → scale(¼) → 1 tile` is that tile-edge-artefacts compounds, potentially resulting in visible horizontal and vertical lines at some zoom levels. This is most visible when using images that fits the tiles well, as it brings the edges of the images closer together.
+The `4 tiles → join → scale(¼) → 1 tile` processing means that tile-edge-artefacts compounds, potentially resulting in visible horizontal and vertical lines at some zoom levels. This is most visible when using images that fits the tiles well, as it brings the edges of the images closer together.
 
 The script is restart-friendly as it skips already generated tiles.
 
