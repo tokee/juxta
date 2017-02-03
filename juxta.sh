@@ -205,8 +205,8 @@ process_base() {
         else
             echo "    - Error: Could not create tiles from source image #${IMAGE_NUMBER}/${IMAGE_COUNT}. Using blank tiles instead. $IMAGE"
         fi
-        for BLC in `seq 1 $RAW_W`; do
-            for BLR in `seq 1 $RAW_H`; do
+        for (( BLC=1 ; BLC<=$RAW_W ; BLC++ )); do
+            for (( BLR=1 ; BLR<=$RAW_H ; BLR++ )); do
                 cp "$DEST/blank.${TILE_FORMAT}" "${DEST}/${MAX_ZOOM}/${TILE_SUB}$((TILE_START_COL+BLC-1))_$((TILE_START_ROW+BLR-1)).${TILE_FORMAT}"
             done
         done
@@ -303,8 +303,7 @@ create_zoom_levels() {
     export TILE_SIDE
     export BACKGROUND
     export VERBOSE
-    seq 0 $MAX_ROW | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_zoom "{}"'
-
+    ( for (( R=0 ; R<=$MAX_ROW ; R++ )); do echo $R ; done ) | xargs -P $THREADS -n 1 -I {} -d'\n'  bash -c 'process_zoom "{}"'
     echo ""
     create_zoom_levels $DEST_ZOOM
 }
@@ -633,7 +632,7 @@ prepare_batch() {
 
     if [ ! $COL -eq 0 ]; then
         RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
-        for MISSING_COL in `seq $COL $RAW_IMAGE_MAX_COL`; do
+        for (( MISSING_COL=$COL ; MISSING_COL<=$RAW_IMAGE_MAX_COL ; MISSING_COL++ )); do
             echo "$ICOUNTER $MISSING_COL $ROW missing" >> $BATCH
             ICOUNTER=$(( ICOUNTER+1 ))
         done
