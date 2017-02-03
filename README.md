@@ -7,13 +7,18 @@ Demo at https://tokee.github.io/juxta/demo/
 ## Technical notes
 juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel image file. The tile generation is threaded and localized to the individual source images. This means that memory overhead is independent of the total collage size. The difference between generating a collage of 10 vs. 10 million images is only CPU time. Associated meta-data are stored in chunks and only requested on mouse-over, keeping browser page-open time and memory requirements independent of collage size.
 
-One downside to storing tiles as individual files is that the folder holding the tiles for the deepest zoom level will contain a lot of tiles: At least one per source image. This is a performance problem for some file systems, as well as some backup systems.
+As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`, if `jpg` is used as tile format. The artefacts from the JPEG compression compounds, although the effect is mitigated by down scaling.
 
-Another downside happens if `jpg` is used as the output format. As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`. The artefacts from the JPEG compression compounds, although the effect is mitigated by down scaling.
+Another artefact from the `4 tiles → join → scale(¼) → 1 tile` is that tile-edge-artefacts compounds, potentially resulting in visible horizontal and vertical lines at some zoom levels. This is most visible when using images that fits the tiles well, as it brings the edges of the images closer together.
 
 The script is restart-friendly as it skips already generated tiles.
 
 Processing 24,000 ~1MPixel images on a laptop using 2 threads took 2½ hour and resulted in ~390,000 tiles for a total of 6.4GB with a 19GPixel canvas size (138240x138240 pixel). As scaling is practically linear `O(n+log2(sqrt(n)))`, a collage from 1 million such images would take ~4 days.
+
+The theoretical limits for collage size / source image count are dictated by bash & JavaScripts max integers. The bash-limit depends on system, but should be 2⁶³ on most modern systems. For JavaScript it is 2⁵³. Think yotta-pixels.
+
+The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size if `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see issue #5); but that is solvable, should the case arise.
+
 
 ## Requirements
  * bash and friends (unzip, sed, tr...)
@@ -89,17 +94,26 @@ showFooter(x, y, image, meta) {
 ## Performance
 The script `demo_scale.sh` creates a few sample images and a collage of arbitrary size by repeating those images.
 
-### i5 desktop machine with `RAW_W=1 RAW_H=1` (smallest possible images)
-```
+### Old-ish Xeon server machine `RAW_W=1 RAW_H=1` (smallest possible images)
+
 |images|seconds|img/s|MPixels|files|  MB|
-|  ---:|   ---:| ---:    ---:| ---:|---:|
-|    50|      1|   50       3|  146|   5|
-|   500|     12|   41      33|  759|  10|
-|  5000|    115|   43     330|   7K|  66|
-| 50000|   1384|   36    3288|  67K| 621|
-|500000|  43064|   11   32804| 668K|6166|
-```
+|  ---:|   ---:| ---:|   ---:| ---:|---:|
+|    50|      3|   16|      3|  140|   2|
+|   500|     20|   25|     33|  753|   7|
+|  5000|    195|   25|    330|   7K|  63|
+| 50000|   2002|   25|   3288|  67K| 618|
+|500000|  19652|   25|  32804| 669K|6158|
 
-As can be seen, performance drops markedly as the image-count goes up. Theoretically there should be near-zero change in performance.
+This was measured after issue #5 (limit the number of files/folder) was completed. As can be seen, performance is linear with the number of images.
 
-Temporarily modifying the script to delete the generated base tiles immediately after creation and skip upper-level tile generations resulted in average speeds 50, 55, 60, 64 and 64 images/second for the test-cases above. This makes a strong case for issue #5, which aims to limit the number of files in any given folder.
+Before the completion of issue #5, the folder for the lowest zoom-level contained 500K files in this test, which caused a severe performance degradation. The i5 desktop used for this test had the results below, which can be simulated by specifying `FOLDER_LAYOUT=dzi`.
+
+|images|seconds|img/s|MPixels|files|  MB|
+|  ---:|   ---:| ---:|   ---:| ---:|---:|
+|    50|      1|   50|      3|  146|   5|
+|   500|     12|   41|     33|  759|  10|
+|  5000|    115|   43|    330|   7K|  66|
+| 50000|   1384|   36|   3288|  67K| 621|
+|500000|  43064|   11|  32804| 668K|6166|
+
+As can be seen, performance drops markedly when the number of images rises and the folder-layout is forced to `dzi`.

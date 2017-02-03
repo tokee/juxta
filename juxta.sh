@@ -441,13 +441,13 @@ create_image_map() {
         fi
 #        echo "**** ${BASELINE:0:$PRE} $BASELINE $LENGTH $PRE"
 #        echo "$IMAGE"
-        while [ $PRE -gt 0 -a ${IPATH:0:$PRE} != ${BASELINE:0:$PRE} ]; do
+        while [ $PRE -gt 0 -a ".${IPATH:0:$PRE}" != ".${BASELINE:0:$PRE}" ]; do
             PRE=$((PRE-1))
         done
 
         local CLENGTH=${#IPATH}
         local CSTART=$(( CLENGTH-$POST ))
-        while [ $POST -gt 0 -a ${POST_STR} != ${IPATH:$CSTART} ]; do
+        while [ $POST -gt 0 -a ".${POST_STR}" != ".${IPATH:$CSTART}" ]; do
             #echo "*p* $POST  ${POST_STR} != ${IPATH:$CSTART:$CLENGTH}"
             local POST=$(( POST-1 ))
 
