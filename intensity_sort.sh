@@ -13,6 +13,9 @@
 # See http://imagemagick.org/Usage/quantize/#extract for further ideas of
 # extracting image statistics that are sortable.
 #
+
+: ${REVERSE_SORT:=false}
+
 usage() {
     echo "Usage: ./intensity_sort.sh in_imagelist.dat out_imagelist.dat"
     exit $1
@@ -50,7 +53,11 @@ while read IMAGE; do
     fi
     COUNTER=$((COUNTER+1))
 done < "$IN"
-cat $UNSORTED | sort -n | sed 's/^[0-9.]* //' > "$OUT"
+if { "true" == "$REVERSE_SORT" }; then
+    cat $UNSORTED | sort -n -r | sed 's/^[0-9.]* //' > "$OUT"
+else
+    cat $UNSORTED | sort -n | sed 's/^[0-9.]* //' > "$OUT"
+fi    
 rm $UNSORTED
 
 echo "- Sorting finished, result in $OUT"
