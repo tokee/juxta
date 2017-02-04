@@ -37,7 +37,6 @@ focusChanged = function(event) {
 }
 
 myDragon.addHandler('open', function() {
-    console.log("Setting up handlers");
     var tracker = new OpenSeadragon.MouseTracker({
         element: myDragon.container,
         moveHandler: focusChanged
