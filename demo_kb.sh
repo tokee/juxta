@@ -11,7 +11,7 @@
 : ${SEARCH_URL_PREFIX:="http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/"}
 : ${SEARCH_URL_INFIX:="/${KB_LANGUAGE}/?itemsPerPage=$PAGE_SIZE&orderBy=notBefore&"}
 # Valid values are 'intensity' and 'none'
-: ${IMAGE_SORT:="intensity"}
+: ${IMAGE_SORT:="none"}
 
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
