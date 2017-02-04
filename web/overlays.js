@@ -29,19 +29,25 @@ function handleChange() {
 }                      
 
 // https://openseadragon.github.io/examples/viewport-coordinates/
+focusChanged = function(event) {
+    var webPoint = event.position;
+    var viewportPoint = myDragon.viewport.pointFromPixel(webPoint);
+    imagePoint = myDragon.viewport.viewportToImageCoordinates(viewportPoint);
+    handleChange();
+}
+
 myDragon.addHandler('open', function() {
+    console.log("Setting up handlers");
     var tracker = new OpenSeadragon.MouseTracker({
         element: myDragon.container,
-        moveHandler: function(event) {
-            var webPoint = event.position;
-            var viewportPoint = myDragon.viewport.pointFromPixel(webPoint);
-            imagePoint = myDragon.viewport.viewportToImageCoordinates(viewportPoint);
-            handleChange();
-        }
+        moveHandler: focusChanged
     });
     myDragon.addHandler('animation', handleChange);
+    myDragon.addHandler('canvas-drag', focusChanged);
+    myDragon.addHandler('canvas-click', focusChanged);
     tracker.setTracking(true);  
 });
+
 
 var createHeader = function(x, y, image, meta) {
     return image == "" ? '(' + x + ', ' + y + ')' : image;
