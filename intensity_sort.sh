@@ -53,7 +53,7 @@ while read IMAGE; do
     fi
     COUNTER=$((COUNTER+1))
 done < "$IN"
-if { "true" == "$REVERSE_SORT" }; then
+if [ "true" == "$REVERSE_SORT" ]; then
     cat $UNSORTED | sort -n -r | sed 's/^[0-9.]* //' > "$OUT"
 else
     cat $UNSORTED | sort -n | sed 's/^[0-9.]* //' > "$OUT"
