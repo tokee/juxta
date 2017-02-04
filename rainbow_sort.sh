@@ -12,6 +12,8 @@
 
 # curl -s "http://colrd.com/palette/22198/?download=css" | grep -o "RGB(.*)" | sed -e 's/RGB(//' -e 's/[ )]//g' | tr '\n' ' '
 : ${RAINBOW:="248,12,18 238,17,0 255,51,17 255,68,34 255,102,68 255,153,51 254,174,45 204,187,51 208,195,16 170,204,34 105,208,37 34,204,170 18,189,185 17,170,187 68,68,221 51,17,187 59,12,189 68,34,153"}
+# average or cmeans
+: ${COLOR_FINDER:=cmeans}
 
 usage() {
     echo "Usage: ./rainbow_sort.sh in_imagelist.dat out_imagelist.dat"
@@ -57,6 +59,18 @@ rainbow_bucket() {
     echo $BEST
 }
 
+get_main_color_average() {
+    convert "$1" -resize '1x1!' -format "%[fx:int(255*r+.5)],%[fx:int(255*g+.5)],%[fx:int(255*b+.5)]" info:-
+}
+
+get_main_color_cmeans() {
+    local CTMP=`mktemp /tmp/juxta_rainbow_sort_cmeans.XXXXXXXX`
+    ( convert -verbose "$1" -geometry '200x200!' -segment 200x info:- | grep -B 999 Image: ) > $CTMP 2> /dev/null
+    local PRIMARY=$( cat $CTMP | grep -A 50 "Number of Vectors Per Cluster" | grep -B 50 "Cluster Extents" | grep "Cluster #" | sed 's/Cluster #\([0-9]*\) = \([0-9]*\)/\2 \1/' | sort -n -r | head -n 1 | cut -d' ' -f2 )
+    cat $CTMP | grep -A 100 "Cluster Center Values" | grep -A 2 "Cluster #${PRIMARY}$" | tail -n 1 | sed -e 's/[.][0-9]*//g' -e 's/  */,/g'
+    rm $CTMP
+}
+
 echo "- Determining average RGB and assigning rainbow-index for images in $IN"
 
 TOTAL=`cat "$IN" | wc -l`
@@ -68,7 +82,11 @@ while read IMAGE; do
     IMETA=${TOKENS[1]}
     unset IFS
     echo " - Analyzing $COUNTER/$TOTAL: $IPATH"
-    RGB=`convert "$IPATH" -resize '1x1!' -format "%[fx:int(255*r+.5)],%[fx:int(255*g+.5)],%[fx:int(255*b+.5)]" info:-`
+    if [ "cmeans" == "$COLOR_FINDER" ]; then
+        RGB=`get_main_color_cmeans "$IPATH"`
+    else
+        RGB=`get_main_color_average "$IPATH"`
+    fi        
     RAINBOW_INDEX=`rainbow_bucket $RGB`
 
     echo -n "$RAINBOW_INDEX $IPATH" >> $UNSORTED
