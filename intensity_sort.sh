@@ -39,10 +39,12 @@ TOTAL=`cat "$IN" | wc -l`
 UNSORTED=`mktemp /tmp/juxta_intensity_sort.XXXXXXXX`
 COUNTER=1
 while read IMAGE; do
-    IFS=$'|' TOKENS=($IMAGE)
+    IFS=$'|'
+    TOKENS=($IMAGE)
     IPATH=${TOKENS[0]}
     IMETA=${TOKENS[1]}
     unset IFS
+    
     echo " - Analyzing $COUNTER/$TOTAL: $IPATH"
     INTENSITY=`convert "$IPATH" -type Grayscale -format "%[mean]" info:`
     echo -n "$INTENSITY $IPATH" >> $UNSORTED
