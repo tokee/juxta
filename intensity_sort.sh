@@ -1,4 +1,4 @@
-#1/bin/bash
+#!/bin/bash
 
 #
 # Image sorter by intensity that supports meta-data in the image-list
