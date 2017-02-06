@@ -95,10 +95,10 @@ showFooter(x, y, image, meta) {
 
    It is of course advisable to start with a few hundred images to see that everything works as intended.  
 
-## Performance
-The script `demo_scale.sh` creates a few sample images and a collage of arbitrary size by repeating those images.
+## Performance and scaling
+The script `demo_scale.sh` creates a few sample images and a collage of arbitrary size by repeating those images. Except for the source images being disk cached, this should should be quite representative of a real-data collage.
 
-### Old-ish Xeon server machine `RAW_W=1 RAW_H=1` (smallest possible images)
+### Old-ish Xeon server machine `RAW_W=1 RAW_H=1 ./demo_scale.sh <images>` (smallest possible image representation)
 
 |images|seconds|img/s|MPixels|files|  MB|
 |  ---:|   ---:| ---:|   ---:| ---:|---:|
@@ -110,7 +110,15 @@ The script `demo_scale.sh` creates a few sample images and a collage of arbitrar
 
 This was measured after issue #5 (limit the number of files/folder) was completed. As can be seen, performance is linear with the number of images.
 
-Before the completion of issue #5, the folder for the lowest zoom-level contained 500K files in this test, which caused a severe performance degradation. The i5 desktop used for this test had the results below, which can be simulated by specifying `FOLDER_LAYOUT=dzi`.
+### Upper limit
+
+As stated in the technical notes section, the practical limit to juxta scale is dictated by the file system. To sanity-check this, a sample collage with 5 million images was generated with `RAW_W=1 RAW_H=1 ./demo_scale.sh 5000000` (using the default 3 threads). On an i5 desktop this took 31 hours @ 45 images/second. The resulting collage displayed without problems, including meta-data for the individual images.
+
+### Scale vs. compatibility
+
+When the number of tiles for any given folder gets high, performance drops for a lot of file systems (ext4 being one of them). juxta handles this by switching to a custom tile-layout instead of the standard [Deep Zoom](https://en.wikipedia.org/wiki/Deep_Zoom) (dzi) layout. The downside is lack of portability of the tiles, if another viewer than OpenSeadragon is to be used.
+
+The Deep Zoom layout can be forced by specifying `FOLDER_LAYOUT=dzi`. Doing so on an i5 desktop machine resulted in
 
 |images|seconds|img/s|MPixels|files|  MB|
 |  ---:|   ---:| ---:|   ---:| ---:|---:|
