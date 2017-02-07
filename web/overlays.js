@@ -36,7 +36,8 @@ focusChanged = function(event) {
     handleChange();
 }
 
-myDragon.addHandler('open', function() {
+// Expects the dragon to be open
+function attachToOpenDragon() {
     var tracker = new OpenSeadragon.MouseTracker({
         element: myDragon.container,
         moveHandler: focusChanged
@@ -45,8 +46,15 @@ myDragon.addHandler('open', function() {
     myDragon.addHandler('canvas-drag', focusChanged);
     myDragon.addHandler('canvas-click', focusChanged);
     tracker.setTracking(true);  
-});
+}
 
+if (myDragon.isOpen()) {
+    attachToOpenDragon();
+} else {
+    myDragon.addHandler('open', function() {
+        attachToOpenDragon();
+    });
+}
 
 var createHeader = function(x, y, image, meta) {
     return image == "" ? '(' + x + ', ' + y + ')' : image;
