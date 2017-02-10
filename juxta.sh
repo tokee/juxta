@@ -407,8 +407,8 @@ create_meta_files() {
         local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
         if [ ! -s $DM ]; then
             ###
-            echo "{ prefix: \"${IMAGE_PATH_PREFIX\"," >> $DM
-            echo "  postfix: \"${IMAGE_PATH_POSTFIX}\"," >> $DM
+            echo "{ \"prefix\": \"${IMAGE_PATH_PREFIX}\"," >> $DM
+            echo "  \"postfix\": \"${IMAGE_PATH_POSTFIX}\"," >> $DM
             echo -n "  \"meta\": ["$'\n'"\"$IMETA\"" >> $DM
         else
             echo -n ","$'\n'"\"$IMETA\"" >> $DM
@@ -419,7 +419,13 @@ create_meta_files() {
             COL=0
         fi
     done < $DEST/imagelist.dat
+    # Close all structures in the metadata files
     find $DEST/meta/ -name "*.json" -exec bash -c "echo ']}' >> {}" \;
+    # Create a preload file for the upper left block of image metadata
+    # This is primarily to get around CORS-issued with Chrome on the local file system
+    mkdir -p $DEST/resources/
+    echo -n "var preloaded = " > $DEST/resources/overlays_preload.js
+    cat $DEST/meta/0_0.json >> $DEST/resources/overlays_preload.js
 }
 
 store_collage_setup() {

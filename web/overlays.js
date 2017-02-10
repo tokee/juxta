@@ -11,7 +11,11 @@ function createOverlay(juxtaProperties, dragon) {
     this.footer = document.getElementById('footer');
     this.imagePoint = 0;
     this.myDragon = dragon;
-    
+
+    var metaCacheMax = 10;
+    var metaCache = [];
+
+    // Connect overlay handling to the dragon
     if (myDragon.isOpen()) {
         attachToOpenDragon(juxtaProperties, myDragon);
     } else {
@@ -20,6 +24,19 @@ function createOverlay(juxtaProperties, dragon) {
         });
     }
 
+    // If metadata is preloaded, add it to the cache
+    if (typeof preloaded !== 'undefined') {
+        var preloadEntry = {
+            status: 'ready',
+            source: '0_0.json',
+            meta: preloaded.meta,
+            prefix: preloaded.prefix,
+            postfix: preloaded.postfix
+        }
+        metaCache.push(preloadEntry);
+    }
+
+    
     // Expects the dragon to be open
     var attachToOpenDragon = function() {
         var tracker = new OpenSeadragon.MouseTracker({
@@ -130,8 +147,6 @@ function createOverlay(juxtaProperties, dragon) {
         }
     };
 
-    var metaCacheMax = 10;
-    var metaCache = [];
     var result = {
         fired: true,
         x: 0, y: 0,
@@ -241,9 +256,10 @@ function createOverlay(juxtaProperties, dragon) {
             }
             if (xhttp.status == 200) {
                 //        console.log("Got: " + xhttp.responseText);
-                xhttp.cacheEntry.meta = JSON.parse(xhttp.responseText).meta;
-                xhttp.cacheEntry.prefix = JSON.parse(xhttp.responseText).prefix;
-                xhttp.cacheEntry.prefix = JSON.parse(xhttp.responseText).postfix;
+                var rJSON = JSON.parse(xhttp.responseText);
+                xhttp.cacheEntry.meta = rJSON.meta;
+                xhttp.cacheEntry.prefix = rJSON.prefix;
+                xhttp.cacheEntry.postfix = rJSON.postfix;
                 xhttp.cacheEntry.status = 'ready';
                 //            console.log("meta: " + xhttp.cacheEntry.meta);
                 tryFire();
