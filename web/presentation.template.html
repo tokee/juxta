@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Juxta</title>
     <link rel="stylesheet" type="text/css" href="resources/juxta.css" />
-    <script src="imagemap.js"></script>
+    <!--<script src="collage_setup.js"></script>-->
     <script src="resources/openseadragon.min.js"></script>
+    <script type="text/javascript" src="resources/overlays.js"></script>
 </head>
 
 <body>
@@ -26,11 +27,9 @@
     prefixUrl: "resources/images/",
     ${TILE_SOURCES}
   });
+  ${SETUP_OVERLAY}
 </script>
 
 <p>Generated `date +"%Y-%m-%d %H:%M"`</p>
-
-<!-- Must be below the creation of myDragon -->
-<script type="text/javascript" src="resources/overlays.js"></script>
 </body>
 </html>

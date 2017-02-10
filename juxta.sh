@@ -1,5 +1,14 @@
 #!/bin/bash
 
+#
+# Generates arbitrary collages with source image level contextual metadata.
+# Demo at http://labs.statsbiblioteket.dk/juxta/subject3795/
+#
+# Released under Apache 2.0
+# Primary developer: Toke Eskildsen - @TokeEskildsen - toes@kb.dk / te@ekot.dk
+#
+
+
 pushd ${BASH_SOURCE%/*} > /dev/null
 if [ -s juxta.conf ]; then
     source juxta.conf
@@ -321,8 +330,6 @@ create_html() {
     unzip -q -o -j -d $TILE_SOURCE/resources/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip ${OSD_ZIP%.*}/openseadragon.min.js
     unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
 
-    ###
-
     if [ "limit" == "$FOLDER_LAYOUT" ]; then
         TILE_SOURCES="    tileSources:   {
         height: $CANVAS_PIXEL_H,
@@ -350,6 +357,8 @@ create_html() {
 }"
     fi
 
+    SETUP_OVERLAY="var overlays = createOverlay($(cat $DEST/collage_setup.js), myDragon);"
+    
     export TILE_SOURCE
     if [ -s $HTML ]; then
         if [ "true" == "$OVERWRITE_HTML" ]; then
@@ -397,7 +406,10 @@ create_meta_files() {
         local IMETA="`echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
         local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
         if [ ! -s $DM ]; then
-            echo -n "{\"meta\": ["$'\n'"\"$IMETA\"" >> $DM
+            ###
+            echo "{ prefix: \"${IMAGE_PATH_PREFIX\"," >> $DM
+            echo "  postfix: \"${IMAGE_PATH_POSTFIX}\"," >> $DM
+            echo -n "  \"meta\": ["$'\n'"\"$IMETA\"" >> $DM
         else
             echo -n ","$'\n'"\"$IMETA\"" >> $DM
         fi
@@ -410,18 +422,18 @@ create_meta_files() {
     find $DEST/meta/ -name "*.json" -exec bash -c "echo ']}' >> {}" \;
 }
 
-create_image_map() {
+store_collage_setup() {
     echo "  - Analyzing collection meta data"
-    echo "var juxtaColCount=$RAW_IMAGE_COLS;" > $DEST/imagemap.js
-    echo "var juxtaRowCount=$(( ROW + 1 ));" >> $DEST/imagemap.js
-    echo "var juxtaImageCount=`cat $DEST/imagelist.dat | wc -l | tr -d ' '`;" >> $DEST/imagemap.js
-    echo "var juxtaTileSize=$TILE_SIDE;" >> $DEST/imagemap.js
-    echo "var juxtaRawW=$RAW_W;" >> $DEST/imagemap.js
-    echo "var juxtaRawH=$RAW_H;" >> $DEST/imagemap.js
-    echo "var juxtaAsyncMetaSide=$ASYNC_META_SIDE;" >> $DEST/imagemap.js
-    echo "var juxtaMetaIncludesOrigin=$INCLUDE_ORIGIN;" >> $DEST/imagemap.js
-    echo "var juxtaFolderLayout=\"$FOLDER_LAYOUT\";" >> $DEST/imagemap.js
-    echo "var juxtaLimitFolderSide=$LIMIT_FOLDER_SIDE;" >> $DEST/imagemap.js
+    echo "{ colCount: $RAW_IMAGE_COLS," > $DEST/collage_setup.js
+    echo "  rowCount: $(( ROW + 1 ))," >> $DEST/collage_setup.js
+    echo "  imageCount: `cat $DEST/imagelist.dat | wc -l | tr -d ' '`," >> $DEST/collage_setup.js
+    echo "  tileSize: $TILE_SIDE," >> $DEST/collage_setup.js
+    echo "  rawW: $RAW_W," >> $DEST/collage_setup.js
+    echo "  rawH: $RAW_H," >> $DEST/collage_setup.js
+    echo "  asyncMetaSide: $ASYNC_META_SIDE," >> $DEST/collage_setup.js
+    echo "  metaIncludesOrigin: $INCLUDE_ORIGIN," >> $DEST/collage_setup.js
+    echo "  folderLayout: \"$FOLDER_LAYOUT\"," >> $DEST/collage_setup.js
+    echo "  limitFolderSide: $LIMIT_FOLDER_SIDE," >> $DEST/collage_setup.js
 
     # Derive shared pre- and post-fix for all images for light image compression
     local BASELINE="`cat $DEST/imagelist.dat | head -n 1 | cut -d'|' -f1`"
@@ -461,33 +473,12 @@ create_image_map() {
             break
         fi
     done < $DEST/imagelist.dat
-    echo "var juxtaPrefix=\"${BASELINE:0:$PRE}\";" >> $DEST/imagemap.js
-    echo "var juxtaPostfix=\"${POST_STR}\";" >> $DEST/imagemap.js
-
-    # DEPRECATED: Images are now (optionally) stored with the async meta-data
-    # Use the shared pre- and post-fixes to build a lightly compressed image list
-    if [ "true" == "false" ]; then
-    #if [ "true" == "$INCLUDE_ORIGIN" ]; then
-        echo "var juxtaImages=[" >> $DEST/imagemap.js
-        local FIRST=false
-        while read IMAGE; do
-            IFS=$'|' TOKENS=($IMAGE)
-            local IPATH=${TOKENS[0]}
-            local IMETA=${TOKENS[1]}
-            unset IFS
-            if [ "false" == "$FIRST" ]; then
-                local FIRST=true
-            else
-                echo ","  >> $DEST/imagemap.js
-            fi
-            local ILENGTH=${#IPATH}
-            local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
-            echo -n "\"${IPATH:$PRE:$CUT_LENGTH}\"" >> $DEST/imagemap.js
-        done < $DEST/imagelist.dat
-        echo "];" >> $DEST/imagemap.js
-    fi
+    IMAGE_PATH_PREFIX=${BASELINE:0:$PRE}
+    IMAGE_PATH_POSTFIX=${POST_STR}
+    echo "  prefix: \"${IMAGE_PATH_PREFIX}\"," >> $DEST/collage_setup.js
+    echo "  postfix: \"${IMAGE_PATH_POSTFIX}\"" >> $DEST/collage_setup.js
+    echo "}" >> $DEST/collage_setup.js
     
-    # Meta-data are added directly (if available & enabled)
     if [ "true" == "$INCLUDE_ORIGIN" -o "true" == "$ANY_META" ]; then
         create_meta_files
     fi
@@ -646,7 +637,7 @@ resolve_dimensions
 echo "  - Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 set_converter
 prepare_batch
-create_image_map
+store_collage_setup
 create_html
 
 export RAW_W
