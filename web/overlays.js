@@ -12,8 +12,8 @@ function createOverlay(juxtaProperties, dragon) {
     this.imagePoint = 0;
     this.myDragon = dragon;
 
-    var metaCacheMax = 10;
-    var metaCache = [];
+    this.metaCacheMax = 10;
+    this.metaCache = [];
 
     // Connect overlay handling to the dragon
     if (myDragon.isOpen()) {
@@ -36,9 +36,8 @@ function createOverlay(juxtaProperties, dragon) {
         metaCache.push(preloadEntry);
     }
 
-    
     // Expects the dragon to be open
-    var attachToOpenDragon = function() {
+    this.attachToOpenDragon = function() {
         var tracker = new OpenSeadragon.MouseTracker({
             element: myDragon.container,
             moveHandler: focusChanged
@@ -49,14 +48,14 @@ function createOverlay(juxtaProperties, dragon) {
         tracker.setTracking(true);  
     }
 
-    var rawToWeb = function(rawX, rawY) {
+    this.rawToWeb = function(rawX, rawY) {
         var ip = new OpenSeadragon.Point(rawX * jprops.rawW * jprops.tileSize, rawY * jprops.rawH * jprops.tileSize);
         var wp = myDragon.viewport.imageToViewportCoordinates(ip);
         var rwp = myDragon.viewport.pixelFromPoint(wp);
         return rwp;
     }
 
-    var handleChange = function() {
+    this.handleChange = function() {
         var rawX = Math.floor(imagePoint.x / jprops.tileSize / jprops.rawW);
         var rawY = Math.floor(imagePoint.y / jprops.tileSize / jprops.rawH);
         roundWebPoint = rawToWeb(rawX, rawY);
@@ -70,30 +69,30 @@ function createOverlay(juxtaProperties, dragon) {
     }                      
 
     // https://openseadragon.github.io/examples/viewport-coordinates/
-    var focusChanged = function(event) {
+    this.focusChanged = function(event) {
         webPoint = event.position;
         viewportPoint = myDragon.viewport.pointFromPixel(webPoint);
         imagePoint = myDragon.viewport.viewportToImageCoordinates(viewportPoint);
         handleChange();
     }
 
-    var createHeader = function(x, y, image, meta) {
+    this.createHeader = function(x, y, image, meta) {
         return image == "" ? '(' + x + ', ' + y + ')' : image;
     }
-    var createFooter = function(x, y, image, meta) {
+    this.createFooter = function(x, y, image, meta) {
         return meta;
     }
 
-    var showFullInfo = function(boxWidth, boxHeight) {
+    this.showFullInfo = function(boxWidth, boxHeight) {
         return boxWidth >= 150;
     }
-    var showFooter = function(x, y, image, meta) {
+    this.showFooter = function(x, y, image, meta) {
         // No longer valid
         //return (typeof(juxtaMeta) != 'undefined');
         return meta != "";
     }
 
-    var juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
+    this.juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
         var sf = showFooter(x, y, image, meta);
         if (validPos) {
             infobox.style.visibility='visible';
@@ -147,7 +146,7 @@ function createOverlay(juxtaProperties, dragon) {
         }
     };
 
-    var result = {
+    this.result = {
         fired: true,
         x: 0, y: 0,
         boxX: 0, boxY: 0,
@@ -156,7 +155,7 @@ function createOverlay(juxtaProperties, dragon) {
         image: '',
         meta: ''
     };
-    var fireResult = function(){
+    this.fireResult = function(){
         if (result.fired) {
             returm;
         }
@@ -166,7 +165,7 @@ function createOverlay(juxtaProperties, dragon) {
     }
 
     // Returns false if a new request must be started
-    var tryFire = function() {
+    this.tryFire = function() {
         if (result.fired) {
             return true
         }
@@ -212,7 +211,7 @@ function createOverlay(juxtaProperties, dragon) {
     // is updated.
     // If there is no pending request for the block, notifyMeta is updated and a new
     // async request is initiated.
-    var prepareMeta = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos) {
+    this.prepareMeta = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos) {
         if (!validPos) {
             // TODO: Set meta to "" and fire event
             return
@@ -283,7 +282,7 @@ function createOverlay(juxtaProperties, dragon) {
         xhttp.send();
     }
 
-    var juxtaExpand = function(x, y, boxX, boxY, boxWidth, boxHeight) {
+    this.juxtaExpand = function(x, y, boxX, boxY, boxWidth, boxHeight) {
         var meta="";
         var image = "";
         var validPos = false;
@@ -301,4 +300,6 @@ function createOverlay(juxtaProperties, dragon) {
         //  juxtaCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
         prepareMeta(x, y, boxX, boxY, boxWidth, boxHeight, validPos);
     }
+
+    return this;
 }
