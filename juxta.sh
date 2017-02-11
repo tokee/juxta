@@ -668,6 +668,9 @@ fi
 create_zoom_levels $MAX_ZOOM
 END_S=`date +%s`
 SPEND_S=$((END_S-START_S))
+if [ "$SPEND_S" -eq "0" ]; then
+    SPEND_S=1
+fi
 rm $BATCH
 ICOUNT=`cat $DEST/imagelist_onlyimages.dat | wc -l | tr -d ' '`
 
