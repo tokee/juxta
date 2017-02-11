@@ -60,7 +60,10 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 ```
 
 ## Demos
-The script ./demo_kb.sh fetches openly available images from kb.dk and generates a collage
+
+### Historical image collection at kb.dk
+
+The script `demo_kb.sh` fetches openly available images from kb.dk and generates a collage
 with linkback to the image pages at kb.dk. Sample run of the script:
 ```
 MAX_IMAGES=200 ./demo_kb.sh create subject2210
@@ -71,6 +74,31 @@ Scale testing can be done with ./demo_scale.sh. Sample runs:
 ./demo_scale.sh 100
 RAW_W=1 RAW_H=1 ./demo_scale.sh 1000
 ```
+
+### Twitter images
+
+The script `demo_twitter.sh` takes a list of tweet-IDs, locates all images from the tweets and
+creates a collage with links back to the original tweets. The script downloads all the images
+before using juxta to create the collage and is restart-friendly.
+
+**Important:** This requires [tawrc](https://github.com/docnow/twarc), a (free) API-key from
+Twitter and an understanding of Twitters [Developer Agreement & Policy](https://dev.twitter.com/overview/terms/agreement-and-policy).
+
+Given a list of tweet-IDs (just the numbers), call the script with
+```
+MAX_IMAGES=10 ./demo_twitter.sh mytweets.dat tweet_collage
+```
+
+If the tweett and their images are already available, the template from `demo_tweet.sh` can re-used by creating a list of the images of the form `imagepath|tweet-ID timestamp`, for example
+```
+images/0/pbs.twimg.com_media_CupTGBlWcAA-yzz.jpg|786532479343599620 2016-10-13T13:42:10
+images/0/pbs.twimg.com_media_CYwJ7LDWwAIA011.jpg|687935756539686912 2016-01-15T10:54:00
+```
+and juxta can be activated with
+```
+TEMPLATE=demo_twitter.template.html RAW_W=1 RAW_H=1 INCLUDE_ORIGIN=false ./juxta.sh tweet_images.dat tweet_collage
+```
+
 
 ## Custom collage with links
 1. Download the images to a local folder

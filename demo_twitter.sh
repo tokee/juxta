@@ -152,4 +152,7 @@ download_images
 prepare_juxta_input
 
 export TEMPLATE
+export RAW_W
+export RAW_H
+export THREADS
 INCLUDE_ORIGIN=false ./juxta.sh "$DOWNLOAD/twitter_images.dat" "$DEST"
