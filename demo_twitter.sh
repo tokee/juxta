@@ -13,9 +13,10 @@
 # - An installed twarc and a Twitter API key (see the twarc GitHub readme)
 # - jq (sudo apt install jq)
 #
-# TODO: Consider adding user.screen_name at meta data
+# TODO: Consider adding user.screen_name as metadata
+# TODO: Pipe the hydrate output through gzip to save disk space
+# TODO: Better guessing as to where twarc is installed
 
-# TODO: Also check with which
 : ${TWARC:="$HOME/.local/bin/twarc"}
 : ${IMAGE_BUCKET_SIZE:=20000}
 : ${MAX_IMAGES:=99999999999}
@@ -66,7 +67,8 @@ extract_image_data() {
         return
     fi
     echo " - Extracting date, ID and imageURL to $DOWNLOAD/date-id-imageURL.dat"
-    cat "$DOWNLOAD/hydrated.json" | jq --indent 0 -r 'if (.entities .media[] .type) == "photo" then [.id_str,.created_at,.entities .media[] .media_url_https // .entities .media[] .media_url] else empty end' > "$DOWNLOAD/date-id-imageURL.dat"
+    # TODO: Better handling of errors than throwing them away
+    cat "$DOWNLOAD/hydrated.json" | jq --indent 0 -r 'if (.entities .media[] .type) == "photo" then [.id_str,.created_at,.entities .media[] .media_url_https // .entities .media[] .media_url] else empty end' > "$DOWNLOAD/date-id-imageURL.dat" 2>/dev/null
     
     # TODO: $DOWNLOAD/hydrated.json -> $DOWNLOAD/date-id-imageURL.dat
 }
