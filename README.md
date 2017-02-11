@@ -48,13 +48,13 @@ Processing can be controlled by setting environment variables. Most important op
  * TILE_FORMAT: png or jpg. Default is jpg.
 
 Processing a bunch of photos of file size 500KB or more could be done with
-```
+```shell
 find myimages -iname "*.jpg" -a -size +500k  > photos.dat
 BACKGROUND=000000 RAW_W=3 RAW_H=2 THREADS=4 TILE_FORMAT=jpg ./juxta.sh photos.dat mycollage
 ```
 
 A collection of small clip art images could be
-```
+```shell
 find myimages -iname "*.png" -o -iname "*.gif" > clipart.dat
 BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.dat mycollage
 ```
@@ -65,12 +65,12 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 
 The script `demo_kb.sh` fetches openly available images from kb.dk and generates a collage
 with linkback to the image pages at kb.dk. Sample run of the script:
-```
+```shell
 MAX_IMAGES=200 ./demo_kb.sh create subject2210
 ```
 
 Scale testing can be done with ./demo_scale.sh. Sample runs:
-```
+```shell
 ./demo_scale.sh 100
 RAW_W=1 RAW_H=1 ./demo_scale.sh 1000
 ```
@@ -85,17 +85,17 @@ before using juxta to create the collage and is restart-friendly.
 Twitter and an understanding of Twitters [Developer Agreement & Policy](https://dev.twitter.com/overview/terms/agreement-and-policy).
 
 Given a list of tweet-IDs (just the numbers), call the script with
-```
+```shell
 MAX_IMAGES=10 ./demo_twitter.sh mytweets.dat tweet_collage
 ```
 
-If the tweett and their images are already available, the template from `demo_tweet.sh` can re-used by creating a list of the images of the form `imagepath|tweet-ID timestamp`, for example
-```
+If the tweets and their images are already available, the template from `demo_twitter.sh` can re-used by creating a list of the images of the form `imagepath|tweet-ID timestamp`, for example
+```shell
 images/0/pbs.twimg.com_media_CupTGBlWcAA-yzz.jpg|786532479343599620 2016-10-13T13:42:10
 images/0/pbs.twimg.com_media_CYwJ7LDWwAIA011.jpg|687935756539686912 2016-01-15T10:54:00
 ```
-and juxta can be activated with
-```
+and juxta can be called with
+```shell
 TEMPLATE=demo_twitter.template.html RAW_W=1 RAW_H=1 INCLUDE_ORIGIN=false ./juxta.sh tweet_images.dat tweet_collage
 ```
 
@@ -109,12 +109,12 @@ TEMPLATE=demo_twitter.template.html RAW_W=1 RAW_H=1 INCLUDE_ORIGIN=false ./juxta
 
    The template `demo_kb.template.html` can be used as a starting point. Override either of `createHeader` and `createFooter`. In this example, it could be  
    
-   ```
-createHeader = function(x, y, image, meta) {
+   ```javascript
+overlays.createHeader = function(x, y, image, meta) {
   imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
   return '<a href="' + meta + '">' + imageID + '</a>';
 }
-showFooter(x, y, image, meta) {
+overlays.showFooter(x, y, image, meta) {
   return false;
 }
 ```
