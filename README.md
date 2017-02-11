@@ -81,7 +81,7 @@ The script `demo_twitter.sh` takes a list of tweet-IDs, locates all images from 
 creates a collage with links back to the original tweets. The script downloads all the images
 before using juxta to create the collage and is restart-friendly.
 
-**Important:** This requires [tawrc](https://github.com/docnow/twarc), a (free) API-key from
+**Important:** This requires [twarc](https://github.com/docnow/twarc), a (free) API-key from
 Twitter and an understanding of Twitters [Developer Agreement & Policy](https://dev.twitter.com/overview/terms/agreement-and-policy).
 
 Given a list of tweet-IDs (just the numbers), call the script with
