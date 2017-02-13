@@ -1,0 +1,58 @@
+# Specific documentation of demo_twitter.sh
+
+# STATUS: Readme is under construction
+
+## Introduction
+
+`demo_twitter.sh` was created explicitly for handling a use-case for
+@ruebot: https://twitter.com/ruebot/status/825819358228254720
+
+In short: Display millions of images from tweets in a collage, providing links
+back to the original tweets.
+
+juxta itself takes care of the collage generation, but it needs to be fed with
+a list of image-paths and metadata. This documents is about ways to make
+that happen.
+
+## Things to consider
+
+juxta creates one big collage. At maximum zoom, the size of the images (and their aspect ratio) is defined by `RAW_WxRAW_H`, where 
+
+
+## Tweet-IDs as source
+
+The base usage of the script is to have a file with a list of tweet-IDs,
+such as
+```
+786532479343599620
+619403274597363712
+599186643854204928
+```
+
+Feeding the list to `demo_twitter.sh` with the command
+```Shell
+MAX_IMAGES=10 ./demo_twitter.sh mytweets.dat tweet_collage
+```
+will result in the following actions
+1. The tweets are resolved from their IDs using [twarc](https://github.com/docnow/twarc) hydrate
+2. A list of tuples with `[timestamp, tweet-ID, image-URL]` is extracted from the hydrated tweets
+3. The images from the tuples are downloaded and a new list of entries `imagePath|tweet-ID timestamp` is created
+4. juxta is called with the list of entries, using the template `demo_twitter.template.html` to provide custom snippets of JavaScript to resolve `tweet-ID timestamp` into tweet-links
+
+If the script is stopped, restarting will cause it to skip the parts that are already completed. Images are stored in `destination_downloads` in sub-folders containing at most 20,000 images to avoid performance problems with many files/folder.
+
+## Tweets as source
+
+If the tweets are already available in the format used by twarc hydrate, step 1 in _Tweet-IDs as source_ is not needed. `demo_tritter.sh` does not handle this explicitly, but it is easy to hack:
+1. Create a folder `tweet_collage_downloads`
+2. Copy the tweets to `tweet_collage_downloads/hydrated.json`
+3. Start `demo_twitter.sh` with an existing dummy file and with `tweet_collage` as destination: `./demo_twitter.sh tweet_collage_downloads/hydrated.json tweet_collage`. This will cause `demo_tritter.sh` to skip the hydration phase as `hydrated.json` is already present
+
+## Tweets + images both available
+
+It is highly doubtful that an existing collection of tweets and images will follow the folder layout and file name normalisation used by `demo_twitter.sh`. In this case, the script should be skipped and a list of entries of the format `imagePath|tweet-ID timestamp` should be created. For example
+
+With this list, juxta should be called with
+```Shell
+TEMPLATE=demo_twitter.template.html RAW_W=2 RAW_H=2 THREADS=3 INCLUDE_ORIGIN=false ./juxta.sh mylist.dat twitter_collage
+```
