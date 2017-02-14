@@ -1,7 +1,5 @@
 # Specific documentation of demo_twitter.sh
 
-# STATUS: Readme is under construction
-
 ## Introduction
 
 `demo_twitter.sh` was created explicitly for handling a use-case for
