@@ -50,7 +50,12 @@ If the tweets are already available in the format used by twarc hydrate, step 1 
 
 ## Tweets + images both available
 
-It is highly doubtful that an existing collection of tweets and images will follow the folder layout and file name normalisation used by `demo_twitter.sh`. In this case, the script should be skipped and a list of entries of the format `imagePath|tweet-ID timestamp` should be created. For example
+It is highly doubtful that an existing collection of tweets and images will follow the folder layout and file name normalisation used by `demo_twitter.sh`. In this case, the script should be skipped altogether and a list of entries of the format `imagePath|tweet-ID timestamp` should be created by other means. An example list is
+```
+te-images/pbs.twimg.com_media_CupTGBlWcAA-yzz.jpg|786532479343599620 2016-10-13T13:42:10
+te-images/pbs.twimg.com_media_CFC9E7bVEAAa62-.png|599186643854204928 2015-05-15T14:16:42
+te-images/pbs.twimg.com_media_CJiP_t_XAAApWE6.jpg|619403274597363712 2015-07-10T09:10:23
+```
 
 With this list, juxta should be called with
 ```Shell
