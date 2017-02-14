@@ -16,7 +16,9 @@ that happen.
 
 ## Things to consider
 
-juxta creates one big collage. At maximum zoom, the size of the images (and their aspect ratio) is defined by `RAW_WxRAW_H`, where 
+juxta creates one big collage. At maximum zoom, the size of the images (and their aspect ratio) is defined by `RAW_WxRAW_H`, where each block is 256x256 pixels, so setting `RAW_W=3 RAW_H=2` means `768x512 pixels`. If there are 1 millions of images, that means a final collage of ~400 gigapixel. An obvious precation is to create a test-collage of 1000 images or so, to get an idea of how it looks, before running a big job.
+
+Also note that the number of inodes used will be a little more than `RAW_WxRAW_H`. With the example above, be sure to check that there at at least 10 million free inodes on the file system.
 
 
 ## Tweet-IDs as source
@@ -34,19 +36,21 @@ Feeding the list to `demo_twitter.sh` with the command
 MAX_IMAGES=10 ./demo_twitter.sh mytweets.dat tweet_collage
 ```
 will result in the following actions
-1. The tweets are resolved from their IDs using [twarc](https://github.com/docnow/twarc) hydrate
-2. A list of tuples with `[timestamp, tweet-ID, image-URL]` is extracted from the hydrated tweets
-3. The images from the tuples are downloaded and a new list of entries `imagePath|tweet-ID timestamp` is created
-4. juxta is called with the list of entries, using the template `demo_twitter.template.html` to provide custom snippets of JavaScript to resolve `tweet-ID timestamp` into tweet-links
+
+ 1. The tweets are resolved from their IDs using [twarc](https://github.com/docnow/twarc) hydrate
+ 2. A list of tuples with `[timestamp, tweet-ID, image-URL]` is extracted from the hydrated tweets
+ 3. The images from the tuples are downloaded and a new list of entries `imagePath|tweet-ID timestamp` is created
+ 4. juxta is called with the list of entries, using the template `demo_twitter.template.html` to provide custom snippets of JavaScript to resolve `tweet-ID timestamp` into tweet-links
 
 If the script is stopped, restarting will cause it to skip the parts that are already completed. Images are stored in `destination_downloads` in sub-folders containing at most 20,000 images to avoid performance problems with many files/folder.
 
 ## Tweets as source
 
 If the tweets are already available in the format used by twarc hydrate, step 1 in _Tweet-IDs as source_ is not needed. `demo_tritter.sh` does not handle this explicitly, but it is easy to hack:
-1. Create a folder `tweet_collage_downloads`
-2. Copy the tweets to `tweet_collage_downloads/hydrated.json`
-3. Start `demo_twitter.sh` with an existing dummy file and with `tweet_collage` as destination: `./demo_twitter.sh tweet_collage_downloads/hydrated.json tweet_collage`. This will cause `demo_tritter.sh` to skip the hydration phase as `hydrated.json` is already present
+
+ 1. Create a folder `tweet_collage_downloads`
+ 2. Copy the tweets to `tweet_collage_downloads/hydrated.json`
+ 3. Start `demo_twitter.sh` with an existing dummy file and with `tweet_collage` as destination: `./demo_twitter.sh tweet_collage_downloads/hydrated.json tweet_collage`. This will cause `demo_tritter.sh` to skip the hydration phase as `hydrated.json` is already present
 
 ## Tweets + images both available
 
