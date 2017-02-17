@@ -15,9 +15,7 @@
 
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
-# TODO: Extraction of title
-# TODO: Support the separate collection
-# http://www.kb.dk/maps/kortsa/2012/jul/kortatlas/subject208/da/
+# TODO: Get full images: http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
 
 usage() {
     echo "Usage:"
@@ -76,12 +74,17 @@ download_collection() {
             local TITLE=$( echo "$ITEM" | grep -o '<title>[^<]*</title>' | sed ' s/<\/\?title>//g' )
             local IMAGE_URL=$( echo "$ITEM" | grep -o "<[^<]*displayLabel=.image.[^>]>*[^<]*<" | sed 's/.*type=.uri..\(http[^<]*\).*/\1/' )
             local IMAGE_SHORT=`basename "$IMAGE_URL" | sed 's/ /_/g'`
+            # Tweak URL to be against the IIIF so that the full resolution is requested
+            # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010.jpg
+            # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010/full/full/0/native.jpg
+            local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' )
             if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
                 echo "    - Downloading $IMAGE_SHORT"
                 # TODO: Fetch full image with
                 # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
                 # 
                 # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
+                echo "$IMAGE_URL"
                 curl -s -m 60 "$IMAGE_URL" > downloads/$COLLECTION/$IMAGE_SHORT
                 if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
                     >&2 echo "Error: Unable do download $IMAGE_URL"
