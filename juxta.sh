@@ -317,6 +317,22 @@ create_zoom_levels() {
     create_zoom_levels $DEST_ZOOM
 }
 
+create_dzi() {
+    pushd $DEST > /dev/null
+    echo "{
+    \"Image\": {
+        \"xmlns\":    \"http://schemas.microsoft.com/deepzoom/2008\",
+        \"Format:   \"$TILE_FORMAT\", 
+        \"Overlap\":  \"0\", 
+        \"TileSize\": \"$TILE_SIDE\",
+        \"Size\": {
+            \"Width\": \"$CANVAS_PIXEL_W\",
+            \"Height\":  \"$CANVAS_PIXEL_H\"
+        }
+    }
+}" > collage.dzi
+}
+
 create_html() {
     pushd $DEST > /dev/null
     TILE_SOURCE=$(basename `pwd`)
@@ -334,7 +350,7 @@ create_html() {
         TILE_SOURCES="    tileSources:   {
         height: $CANVAS_PIXEL_H,
         width: $CANVAS_PIXEL_W,
-        tileSize: 256,
+        tileSize: $TILE_SIDE,
         getTileUrl: function( level, x, y ){
             return level + \"/\" + (Math.floor(Math.floor(x/juxtaRawW)/juxtaLimitFolderSide)*juxtaLimitFolderSide) +
                     \"_\" + (Math.floor(Math.floor(y/juxtaRawH)/juxtaLimitFolderSide)*juxtaLimitFolderSide) + \"/\" +
@@ -644,6 +660,7 @@ set_converter
 prepare_batch
 store_collage_setup
 create_html
+create_dzi
 
 export RAW_W
 export RAW_H
