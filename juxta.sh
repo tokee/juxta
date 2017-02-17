@@ -406,7 +406,6 @@ create_meta_files() {
         local IMETA="`echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
         local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
         if [ ! -s $DM ]; then
-            ###
             echo "{ \"prefix\": \"${IMAGE_PATH_PREFIX}\"," >> $DM
             echo "  \"postfix\": \"${IMAGE_PATH_POSTFIX}\"," >> $DM
             echo -n "  \"meta\": ["$'\n'"\"$IMETA\"" >> $DM
@@ -640,7 +639,7 @@ START_S=`date +%s`
 START_TIME=`date +%Y%m%d-%H%M`
 sanitize_input $@
 resolve_dimensions
-echo "  - Montaging ${IMAGE_COUNT} images in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
+echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 set_converter
 prepare_batch
 store_collage_setup
