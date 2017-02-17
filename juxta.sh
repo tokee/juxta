@@ -331,6 +331,7 @@ create_dzi() {
         }
     }
 }" > collage.dzi
+    popd > /dev/null
 }
 
 create_html() {
