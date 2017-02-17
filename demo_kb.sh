@@ -13,6 +13,11 @@
 # Valid values are 'none', 'intensity' and 'rainbow'
 : ${IMAGE_SORT:="none"}
 
+: ${RAW_W:=4}
+: ${RAW_H:=3}
+: ${BACKGROUND:=000000}
+: ${TEMPLATE:=demo_kb.template.html}
+
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
 # TODO: Get full images: http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
@@ -133,4 +138,4 @@ elif [ "rainbow" == "$IMAGE_SORT" ]; then
 else
     SORTED_SOURCE="downloads/$COLLECTION/sources.dat"
 fi
-BACKGROUND=000000 ROW_W=4 ROW_H=4 TEMPLATE=demo_kb.template.html ./juxta.sh $SORTED_SOURCE $COLLECTION
+. ./juxta.sh $SORTED_SOURCE $COLLECTION
