@@ -79,7 +79,7 @@ fi
 # generated for the demo page). Using 'limit' with 10K tiles or less has no performance
 # benefits.
 # If 'auto', juxta uses 'dzi', unless the tile-count exceeds $AUTO_FOLDER_LIMIT, in which
-# case it uses 'high'. The AUTO_FOLDER_LIMIT is intentionally high (1M) to promote
+# case it uses 'limit'. The AUTO_FOLDER_LIMIT is intentionally high (1M) to promote
 # standard layout. A more performance-oriented choice would be 100K.
 : ${FOLDER_LAYOUT:=auto}
 : ${AUTO_FOLDER_LIMIT:=20000}
@@ -361,9 +361,9 @@ create_html() {
         height: $CANVAS_PIXEL_H,
         width: $CANVAS_PIXEL_W,
         tileSize: $TILE_SIDE,
-        getTileUrl: function( level, x, y ){
-            return level + \"/\" + (Math.floor(Math.floor(x/juxtaRawW)/juxtaLimitFolderSide)*juxtaLimitFolderSide) +
-                    \"_\" + (Math.floor(Math.floor(y/juxtaRawH)/juxtaLimitFolderSide)*juxtaLimitFolderSide) + \"/\" +
+        getTileUrl: function( level, x, y ){###
+            return level + \"/\" + (Math.floor(Math.floor(x/${RAW_W})/${LIMIT_FOLDER_SIDE})*${LIMIT_FOLDER_SIDE}) +
+                    \"_\" + (Math.floor(Math.floor(y/${RAW_H})/${LIMIT_FOLDER_SIDE})*${LIMIT_FOLDER_SIDE}) + \"/\" +
                     x + \"_\" + y + \".jpg\";
         }
     }"
@@ -637,7 +637,7 @@ sanitize_input() {
     elif [ "limit" == "$FOLDER_LAYOUT" ]; then
         echo "  - Using folder layout 'limit' with expected ${TILE_COUNT} base tiles from $ICOUNTER images"
         if [ $TILE_COUNT -le $AUTO_FOLDER_LIMIT ]; then
-            echo "    - Warning: This is not an excessively high tile count. Consider using the DZI-compatible layout with FOLDER_LAYOUT=dzi for compatibility reasons"
+            echo "    - Warning: This is not an excessively high tile count. Consider using the DZI-compatible layout with FOLDER_LAYOUT=dzi instead"
         fi
     fi
     export FOLDER_LAYOUT
