@@ -37,6 +37,9 @@ fi
 # Quality only applicable to JPG
 : ${QUALITY:=80}
 : ${TILE_QUALITY:=$QUALITY}
+# If true, images that are smaller than RAW_W*TILE_SIDE * RAW_H*TILE_SIDE are
+# upscaled (keeping aspect ration) to fit
+: ${ALLOW_UPSCALE:=false}
 
 # The size of the raw (fully zoomed) images, measured in 256x256 pixel tiles.
 # RAW_W=4 and RAW_H=3 means (4*256)x(3*256) = 1024x768 pixels.
@@ -185,7 +188,11 @@ process_base() {
     local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
     local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
     local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
-
+    if [ "true" == "$ALLOW_UPSCALE" ]; then
+        local SCALE_MODIFIER=""
+    else
+        local SCALE_MODIFIER=">"
+    fi
     local TILE_SUB=`get_tile_subfolder $COL $ROW`
     mkdir -p $DEST/$MAX_ZOOM/$TILE_SUB
     if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
@@ -206,7 +213,7 @@ process_base() {
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [ "missing" != "$IMAGE" ]; then
         echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
-        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}>" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+        convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}${SCALE_MODIFIER}" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
     if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
         if [ "missing" == "$IMAGE" ]; then
