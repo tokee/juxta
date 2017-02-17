@@ -692,6 +692,7 @@ export TILE_FORMAT
 export TILE_QUALITY
 export VERBOSE
 export IMAGE_COUNT
+export ALLOW_UPSCALE
 
 if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
