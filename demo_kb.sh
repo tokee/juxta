@@ -16,6 +16,8 @@
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
 # TODO: Extraction of title
+# TODO: Support the separate collection
+# http://www.kb.dk/maps/kortsa/2012/jul/kortatlas/subject208/da/
 
 usage() {
     echo "Usage:"
@@ -56,6 +58,7 @@ download_collection() {
     mkdir -p downloads/$COLLECTION
     local T=`mktemp /tmp/juxta_demo_kb_XXXXXXXX`
     local PAGE=1
+    local DOWNLOADED=0
     rm -f downloads/$COLLECTION/sources.dat
     while [ $(( (PAGE-1)*PAGE_SIZE )) -lt $MAX_IMAGES ]; do
         local URL="${SEARCH_URL_PREFIX}${COLLECTION}${SEARCH_URL_INFIX}page=${PAGE}"
@@ -77,6 +80,7 @@ download_collection() {
                 echo "    - Downloading $IMAGE_SHORT"
                 # TODO: Fetch full image with
                 # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
+                # 
                 # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
                 curl -s -m 60 "$IMAGE_URL" > downloads/$COLLECTION/$IMAGE_SHORT
                 if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
@@ -86,6 +90,10 @@ download_collection() {
                 fi
             fi
             echo "downloads/$COLLECTION/${IMAGE_SHORT}|${LINK}§${TITLE}§${DESCRIPTION}" >> downloads/$COLLECTION/sources.dat
+            DOWNLOADED=$((DOWNLOADED+1))
+            if [ "$DOWNLOADED" -ge "$MAX_IMAGES" ]; then
+                break
+            fi
         done
         if [ $(( PAGE*PAGE_SIZE )) -ge $HITS ]; then
             break
