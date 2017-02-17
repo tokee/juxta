@@ -21,6 +21,7 @@
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
 # TODO: Get full images: http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
+# TODO: Trim titles to max X chars
 
 usage() {
     echo "Usage:"
@@ -62,6 +63,8 @@ download_collection() {
     local T=`mktemp /tmp/juxta_demo_kb_XXXXXXXX`
     local PAGE=1
     local DOWNLOADED=0
+    local HITS="-1"
+    local POSSIBLE=0
     rm -f downloads/$COLLECTION/sources.dat
     while [ $(( (PAGE-1)*PAGE_SIZE )) -lt $MAX_IMAGES ]; do
         local URL="${SEARCH_URL_PREFIX}${COLLECTION}${SEARCH_URL_INFIX}page=${PAGE}"
@@ -71,7 +74,15 @@ download_collection() {
         # http://www.kb.dk/maps/kortsa/2012/jul/kortatlas/subject233/da/?orderBy=notBefore&page=2
         # Seems to allow for paging all the way to the end of the search result
         curl -s -m 60 "$URL" | xmllint --format - > $T
-        local HITS=$( cat $T | grep totalResults | sed 's/.*>\([0-9]*\)<.*/\1/' )
+        if [ "$HITS" -eq "-1" ]; then
+            local HITS=$( cat $T | grep totalResults | sed 's/.*>\([0-9]*\)<.*/\1/' )
+            echo " - Total hits for ${COLLECTION}: $HITS"
+            if [ "$HITS" -lt "$MAX_IMAGES" ]; then
+                POSSIBLE=$HITS
+            else
+                POSSIBLE=$MAX_IMAGES
+            fi
+        fi
         IFS=$'\n'
         for ITEM in $( cat $T | tr '\n' ' ' | sed $'s/<item /\\\n<item /g' | grep "<item " ); do
             local LINK=$( echo "$ITEM" | grep -o '<link>[^<]*</link>' | sed ' s/<\/\?link>//g' )
@@ -83,13 +94,14 @@ download_collection() {
             # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010.jpg
             # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010/full/full/0/native.jpg
             local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' )
+            DOWNLOADED=$((DOWNLOADED+1))
             if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
-                echo "    - Downloading $IMAGE_SHORT"
+                echo "    - Downloading image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_SHORT"
                 # TODO: Fetch full image with
                 # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
                 # 
                 # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
-                echo "$IMAGE_URL"
+                # echo "$IMAGE_URL"
                 curl -s -m 60 "$IMAGE_URL" > downloads/$COLLECTION/$IMAGE_SHORT
                 if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
                     >&2 echo "Error: Unable do download $IMAGE_URL"
@@ -98,7 +110,6 @@ download_collection() {
                 fi
             fi
             echo "downloads/$COLLECTION/${IMAGE_SHORT}|${LINK}§${TITLE}§${DESCRIPTION}" >> downloads/$COLLECTION/sources.dat
-            DOWNLOADED=$((DOWNLOADED+1))
             if [ "$DOWNLOADED" -ge "$MAX_IMAGES" ]; then
                 break
             fi
