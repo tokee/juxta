@@ -193,6 +193,9 @@ function createOverlay(juxtaProperties, dragon) {
                     } else {
                         result.meta = full;
                     }
+                    if (typeof(result.meta) == 'undefined') { // Happens for single images without metadata
+                        result.meta = '';
+                    }
                     //                console.log("Firing x=" + result.x + ", y=" + result.y + ", aside=" + aSide + ", index=" + index + ", meta=" + result.meta);
                     fireResult();
                     return true;
