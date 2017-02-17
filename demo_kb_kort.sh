@@ -14,10 +14,10 @@
 : ${SEARCH_URL_PREFIX:="http://www.kb.dk/cop/syndication/maps/kortsa/2012/jul/kortatlas/"}
 
 # Maps & Atlases are quite high-resolution, so we try to make room for a lot of pixels without
-# getting too much padding for the smaller ones.
-# Note that the image server at kb.dk caps the size at 8000x8000, so no nice 32x24 RAW below.
-: ${RAW_W:=31}
-: ${RAW_H:=23}
+# getting too much upscaling for the smaller ones.
+# Note that the image server at kb.dk caps the size at 8000x8000
+: ${RAW_W:=24}
+: ${RAW_H:=18}
 : ${MARGIN:=20}
 
 # Although many of the maps are 50MP+, some are smaller. To avoid ugly size differences
