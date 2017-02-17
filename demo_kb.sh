@@ -60,7 +60,6 @@ download_collection() {
     echo "- Downloading a maximum of $MAX_IMAGES images from collection ${COLLECTION}"
     local SUBJECT_ID=`echo $COLLECTION | grep -o "[0-9]*"`
     mkdir -p downloads/$COLLECTION
-    local T=`mktemp /tmp/juxta_demo_kb_XXXXXXXX`
     local PAGE=1
     local DOWNLOADED=0
     local HITS="-1"
@@ -69,11 +68,15 @@ download_collection() {
     while [ $(( (PAGE-1)*PAGE_SIZE )) -lt $MAX_IMAGES ]; do
         local URL="${SEARCH_URL_PREFIX}${COLLECTION}${SEARCH_URL_INFIX}page=${PAGE}"
         #&subject=${SUBJECT_ID}"
-        echo "  - Fetching page ${PAGE}: $URL"
-        # TODO: Seems to be limited to 400 total entries
         # http://www.kb.dk/maps/kortsa/2012/jul/kortatlas/subject233/da/?orderBy=notBefore&page=2
         # Seems to allow for paging all the way to the end of the search result
-        curl -s -m 60 "$URL" | xmllint --format - > $T
+        T="downloads/$COLLECTION/page_${PAGE}.xml"
+        if [ ! -s "$T" ]; then
+            echo "  - Fetching page ${PAGE}: $URL"
+            curl -s -m 60 "$URL" | xmllint --format - > $T
+        else
+            echo " - $COLLECTION browse page $PAGE already fetched"
+        fi
         if [ "$HITS" -eq "-1" ]; then
             local HITS=$( cat $T | grep totalResults | sed 's/.*>\([0-9]*\)<.*/\1/' )
             echo " - Total hits for ${COLLECTION}: $HITS"
@@ -119,7 +122,6 @@ download_collection() {
         fi
         PAGE=$(( PAGE+1 ))
     done
-    rm $T
 }
 
 if [ "list" == "$COMMAND" ]; then
