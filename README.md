@@ -69,7 +69,15 @@ with linkback to the image pages at kb.dk. Sample run of the script:
 MAX_IMAGES=200 ./demo_kb.sh create subject2210
 ```
 
-Scale testing can be done with ./demo_scale.sh. Sample runs:
+The script `demo_kb_kort.sh` provides overrides to use the Kort & Atlas (Maps & Atlases) from kb.dk. Most of those images are quite high-resolution (~50MPixel), so `RAW_W` and `RAW_H` are set to take advantage of that. Consequently, it might be a good idea to check with a few images before going for thousands.
+```shell
+MAX_IMAGES=20 ./demo_kb_kort.sh create subject208
+```
+
+
+### Scaling
+
+Scale testing can be done with ./demo_scale.sh. See more in the "Performance & Scaling section in this document.  Sample runs:
 ```shell
 ./demo_scale.sh 100
 RAW_W=1 RAW_H=1 ./demo_scale.sh 1000
