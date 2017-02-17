@@ -347,6 +347,8 @@ create_html() {
     popd > /dev/null
     HTML=$DEST/index.html
     TOTAL_IMAGES=`cat $DEST/imagelist.dat | wc -l | tr -d ' '`
+    # Yes, mega is 10^6, not 2^20. At least when counting pixels
+    MEGAPIXELS=$(( CANVAS_PIXEL_W*$CANVAS_PIXEL_H/1000000 ))
     
     mkdir -p $TILE_SOURCE/resources/images
     cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
