@@ -402,7 +402,6 @@ create_meta_files() {
     local COL=0
     local TOKENS
     while read IMAGE; do
-        echo "Generatong"
         if [ "true" == "$INCLUDE_ORIGIN" ]; then
             if [ $PRE -gt 0 -o $POST -gt 0 ]; then
                 IFS=$'|' TOKENS=($IMAGE)
