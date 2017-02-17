@@ -402,6 +402,7 @@ create_meta_files() {
     local COL=0
     local TOKENS
     while read IMAGE; do
+        echo "Generatong"
         if [ "true" == "$INCLUDE_ORIGIN" ]; then
             if [ $PRE -gt 0 -o $POST -gt 0 ]; then
                 IFS=$'|' TOKENS=($IMAGE)
@@ -409,8 +410,12 @@ create_meta_files() {
                 local IMETA=${TOKENS[1]}
                 unset IFS
                 local ILENGTH=${#IPATH}
-                local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
-                local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
+                if [ $PRE -eq $POST ]; then # Happens with single image
+                    local IMETA=""
+                else 
+                    local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+                    local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
+                fi
             else
                 local IMETA="$IMAGE"
             fi
@@ -424,7 +429,11 @@ create_meta_files() {
         local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
         if [ ! -s $DM ]; then
             echo "{ \"prefix\": \"${IMAGE_PATH_PREFIX}\"," >> $DM
-            echo "  \"postfix\": \"${IMAGE_PATH_POSTFIX}\"," >> $DM
+            if [ $PRE -eq $POST ]; then # Probably single image
+                echo "  \"postfix\": \"\"," >> $DM
+            else
+                echo "  \"postfix\": \"${IMAGE_PATH_POSTFIX}\"," >> $DM
+            fi
             echo -n "  \"meta\": ["$'\n'"\"$IMETA\"" >> $DM
         else
             echo -n ","$'\n'"\"$IMETA\"" >> $DM
