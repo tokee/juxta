@@ -361,7 +361,7 @@ create_html() {
         height: $CANVAS_PIXEL_H,
         width: $CANVAS_PIXEL_W,
         tileSize: $TILE_SIDE,
-        getTileUrl: function( level, x, y ){###
+        getTileUrl: function( level, x, y ){
             return level + \"/\" + (Math.floor(Math.floor(x/${RAW_W})/${LIMIT_FOLDER_SIDE})*${LIMIT_FOLDER_SIDE}) +
                     \"_\" + (Math.floor(Math.floor(y/${RAW_H})/${LIMIT_FOLDER_SIDE})*${LIMIT_FOLDER_SIDE}) + \"/\" +
                     x + \"_\" + y + \".jpg\";
