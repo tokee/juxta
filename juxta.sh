@@ -102,7 +102,7 @@ fi
 : ${AGGRESSIVE_IMAGE_SKIP:=false}
 
 : ${DEST:=tiles}
-if [ ! "." == ".$2" ]; then
+if [ "." != ".$2" ]; then
     DEST="$2"
 fi
 
@@ -524,7 +524,7 @@ store_collage_setup() {
 }
 
 resolve_dimensions() {
-    IMAGE_COUNT=`cat "$DEST/imagelist_onlyimages.dat" | grep -v "^#.*" | grep -v "^$" | wc -l | tr -d ' '`
+    IMAGE_COUNT=`cat "$DEST/imagelist.dat" | wc -l | tr -d ' '`
     if [ "." != ".$RAW_IMAGE_COLS" ]; then # Fixed width
         if [ "true" == "$AUTO_CROP" -a $RAW_IMAGE_COLS -gt $IMAGE_COUNT ]; then
             RAW_IMAGE_COLS=$IMAGE_COUNT
@@ -578,22 +578,19 @@ usage() {
     echo "Usage: ./juxta.sh imagelist [destination]"
     echo "imagelist: A file with images represented as file paths"
     echo "destination: Where to store the generated tiles"
+    echo ""
+    echo "Alternative: ./juxta.sh -r destination"
+    echo "Re-creates all structures (HTML file and supporting files) for an existing collage,"
+    echo "without touching the generated tiles. Make sure that all tile-related optional"
+    echo "options are the same as for the previous run."
     exit $1
 }
 
-sanitize_input() {
-    if [ -z "$1" ]; then
-        usage
-    fi
-    IMAGE_LIST="$1"
-    if [ ! -s $IMAGE_LIST ]; then
-        >&2 echo "Error: Unable to access imagelist '$IMAGE_LIST'"
-        usage 1
-    fi
-
-    echo "  - Verifying images availability"
+# Out: ICOUNTER
+verify_source_images() {
+    echo "  - Verifying images availability and generating $DEST/imagelist.dat"
     mkdir -p $DEST
-    local ICOUNTER=1
+    ICOUNTER=1
     rm -rf $DEST/imagelist.dat $DEST/imagelist_onlyimages.dat
     while read IMAGE; do
         if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
@@ -616,9 +613,40 @@ sanitize_input() {
         fi
         echo "$IMAGE" >> $DEST/imagelist.dat
         echo "$IPATH" >> $DEST/imagelist_onlyimages.dat
-        local ICOUNTER=$(( ICOUNTER+1 ))
+        ICOUNTER=$(( ICOUNTER+1 ))
     done < $IMAGE_LIST
+    export ICOUNTER
+}
 
+# Out: RECREATE ICOUNTER FOLDER_LAYOUT LIMIT_FOLDER_SIDE
+sanitize_input() {
+    if [ -z "$1" ]; then
+        usage
+    fi
+
+    IMAGE_LIST="$1"
+    if [ "-r" == "$IMAGE_LIST" ]; then
+        echo " - Attempting to re-create HTML and support files without touching files for project '$DEST'"
+        if [ ! -d "$DEST" ]; then
+            >&2 "The folder '$DEST' does not exists. Unable to re-create non-tile files"
+            usage 50
+        fi
+        if [ ! -s "$DEST/imagelist.dat" ]; then
+            >&2 "The image list '$DEST/imagelist.dat' does not exist. Unable to re-create non-tile files"
+            usage 51
+        fi
+        ICOUNTER=$(cat $DEST/imagelist.dat | wc -l)
+        echo "  - $DEST/imagelist.dat exists and contains $ICOUNTER image references"
+        export RECREATE=true
+    else
+        if [ ! -s $IMAGE_LIST ]; then
+            >&2 echo "Error: Unable to access imagelist '$IMAGE_LIST'"
+            usage 1
+        fi
+        verify_source_images # ICOUNTER(number of valid images)
+        export RECREATE=false
+    fi
+    
     # Determine folder layout
     local TILE_COUNT=$((ICOUNTER*RAW_W*RAW_H))
     if [ "auto" == "$FOLDER_LAYOUT" ]; then
@@ -644,6 +672,7 @@ sanitize_input() {
     export LIMIT_FOLDER_SIDE
 }
 
+# Out: BATCH
 prepare_batch() {
     BATCH=`mktemp /tmp/juxta_XXXXXXXX`
     echo "  - Preparing batch job"
@@ -673,12 +702,19 @@ START_S=`date +%s`
 START_TIME=`date +%Y%m%d-%H%M`
 sanitize_input $@
 resolve_dimensions
-echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 set_converter
-prepare_batch
+
 store_collage_setup
 create_html
 create_dzi
+
+if [ "true" == "$RECREATE" ]; then
+    echo "  - Skipping all tile generation as '-r' (recreate) was specified"
+    echo "HTML-page available at $HTML"
+    exit
+fi
+    
+echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 
 export RAW_W
 export RAW_H
@@ -697,6 +733,7 @@ export ALLOW_UPSCALE
 if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
+    prepare_batch
     echo "  - Creating base zoom level $MAX_ZOOM"
     cat $BATCH | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'process_base "{}"'
 fi
