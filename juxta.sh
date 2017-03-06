@@ -714,6 +714,7 @@ sanitize_input $@
 resolve_dimensions
 set_converter
 
+prepare_batch # Needs to be here, but why?
 store_collage_setup
 create_html
 create_dzi
@@ -745,7 +746,6 @@ export ALLOW_UPSCALE
 if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
-    prepare_batch
     echo "  - Creating base zoom level $MAX_ZOOM"
     cat $BATCH | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'process_base "{}"'
 fi

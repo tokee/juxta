@@ -157,7 +157,7 @@ function createOverlay(juxtaProperties, dragon) {
     };
     this.fireResult = function(){
         if (result.fired) {
-            returm;
+            return;
         }
         result.fired = true;
         juxtaCallback(result.x, result.y, result.boxX, result.boxY, result.boxWidth, result.boxHeight,
