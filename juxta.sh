@@ -111,6 +111,12 @@ fi
 : ${OSD_ZIP:="openseadragon-bin-${OSD_VERSION}.zip"}
 : ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v${OSD_VERSION}/$OSD_ZIP"}
 
+dump_options() {
+    for VAL in $( cat ${BASH_SOURCE} | grep -o ': ${[A-Z_]*:=' | grep -o '[A-Z_]*'); do
+        echo ": \${$VAL:=\"$(eval echo '$'$VAL)\"}"
+    done
+}
+
 fetch_dragon() {
     if [ -s $JUXTA_HOME/osd/$OSD_ZIP ]; then
         return
@@ -635,6 +641,10 @@ sanitize_input() {
             >&2 "The image list '$DEST/imagelist.dat' does not exist. Unable to re-create non-tile files"
             usage 51
         fi
+        if [ -s "$DEST/previous_options.conf" ]; then
+            echo "  - Sourcing $DEST/previous_options.conf to mimick original setup (this won't override explicit parameters)"
+            source "$DEST/previous_options.conf"
+        fi
         ICOUNTER=$(cat $DEST/imagelist.dat | wc -l)
         echo "  - $DEST/imagelist.dat exists and contains $ICOUNTER image references"
         export RECREATE=true
@@ -713,7 +723,9 @@ if [ "true" == "$RECREATE" ]; then
     echo "HTML-page available at $HTML"
     exit
 fi
-    
+
+# We only change stored options if we are not recreating
+dump_options > "$DEST/previous_options.conf"
 echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 
 export RAW_W
