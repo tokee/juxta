@@ -8,37 +8,49 @@
 # Primary developer: Toke Eskildsen - @TokeEskildsen - toes@kb.dk / te@ekot.dk
 #
 
-
+if [ -s "$JUXTA_CONF" ]; then # And see if the caller specified the configuration
+    echo " - Sourcing primary setup from $JUXTA_CONF"
+    source "$JUXTA_CONF"
+fi
+if [ -s "$DEST/juxta.conf" ]; then
+    echo " - Sourcing previous setup from $DEST/juxta.conf"
+    source "$DEST/juxta.conf"
+fi
+if [ -s juxta.conf ]; then # Also look for configuration in calling folder
+    echo " - Sourcing default setup from $(pwd)/juxta.conf"
+    source juxta.conf
+fi
 pushd ${BASH_SOURCE%/*} > /dev/null
 if [ -s juxta.conf ]; then
+    echo " - Sourcing default setup from $(pwd)/juxta.conf"
     source juxta.conf
 fi
 JUXTA_HOME=`pwd`
 popd > /dev/null
-if [ -s juxta.conf ]; then # Also look for configuration in calling folder
-    source juxta.conf
-fi
-if [ -s "$JUXTA_CONF" ]; then # And see if the caller specified the configuration
-    source "$JUXTA_CONF"
-fi
 
-# Maximum number of threads to use for processing
+# Maximum number of threads to use for generating tiles
 : ${THREADS:=3}
 
+# The tile edge size. This can theoretically be anything, but the strong default is 256.
 # Don't change this unless you know what you are doing
 : ${TILE_SIDE:=256}
-# Hex RGB for background, when the aspect ration for an image does not fit
+# Hex RGB for background, when the aspect ratio for an image does not fit
 : ${BACKGROUND:=cccccc}
+# Template for the HTML document that is generated. If multiple pages are to be generated
+# with the same look'n'feel, it might be worth it to create abd usa a custom template.
+# If the collage is unique, it is probably easier to use the default template and tweak
+# the result instead.
 : ${TEMPLATE:="$JUXTA_HOME/web/presentation.template.html"}
-# Free space (in pixels) around each raw image
+# Free space (in pixels) around each raw image, The free space will be filled with BACKGROUND
 : ${MARGIN:=5}
+# The tile format. Possible values are jpg and png
 : ${FORMAT:=jpg}
 : ${TILE_FORMAT:=$FORMAT}
-# Quality only applicable to JPG
+# Quality is only applicable to JPG
 : ${QUALITY:=80}
 : ${TILE_QUALITY:=$QUALITY}
-# If true, images that are smaller than RAW_W*TILE_SIDE * RAW_H*TILE_SIDE are
-# upscaled (keeping aspect ration) to fit
+# If true, images that are smaller than RAW_W*TILE_SIDE * RAW_H*TILE_SIDE are upscaled
+# (keeping aspect ration) to fit. If false, such images will have a larger margin
 : ${ALLOW_UPSCALE:=false}
 
 # The size of the raw (fully zoomed) images, measured in 256x256 pixel tiles.
@@ -49,22 +61,23 @@ fi
 # Possible values are NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
 : ${RAW_GRAVITY:=center}
 
-# If either of these are defines, a fixed width or height layout is used
+# If either of these are defined, a fixed width or height layout is used
 # If none are defined, the canvas aspect is used
-# If both are defined, the ROWS is ignored
+# If both are defined, RAW_IMAGE_ROWS is ignored
 : ${RAW_IMAGE_COLS:=$COLS}
 : ${RAW_IMAGE_ROWS:=$ROWS}
 # If true, the special case ROWS=1 or COLS=1 are handled so no empty tiles are created
 : ${AUTO_CROP:=true}
 # The preferable aspect ratio of the virtual canvas.
-# Note that this is not guaranteed to be exact.
+# Note: This is not guaranteed to be exact
 : ${CANVAS_ASPECT_W:=1}
 : ${CANVAS_ASPECT_H:=1}
 # If true, structures are provided for resolving the source image belonging to the
-# tiles that are hovered
+# tiles that are hovered. This can be used to provide download-links to the source
+# images or to infer external links, depending on the images
 : ${INCLUDE_ORIGIN:=true}
 # Meta-data are resolved using async calls for arrays. To avoid flooding the server,
-# they are stored in chunks, where each chunk contains ASYNC_META_SIDE^2 entries.
+# they are stored in chunks. Each chunk contains ASYNC_META_SIDE^2 entries
 : ${ASYNC_META_SIDE:=50}
 # The number of meta-data-chunks to keep cached in the browser.
 : ${ASYNC_META_CACHE:=10}
@@ -79,10 +92,10 @@ fi
 # generated for the demo page). Using 'limit' with 10K tiles or less has no performance
 # benefits.
 # If 'auto', juxta uses 'dzi', unless the tile-count exceeds $AUTO_FOLDER_LIMIT, in which
-# case it uses 'limit'. The AUTO_FOLDER_LIMIT is intentionally high (1M) to promote
-# standard layout. A more performance-oriented choice would be 100K.
+# case it uses 'limit'. The AUTO_FOLDER_LIMIT is intentionally high (100K) to promote
+# standard layout
 : ${FOLDER_LAYOUT:=auto}
-: ${AUTO_FOLDER_LIMIT:=20000}
+: ${AUTO_FOLDER_LIMIT:=100000}
 # The edge length of the raw grid blocks for creating sub-folders when FOLDER_LAYOUT=limit.
 # The number of tiles in each folder will be AUTO_FOLDER_SIDE^2*RAW_W*RAW_H.
 # With the default values that is 40^2 * 4 * 3 = 19,200.
@@ -92,7 +105,8 @@ fi
 # Controls log level
 : ${VERBOSE:=true}
 
-# Ignore missing source images
+# Ignore missing source images. If true, blank tiles will be generated for missing images.
+# If false, the missing images are not included in the collage
 : ${IGNORE_MISSING:=false}
 
 # If true, any pre-existing HTML file for the collage will be overwritten
@@ -140,7 +154,7 @@ set_converter() {
     export CONVERT="convert"
     export MONTAGE="montage"
     if [ ! -z "`which gm`" ]; then
-        # TODO: Test if GM really is the better choise for these tasks
+        # TODO: Test if GM really is the better choice for these tasks
         export CONVERT="gm convert"
         export MONTAGE="gm montage"
     fi
