@@ -9,7 +9,7 @@ juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel i
 
 As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`, if `jpg` is used as tile format. The artefacts from the JPEG compression compounds, although the effect is mitigated by down scaling.
 
-The `4 tiles → join → scale(¼) → 1 tile` processing means that tile-edge-artefacts compounds, potentially resulting in visible horizontal and vertical lines at some zoom levels. This is most visible when using images that fits the tiles well, as it brings the edges of the images closer together.
+The repeated `4 tiles → join → scale(¼) → 1 tile` processing means that tile-edge-artefacts compounds, potentially resulting in visible horizontal and vertical lines at some zoom levels. This is most visible when using images that fits the tiles well, as it brings the edges of the images closer together.
 
 The script is restart-friendly as it skips already generated tiles.
 
@@ -17,9 +17,9 @@ Processing 24,000 ~1MPixel images on a laptop using 2 threads took 2½ hour and 
 
 The theoretical limits for collage size / source image count are dictated by bash & JavaScripts max integers. The bash-limit depends on system, but should be 2⁶³ on most modern systems. For JavaScript it is 2⁵³. Think yotta-pixels.
 
-The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size if `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see issue #5); but that is solvable, should the case arise.
+The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size of `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see issue #5); but that is solvable, should the case arise.
 
-Depending on browser, mouse-over meta-data will not be shown when opening the collage from the local file system. This is a security decision (CORS). It should work when accessing the collage through a webserver.
+Depending on browser, mouse-over meta-data will only work for the upper left images of the collage, when opening the collage from the local file system. This is by design (see CORS). It should work for all browsers when accessing the collage through a webserver.
 
 
 ## Requirements
@@ -28,6 +28,9 @@ Depending on browser, mouse-over meta-data will not be shown when opening the co
  * wget optional (OpenSeadragon must be downloaded manually if it is not there)
 
 Developed and tested under Ubuntu 16.04. As of 2017-02-03 it worked under OS X, with some glitches in meta-data.
+
+OpenSeadragon and the mouse-over code has been tested with IE10, Firefox, Chrome & Safari on desktop machines, as well as Safari on iPhone &iPad and whatever build-in browser CyanogenMOD has.
+
 
 ## Usage
 1. Create a list of images
@@ -165,3 +168,12 @@ The Deep Zoom layout can be forced by specifying `FOLDER_LAYOUT=dzi`. Doing so o
 |500000|  43064|   11|  32804| 668K|6166|
 
 As can be seen, performance drops markedly when the number of images rises and the folder-layout is forced to `dzi`.
+
+
+## Upgrading
+
+juxta is very much "hope you hit a stable version at git clone" at the moment, so chances are that the HTML and supporting files should be upgraded at some point. As large collages can take days to create, a special upgrade-mode has been added:
+```shell
+/juxta.sh -r mycollage
+```
+Running with `-r` ensures that the tile files are not touched by juxta. However, for this to work properly, it is essential that all tile-related parameters, such as `RAW_W` and `RAW_H`, are set to the same as the original call to juxta. The only safe parameters to tweak on an upgrade are `TEMPLATE`, `ASYNC_META_SIDE`, `ASYNC_META_CACHE`, `OSD_VERSION`, `OSD_ZIP` & `OSD_URL`.
