@@ -43,6 +43,10 @@ popd > /dev/null
 : ${TEMPLATE:="$JUXTA_HOME/web/presentation.template.html"}
 # Free space (in pixels) around each raw image, The free space will be filled with BACKGROUND
 : ${MARGIN:=5}
+# To control horizontal & vertical margins independently, set MARGIN_W and MAGIN_H instead
+# of only MARGIN
+: ${MARGIN_W:=$MARGIN}
+: ${MARGIN_H:=$MARGIN}
 # The tile format. Possible values are jpg and png
 : ${FORMAT:=jpg}
 : ${TILE_FORMAT:=$FORMAT}
@@ -206,8 +210,8 @@ process_base() {
     local TILE_START_ROW=$((ROW*RAW_H))
     local RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
     local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
-    local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN))
-    local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN))
+    local GEOM_W=$((RAW_PIXEL_W-2*$MARGIN_W))
+    local GEOM_H=$((RAW_PIXEL_H-2*$MARGIN_H))
     if [ "true" == "$ALLOW_UPSCALE" ]; then
         local SCALE_MODIFIER=""
     else
@@ -749,7 +753,8 @@ export RAW_GRAVITY
 export DEST
 export MAX_ZOOM
 export BACKGROUND
-export MARGIN
+export MARGIN_W
+export MARGIN_H
 export TILE_SIDE
 export TILE_FORMAT
 export TILE_QUALITY
