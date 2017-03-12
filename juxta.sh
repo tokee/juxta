@@ -43,8 +43,7 @@ popd > /dev/null
 : ${TEMPLATE:="$JUXTA_HOME/web/presentation.template.html"}
 # Free space (in pixels) around each raw image, The free space will be filled with BACKGROUND
 : ${MARGIN:=5}
-# To control horizontal & vertical margins independently, set MARGIN_W and MAGIN_H instead
-# of only MARGIN
+# To control width & height margins independently, set MARGIN_W and MAGIN_H instead MARGIN
 : ${MARGIN_W:=$MARGIN}
 : ${MARGIN_H:=$MARGIN}
 # The tile format. Possible values are jpg and png
