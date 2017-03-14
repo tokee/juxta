@@ -347,6 +347,10 @@ create_zoom_levels() {
     create_zoom_levels $DEST_ZOOM
 }
 
+#
+# Creates a .dzi-file, usable for generic DeepZoom-applications.
+# The juxta sample HTML page does not use this file for anything.
+#
 create_dzi() {
     pushd $DEST > /dev/null
     echo "{
@@ -364,6 +368,11 @@ create_dzi() {
     popd > /dev/null
 }
 
+#
+# Creates a HTML page with an OpenSeadragon-setup using the generated tiles
+# and meta-data files. The page can be used as-is, served from the local file
+# system or a web server.
+#
 create_html() {
     pushd $DEST > /dev/null
     TILE_SOURCE=$(basename `pwd`)
@@ -426,6 +435,10 @@ create_html() {
     ctemplate "$TEMPLATE" > $HTML
 }
 
+#
+# Creates callback-files with filenames and/or meta-data for the source images,
+# used for the graphical overlays.
+#
 create_meta_files() {
     echo "  - Creating meta files"
     rm -f $DEST/meta/*.json
@@ -484,6 +497,11 @@ create_meta_files() {
     cat $DEST/meta/0_0.json >> $DEST/resources/overlays_preload.js
 }
 
+#
+# Outputs the resolved parameters, usable for debugging or generating a
+# setup-file matching the current collage. If college-generation is
+# re-executed, these settings will be sourced.
+#
 store_collage_setup() {
     echo "  - Analyzing collection meta data"
     echo "{ colCount: $RAW_IMAGE_COLS," > $DEST/collage_setup.js
@@ -546,6 +564,11 @@ store_collage_setup() {
     fi
 }
 
+#
+# Determine the size of the collage, measured in raw images.
+#
+# Out: RAW_IMAGE_COLS RAW_IMAGE_ROWS
+#
 resolve_dimensions() {
     IMAGE_COUNT=`cat "$DEST/imagelist.dat" | wc -l | tr -d ' '`
     if [ "." != ".$RAW_IMAGE_COLS" ]; then # Fixed width
@@ -609,7 +632,13 @@ usage() {
     exit $1
 }
 
-# Out: ICOUNTER
+#
+# Iterates all source images and verifies that a file of size > 0 is present
+# for each of them. If a file is not present, the image is ignored.
+#
+# Produces: imagelist.dat (images & meta-data), imagelist_onlyimages.dat
+# Out: ICOUNTER (number of valid images)
+#
 verify_source_images() {
     echo "  - Verifying images availability and generating $DEST/imagelist.dat"
     mkdir -p $DEST
