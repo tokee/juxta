@@ -64,6 +64,17 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 
 ## Demos
 
+### Image collection at rijksmuseum.nl
+
+The script `demo_rijksmuseum.sh` fetches openly available images from rijksmuseum.nl and generates a collage
+with linkback to the image pages at the museum. In order to run the script, a *free key* must be requested
+from the museum. Details at http://rijksmuseum.github.io/ - with that key a sample run is
+```shell
+MAX_IMAGES=200 KEY=mykey ./demo_rijksmuseum.sh "https://www.rijksmuseum.nl/en/search?f.principalMakers.name.sort=Rembrandt+Harmensz.+van+Rijn&st=OBJECTS" "rembrandt"
+```
+where the URL is copy-pasted from a search at the Rijksmuseum.
+
+
 ### Historical image collection at kb.dk
 
 The script `demo_kb.sh` fetches openly available images from kb.dk and generates a collage
