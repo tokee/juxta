@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${COLLECTION} covers</title>
+    <link rel="stylesheet" type="text/css" href="resources/juxta.css" />
+    <script src="resources/openseadragon.min.js"></script>
+    <script type="text/javascript" src="resources/overlays_preload.js"></script>
+    <script type="text/javascript" src="resources/overlays.js"></script>
+    <!-- Contact person: toes@kb.dk -->
+    <style>
+        body {
+          background: black;
+          color: white;
+        }
+        #header, #footer {
+          color: black;
+        }
+        html, body {
+          height: 100%;
+        }
+        #zoom-display {
+          position: absolute;
+          top: 20%;
+          left: 0;
+          width: 100%;
+          height: 75%;
+          border: none;
+        }
+        #pageinfo {
+          position: absolute;
+          top: 5%;
+          left: 5%;
+          width: 90%;
+          height: 10%;
+        }
+    </style>
+</head>
+
+<body>
+<div id="pageinfo">
+<h1>${TOTAL_IMAGES} ${COLLECTION} covers from coverbrowser.com (${MEGAPIXELS} MPixels)</h1>
+<p>juxta-demo of publicly available images from <a href="http://coverbrowser.com">coverbrowser.com</a>. This demo is for personal use - if you want to expose the collage to the public, you need to check your local copyright laws.</p>
+</div>
+
+<div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
+
+<script type="text/javascript">
+  var myDragon = OpenSeadragon({
+    id:            "zoom-display",
+
+    zoomPerScroll: 2.0,    
+    showNavigator:  false,
+    wrapHorizontal: false,
+    prefixUrl: "resources/images/",
+    ${TILE_SOURCES}
+  });
+  ${SETUP_OVERLAY}
+</script>
+<script type="text/javascript">
+overlays.createHeader = function(x, y, image, meta) {
+  imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
+  imageLink =  meta.split("§")[0];
+  linkText = meta.split("§")[1];
+  return '<a href="' + imageLink + '">' + linkText + '</a>';
+}
+
+overlays.showFooter = function(x, y, image, meta) {
+  return false;
+}
+</script>
+
+<!-- Must be below the creation of myDragon -->
+<script type="text/javascript" src="resources/overlays.js"></script>
+<script type="text/javascript">
+</script>
+</body>
+</html>

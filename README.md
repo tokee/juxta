@@ -64,6 +64,17 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 
 ## Demos
 
+### Covers
+
+The script `demo_coverbrowser.sh` fetches images from coverbrowser.com and generates a collage
+with linkback to the image pages at coverbrowser. *Important note:* The covers are not released
+in the public domain or under a CC-license. If a collage of the covers is to be exposed to the
+public, be sure to check that it is legal under local copyright laws. Sample run of the script:
+```shell
+./demo_coverbrowser.sh tintin
+```
+The cover-collections can be browsed at http://coverbrowser.com/
+
 ### Image collection at rijksmuseum.nl
 
 The script `demo_rijksmuseum.sh` fetches openly available images from rijksmuseum.nl and generates a collage
