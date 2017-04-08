@@ -3,7 +3,8 @@
 # Creates collage of public available images from coverbrowser.com
 
 # http://www.coverbrowser.com/covers/maxx
-
+# TODO: Don't download the images, just extract the URLs
+# Move meta-information to footer (amazing-spider-man is fine for testing)
 
 : ${MAX_IMAGES:=5000}
 : ${URL_BASE:="http://www.coverbrowser.com/covers"}
@@ -14,6 +15,7 @@
 : ${RAW_H:=3}
 : ${BACKGROUND:="000000"}
 : ${TEMPLATE:=demo_coverbrowser.template.html}
+: ${ALLOW_UPSCALE:=true}
 
 usage() {
     echo "Usage:   ./demo_coverbrowser.sh collection"
