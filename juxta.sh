@@ -60,6 +60,14 @@ popd > /dev/null
 # RAW_W=4 and RAW_H=3 means (4*256)x(3*256) = 1024x768 pixels.
 : ${RAW_W:=4}
 : ${RAW_H:=3}
+# How to determine RAW_W and RAW_H. Possible values are fixed, automin and automax
+# fixed: Use the values defined for RAW_W and RAW_H as-is
+# automin: Iterate all source images, determining the smallest width and the smallest height
+#          and calculate RAW_W and RAW_H from that
+# automax: Iterate all source images, determining the largest width and the largest height
+#          and calculate RAW_W and RAW_H from that
+: ${RAW_MODE:=fixed}
+
 # Where to position the images if their aspect does not match the ideal
 # Possible values are NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
 : ${RAW_GRAVITY:=center}
@@ -723,6 +731,42 @@ sanitize_input() {
         if [ $TILE_COUNT -le $AUTO_FOLDER_LIMIT ]; then
             echo "    - Warning: This is not an excessively high tile count. Consider using the DZI-compatible layout with FOLDER_LAYOUT=dzi instead"
         fi
+    fi
+    if [ "$RAW_MODE" == "automin" ]; then
+        echo "Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
+        local T=$( mktemp )
+        identify -format '%wx%h\n' $( cat $IMAGE_LIST | sed 's/[|].*//' ) > $T
+        local MINW=$( cat $T | cut -dx -f1 | sort -n | head -n 1 )
+        local MINH=$( cat $T | cut -dx -f2 | sort -n | head -n 1 )
+        rm $T
+        RAW_W=$(( MINW/TILE_SIDE + 1 ))
+        RAW_H=$(( MINH/TILE_SIDE + 1 ))
+        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq $MINW ]; then
+            RAW_W=$(( RAW_W-1 ))
+        fi
+        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq $MINH ]; then
+            RAW_H=$(( RAW_H-1 ))
+        fi
+        echo "RAW_MODE==$RAW_MODE found min size ${MINW}x${MINH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
+    elif [ "$RAW_MODE" == "automax" ]; then
+        echo "Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
+        local T=$( mktemp )
+        identify -format '%wx%h\n' $( cat $IMAGE_LIST | sed 's/[|].*//' ) > $T
+        local MAXW=$( cat $T | cut -dx -f1 | sort -n | tail -n 1 )
+        local MAXH=$( cat $T | cut -dx -f2 | sort -n | tail -n 1 )
+        rm $T
+        RAW_W=$(( MAXW/TILE_SIDE + 1 ))
+        RAW_H=$(( MAXH/TILE_SIDE + 1 ))
+        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq $MAXW ]; then
+            RAW_W=$(( RAW_W-1 ))
+        fi
+        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq $MAXH ]; then
+            RAW_H=$(( RAW_H-1 ))
+        fi
+        echo "RAW_MODE==$RAW_MODE found max size ${MAXW}x${MAXH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
+    elif [ "$RAW_MODE" != "fixed" ]; then
+        >&2 echo "Error: RAW_MODE==$RAW_MODE where supported values are fixed, automin and automax"
+        usage 65
     fi
     export FOLDER_LAYOUT
     export LIMIT_FOLDER_SIDE
