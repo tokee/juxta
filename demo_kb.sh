@@ -13,8 +13,7 @@
 # Valid values are 'none', 'intensity' and 'rainbow'
 : ${IMAGE_SORT:="none"}
 
-: ${RAW_W:=4}
-: ${RAW_H:=3}
+: ${RAW_MODE:=automax}
 : ${BACKGROUND:=000000}
 : ${TEMPLATE:=demo_kb.template.html}
 
@@ -92,11 +91,16 @@ download_collection() {
             local DESCRIPTION=$( echo "$ITEM" | grep -o '<description>[^<]*</description>' | sed ' s/<\/\?description>//g' )
             local TITLE=$( echo "$ITEM" | grep -o '<title>[^<]*</title>' | sed ' s/<\/\?title>//g' )
             local IMAGE_URL=$( echo "$ITEM" | grep -o "<[^<]*displayLabel=.image.[^>]>*[^<]*<" | sed 's/.*type=.uri..\(http[^<]*\).*/\1/' )
+            # The server is not consistent, so we hack. Encountered results are
+            # http://kb-images.kb.dk/DAMJP2/online_master_arkiv_3/non-archival/Images/BILLED/DH/DH014583/full/full/0/native.jpg
+            # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/2009/aug/KBK2_2_15/KBK2_2_15_014.jpg
+            # TODO: Sometimes (subject3756) there are multiple image-urls. Investigate what that is about
+            local IMAGE_URL=$( echo "$IMAGE_URL" | sed 's/\/full\/full\/0\/native//' | head -n 1 )
             local IMAGE_SHORT=`basename "$IMAGE_URL" | sed 's/ /_/g'`
             # Tweak URL to be against the IIIF so that the full resolution is requested
             # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010.jpg
             # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010/full/full/0/native.jpg
-            local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' )
+            local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' -e 's/\/full\/full\/0\/native\/full\/full\/0\/native.jpg/\/full\/full\/0\/native.jpg/' )
             DOWNLOADED=$((DOWNLOADED+1))
             if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
                 echo "    - Downloading image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_SHORT"
@@ -104,10 +108,10 @@ download_collection() {
                 # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
                 # 
                 # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
-                # echo "$IMAGE_URL"
+                # echo "Downloading $IMAGE_URL to downloads/$COLLECTION/$IMAGE_SHORT"
                 curl -s -m 60 "$IMAGE_URL" > downloads/$COLLECTION/$IMAGE_SHORT
                 if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
-                    >&2 echo "Error: Unable do download $IMAGE_URL"
+                    >&2 echo "Error: Unable to download $IMAGE_URL to downloads/$COLLECTION/$IMAGE_SHORT"
                     rm -f downloads/$COLLECTION/$IMAGE_SHORT
                     continue
                 fi
