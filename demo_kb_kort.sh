@@ -18,6 +18,7 @@
 # Note that the image server at kb.dk caps the size at 8000x8000
 : ${RAW_W:=24}
 : ${RAW_H:=18}
+: ${RAW_MODE:=fixed}
 : ${MARGIN:=20}
 
 # Although many of the maps are 50MP+, some are smaller. To avoid ugly size differences
