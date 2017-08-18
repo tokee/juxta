@@ -8,6 +8,11 @@
 # Primary developer: Toke Eskildsen - @TokeEskildsen - toes@kb.dk / te@ekot.dk
 #
 
+: ${DEST:=tiles}
+if [ "." != ".$2" ]; then
+    DEST="$2"
+fi
+
 if [ -s "$JUXTA_CONF" ]; then # And see if the caller specified the configuration
     echo " - Sourcing primary setup from $JUXTA_CONF"
     source "$JUXTA_CONF"
@@ -125,11 +130,6 @@ popd > /dev/null
 
 # If true, no images are processed if any destination-images exist
 : ${AGGRESSIVE_IMAGE_SKIP:=false}
-
-: ${DEST:=tiles}
-if [ "." != ".$2" ]; then
-    DEST="$2"
-fi
 
 # Where to get OpenSeadragon
 : ${OSD_VERSION:=2.2.1}
