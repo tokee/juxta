@@ -60,6 +60,10 @@ popd > /dev/null
 # If true, images that are smaller than RAW_W*TILE_SIDE * RAW_H*TILE_SIDE are upscaled
 # (keeping aspect ration) to fit. If false, such images will have a larger margin
 : ${ALLOW_UPSCALE:=false}
+# Used to change the location of the generated HTML page, relative to the tiles and generated
+# meta-data. Normally this should be blank.
+: ${DATA_ROOT:=""}
+
 
 # The size of the raw (fully zoomed) images, measured in 256x256 pixel tiles.
 # RAW_W=4 and RAW_H=3 means (4*256)x(3*256) = 1024x768 pixels.
@@ -411,7 +415,7 @@ create_html() {
         TILE_SOURCES="tileSources:   {
     Image: {
         xmlns:    \"http://schemas.microsoft.com/deepzoom/2008\",
-        Url:      \"\",
+        Url:      \"$DATA_ROOT\",
         Format:   \"$TILE_FORMAT\", 
         Overlap:  \"0\", 
         TileSize: \"$TILE_SIDE\",
