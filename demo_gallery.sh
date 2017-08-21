@@ -11,7 +11,10 @@
 : ${FORMAT_GLOB:="*.jpg *.jpeg *.png *.tif *.tiff *.bmp"}
 # We move index.html one step up, and data resides in the .juxta-folder
 : ${DATA_ROOT:=".juxta/"}
+
 : ${BACKGROUND:="000000"}
+: ${AGGRESSIVE_IMAGE_SKIP:=true}
+: ${RAW_MODE:=automax}
 
 usage() {
     echo "Usage:"
@@ -42,62 +45,59 @@ process() {
     pushd "$CURRENT" > /dev/null
     local DESIGNATION=$(basename $(pwd))
 
-    log "#¤¤¤ parent=$PARENT current=$CURRENT"
-
     # Depth-first
     local SUB
     local SUBS=""
     local ALLSUBS=$(ls -d */ 2> /dev/null)
-    log "#¤¤¤ ALLSUBS=$ALLSUBS"
     for SUB in $ALLSUBS; do
-        log "#¤¤¤ sub=$SUB"
         if [[ ".juxta" == "$SUB" ]]; then
             continue
         fi
-        log "#¤¤¤ Recursive call to process $DESIGNATION $SUB"
-        if [[ $(process "$DESIGNATION" "$SUB") ]]; then
-            log "#¤¤¤ Finished recursive call to $SUB with true"
+        process "$DESIGNATION" "$SUB"
+        if [[ $? ]]; then
             if [[ "." != ".$SUBS" ]]; then
                 SUBS="$SUBS"$'\n'
             fi
             SUBS="$SUBS$SUB"
-        else
-            log "#¤¤¤ process $DESIGNATION $SUB resulted in false"
         fi
     done
-    log "#¤¤¤ Image-containing subs=$SUBS"
 
     # Any images in current folder?
     shopt -s nocaseglob 
     local IMAGES=$(ls -d $FORMAT_GLOB 2> /dev/null)
+    if [[ "." == .$(echo "$IMAGES" | tr -d '\n') ]]; then
+        IMAGES=""
+    fi
     shopt -u nocaseglob 
-    log "#¤¤¤ Images=$(echo $IMAGES | wc -l)"
-    log "#¤¤¤ Images2=$(echo $IMAGES)"
 
     if [[ "." == ".$SUBS" && "." == ".$IMAGES" ]]; then
-        log "No images or sub-folders with images in $DESIGNATION"
+#        log "No images or sub-folders with images in $DESIGNATION"
         popd > /dev/null
         false
         return
     fi
-    log "Images or sub-folders with images located in $DESIGNATION"
+#    log "Images or sub-folders with images located in $DESIGNATION"
     mkdir -p .juxta
 
     #¤¤¤ TODO: Make this a proper js-include structure
     echo "$SUBS" > .juxta/sub_image_folders.js
     
     echo "$IMAGES" > .juxta/glob_images.dat
-    log "Checking for existing image lists"
-    local DIFF=""
-    if [[ ! -s .juxta/active_images.dat  ||  "." != .$(diff .juxta/glob_images.dat .juxta/active_images.dat) ]]; then
-        log "Creating collage for $(echo "$IMAGES" | wc -l) images in ${DESIGNATION}"
+    if [[ "." != ".$IMAGES" ]]; then
+        local DIFF=""
+        if [[ ! -s .juxta/active_images.dat  ||  "." != .$(diff .juxta/glob_images.dat .juxta/active_images.dat) ]]; then
+            log "Creating collage for $(echo "$IMAGES" | wc -l) images in ${DESIGNATION}"
+            # TODO: Delete any existing tile structures
+        else
+            log "Re-creating index.html for collage $(echo "$IMAGES" | wc -l) images in ${DESIGNATION}"
+            #log "Skipping collage-creation for ${DESIGNATION} as images are unchanged"
+        fi
         mv .juxta/glob_images.dat .juxta/active_images.dat
-        . $JUXTA_HOME/juxta.sh .juxta/active_images.dat .juxta/
+        DESIGNATION="$DESIGNATION" PARENT="$PARENT" SUBS="$SUBS" . $JUXTA_HOME/juxta.sh .juxta/active_images.dat .juxta/
         mv .juxta/index.html ./index.html
     else
-        log "Skipping collage-creation for ${DESIGNATION} as images are unchanged"
+        log "Skipping collage-creation for ${DESIGNATION} as there are no images"
     fi
-
     #¤¤¤ TODO: Move .juxta/index.html to image folder
     
     popd > /dev/null

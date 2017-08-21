@@ -41,8 +41,10 @@
 
 <body>
 <div id="pageinfo">
-<h1>${TOTAL_IMAGES} images for at total of (${MEGAPIXELS} MPixels)</h1>
+    <h1>${DESIGNATION}: ${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels)</h1>
 </div>
+Parent: ${PARENT}<br/>
+Sub-pages: <ul> $(echo "$SUBS" | tr '\n' '\0' | xargs -0 -n 1 -I {} echo "<li><a href="{}index.html">{}</a></li>") </ul>
 
 <div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
 
@@ -61,9 +63,7 @@
 <script type="text/javascript">
 overlays.createHeader = function(x, y, image, meta) {
   imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
-  imageLink =  meta.split("§")[0];
-  linkText = meta.split("§")[1];
-  return '<a href="' + imageLink + '">' + linkText + '</a>';
+  return '<a href="' + image + '">' + imageId + '</a>';
 }
 
 overlays.showFooter = function(x, y, image, meta) {
