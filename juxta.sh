@@ -466,12 +466,12 @@ create_meta_files() {
                 local IMETA=${TOKENS[1]}
                 unset IFS
                 local ILENGTH=${#IPATH}
-                if [ $PRE -eq $POST ]; then # Happens with single image
-                    local IMETA=""
-                else 
+#                if [ $PRE -eq $POST ]; then # Happens with single image
+#                    local IMETA=""
+#                else 
                     local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
                     local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
-                fi
+#                fi
             else
                 local IMETA="$IMAGE"
             fi
@@ -485,11 +485,11 @@ create_meta_files() {
         local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
         if [ ! -s $DM ]; then
             echo "{ \"prefix\": \"${IMAGE_PATH_PREFIX}\"," >> $DM
-            if [ $PRE -eq $POST ]; then # Probably single image
-                echo "  \"postfix\": \"\"," >> $DM
-            else
+#            if [ $PRE -eq $POST ]; then # Probably single image
+#                echo "  \"postfix\": \"\"," >> $DM
+#            else
                 echo "  \"postfix\": \"${IMAGE_PATH_POSTFIX}\"," >> $DM
-            fi
+#            fi
             echo -n "  \"meta\": ["$'\n'"\"$IMETA\"" >> $DM
         else
             echo -n ","$'\n'"\"$IMETA\"" >> $DM
@@ -542,8 +542,8 @@ store_collage_setup() {
         if [ "." != ".$IMETA" ]; then
             ANY_META=true
         fi
-#        echo "**** ${BASELINE:0:$PRE} $BASELINE $LENGTH $PRE"
-#        echo "$IMAGE"
+        #echo "**** ${BASELINE:0:$PRE} $BASELINE $LENGTH $PRE"
+        #echo "$IMAGE"
         while [ $PRE -gt 0 -a ".${IPATH:0:$PRE}" != ".${BASELINE:0:$PRE}" ]; do
             PRE=$((PRE-1))
         done
@@ -559,7 +559,7 @@ store_collage_setup() {
             local CSTART=$(( CLENGTH-POST ))
         done
 
-#        echo "pre=$PRE post=$POST"
+        #echo "pre=$PRE post=$POST post_str=$POST_STR $IMAGE"
         if [ $PRE -eq 0 -a $POST -eq $LENGTH ]; then
             #echo "break"
             break
