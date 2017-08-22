@@ -472,7 +472,6 @@ create_meta_files() {
                 local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
                 if [[ "$CUT_LENGTH" -lt "0" ]]; then
                     local IMETA="|$IMETA"
-                    echo "------------------- $IMETA"
                 else
                     local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
                 fi
