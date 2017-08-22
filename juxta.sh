@@ -691,6 +691,7 @@ sanitize_input() {
     if [ -z "$1" ]; then
         usage
     fi
+    echo " - Starting processing of $IMAGE_LIST into $DEST"
 
     IMAGE_LIST="$1"
     if [ "-r" == "$IMAGE_LIST" ]; then
@@ -741,7 +742,7 @@ sanitize_input() {
         fi
     fi
     if [ "$RAW_MODE" == "automin" ]; then
-        echo "Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
+        echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
         identify -format '%wx%h\n' $( cat $IMAGE_LIST | sed 's/[|].*//' ) > $T
         local MINW=$( cat $T | cut -dx -f1 | sort -n | head -n 1 )
@@ -755,9 +756,9 @@ sanitize_input() {
         if [ $(( (RAW_H-1)*TILE_SIZE )) -eq $MINH ]; then
             RAW_H=$(( RAW_H-1 ))
         fi
-        echo "RAW_MODE==$RAW_MODE found min size ${MINW}x${MINH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
+        echo "    - RAW_MODE==$RAW_MODE found min size ${MINW}x${MINH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
     elif [ "$RAW_MODE" == "automax" ]; then
-        echo "Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
+        echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
         identify -format '%wx%h\n' $( cat $IMAGE_LIST | sed 's/[|].*//' ) > $T
         local MAXW=$( cat $T | cut -dx -f1 | sort -n | tail -n 1 )
@@ -771,7 +772,7 @@ sanitize_input() {
         if [ $(( (RAW_H-1)*TILE_SIZE )) -eq $MAXH ]; then
             RAW_H=$(( RAW_H-1 ))
         fi
-        echo "RAW_MODE==$RAW_MODE found max size ${MAXW}x${MAXH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
+        echo "    - RAW_MODE==$RAW_MODE found max size ${MAXW}x${MAXH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
     elif [ "$RAW_MODE" != "fixed" ]; then
         >&2 echo "Error: RAW_MODE==$RAW_MODE where supported values are fixed, automin and automax"
         usage 65
@@ -857,8 +858,8 @@ fi
 rm $BATCH
 ICOUNT=`cat $DEST/imagelist_onlyimages.dat | wc -l | tr -d ' '`
 
-echo "Process started $START_TIME and ended `date +%Y%m%d-%H%M`"
-echo "juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
-echo "Average speed was $((SPEND_S/ICOUNT)) seconds/image or $((ICOUNT/SPEND_S)) images/second"
-echo "HTML-page available at $HTML"
+echo " - Process started $START_TIME and ended `date +%Y%m%d-%H%M`"
+echo " - juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
+echo " - Average speed was $((SPEND_S/ICOUNT)) seconds/image or $((ICOUNT/SPEND_S)) images/second"
+echo " - HTML-page available at $HTML"
 
