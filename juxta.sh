@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Generates arbitrary collages with source image level contextual metadata.
+# Generates collages with source image level contextual metadata.
 # Demo at http://labs.statsbiblioteket.dk/juxta/subject3795/
 #
 # Released under Apache 2.0
@@ -469,8 +469,13 @@ create_meta_files() {
 #                if [ $PRE -eq $POST ]; then # Happens with single image
 #                    local IMETA=""
 #                else 
-                    local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+                local CUT_LENGTH=$(( ILENGTH-POST-PRE ))
+                if [[ "$CUT_LENGTH" -lt "0" ]]; then
+                    local IMETA="|$IMETA"
+                    echo "------------------- $IMETA"
+                else
                     local IMETA="${IPATH:$PRE:$CUT_LENGTH}|$IMETA"
+                fi
 #                fi
             else
                 local IMETA="$IMAGE"
