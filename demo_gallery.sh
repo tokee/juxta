@@ -34,7 +34,7 @@ JUXTA_HOME=$(pwd)
 popd > /dev/null
 : ${TEMPLATE:="$JUXTA_HOME/demo_gallery.template.html"}
 
-# Produces: true if images, else false
+# Produces: CONTENT_FOLDERS with a list of sub-folders that has content
 process() {
     local PARENT="$1"
     local CURRENT="$2"
@@ -48,35 +48,40 @@ process() {
     # Depth-first
     local SUB
     local SUBS=""
+    local SUBSUBS=""
     local ALLSUBS=$(ls -d */ 2> /dev/null)
     for SUB in $ALLSUBS; do
         if [[ ".juxta" == "$SUB" ]]; then
             continue
         fi
         process "$DESIGNATION" "$SUB"
-        if [[ $? ]]; then
+        if [[ "." != ".$CONTENT_FOLDERS" ]]; then
             if [[ "." != ".$SUBS" ]]; then
                 SUBS="$SUBS"$'\n'
+                SUBSUBS="$SUBSUBS"$'\n'
             fi
-            SUBS="$SUBS$SUB"
+            SUBS="$SUBS$CONTENT_FOLDERS"
+            SUBSUBS="$SUBSUBS$DESIGNATION/$SUB"
         fi
     done
 
     # Any images in current folder?
     shopt -s nocaseglob 
     local IMAGES=$(ls -d $FORMAT_GLOB 2> /dev/null)
+    shopt -u nocaseglob 
     if [[ "." == .$(echo "$IMAGES" | tr -d '\n') ]]; then
         IMAGES=""
     fi
-    shopt -u nocaseglob 
+    if [[ "." == .$(echo "$SUBS" | tr -d '\n') ]]; then
+        SUBS=""
+    fi
 
     if [[ "." == ".$SUBS" && "." == ".$IMAGES" ]]; then
-#        log "No images or sub-folders with images in $DESIGNATION"
         popd > /dev/null
-        false
+        CONTENT_FOLDERS=""
         return
     fi
-#    log "Images or sub-folders with images located in $DESIGNATION"
+    #log "Images [${IMAGES}] or sub-folders [${SUBS}] with images located in $DESIGNATION"
     mkdir -p .juxta
 
     #¤¤¤ TODO: Make this a proper js-include structure
@@ -95,12 +100,16 @@ process() {
         mv .juxta/glob_images.dat .juxta/active_images.dat
         DESIGNATION="$DESIGNATION" PARENT="$PARENT" SUBS="$SUBS" . $JUXTA_HOME/juxta.sh .juxta/active_images.dat .juxta/
         mv .juxta/index.html ./index.html
+
+        CONTENT_FOLDERS="$DESIGNATION/"
     else
-        log "Skipping collage-creation for ${DESIGNATION} as there are no images"
+        log "Skipping collage-creation for ${DESIGNATION} as there are no images only sub folders $SUBSUBS"
+        CONTENT_FOLDERS="$SUBSUBS"
     fi
     #¤¤¤ TODO: Move .juxta/index.html to image folder
     
     popd > /dev/null
-    true
 }
+log "Creating/updating galleries from root $1"
 process "" $1
+log "Finished creating/updating galleries from root $1"
