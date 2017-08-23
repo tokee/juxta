@@ -13,6 +13,7 @@
 # Valid values are 'none', 'intensity' and 'rainbow'
 : ${IMAGE_SORT:="none"}
 
+: ${ALLOW_UPSCALE:=true}
 : ${RAW_MODE:=automax}
 : ${BACKGROUND:=000000}
 : ${TEMPLATE:=demo_kb.template.html}
