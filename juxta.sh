@@ -492,11 +492,11 @@ create_meta_files() {
 #            if [ $PRE -eq $POST ]; then # Probably single image
 #                echo "  \"postfix\": \"\"," >> $DM
 #            else
-                echo "  \"postfix\": \"${IMAGE_PATH_POSTFIX}\"," >> $DM
+                echo "  \"postfix\": \"${IMAGE_PATH_POSTFIX}\"," >> "$DM"
 #            fi
-            echo -n "  \"meta\": ["$'\n'"\"$IMETA\"" >> $DM
+            echo -n "  \"meta\": ["$'\n'"\"$IMETA\"" >> "$DM"
         else
-            echo -n ","$'\n'"\"$IMETA\"" >> $DM
+            echo -n ","$'\n'"\"$IMETA\"" >> "$DM"
         fi
         COL=$(( COL+1 ))
         if [ $COL -ge $RAW_IMAGE_COLS ]; then
@@ -505,7 +505,7 @@ create_meta_files() {
         fi
     done < "$DEST/imagelist.dat"
     # Close all structures in the metadata files
-    find "$DEST/meta/" -name "*.json" -exec bash -c "echo ']}' >> {}" \;
+    find "$DEST/meta/" -name "*.json" -exec bash -c "echo ']}' >> \"{}\"" \;
     # Create a preload file for the upper left block of image metadata
     # This is primarily to get around CORS-issued with Chrome on the local file system
     mkdir -p "$DEST/resources/"
