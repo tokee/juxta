@@ -750,10 +750,10 @@ sanitize_input() {
         rm "$T"
         RAW_W=$(( MINW/TILE_SIDE + 1 ))
         RAW_H=$(( MINH/TILE_SIDE + 1 ))
-        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq "$MINW" ]; then
+        if [ $(( (RAW_W-1)*TILE_SIDE )) -eq "$MINW" ]; then
             RAW_W=$(( RAW_W-1 ))
         fi
-        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq "$MINH" ]; then
+        if [ $(( (RAW_H-1)*TILE_SIDE )) -eq "$MINH" ]; then
             RAW_H=$(( RAW_H-1 ))
         fi
         echo "    - RAW_MODE==$RAW_MODE found min size ${MINW}x${MINH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
@@ -766,10 +766,10 @@ sanitize_input() {
         rm "$T"
         RAW_W=$(( MAXW/TILE_SIDE + 1 ))
         RAW_H=$(( MAXH/TILE_SIDE + 1 ))
-        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq "$MAXW" ]; then
+        if [ $(( (RAW_W-1)*TILE_SIDE )) -eq "$MAXW" ]; then
             RAW_W=$(( RAW_W-1 ))
         fi
-        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq "$MAXH" ]; then
+        if [ $(( (RAW_H-1)*TILE_SIDE )) -eq "$MAXH" ]; then
             RAW_H=$(( RAW_H-1 ))
         fi
         echo "    - RAW_MODE==$RAW_MODE found max size ${MAXW}x${MAXH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
