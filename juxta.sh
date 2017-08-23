@@ -30,7 +30,7 @@ if [ -s juxta.conf ]; then
     echo " - Sourcing default setup from $(pwd)/juxta.conf"
     source juxta.conf
 fi
-JUXTA_HOME=`pwd`
+JUXTA_HOME=$(pwd)
 popd > /dev/null
 
 # Maximum number of threads to use for generating tiles
@@ -141,7 +141,7 @@ popd > /dev/null
 : ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v${OSD_VERSION}/$OSD_ZIP"}
 
 dump_options() {
-    for VAL in $( cat ${BASH_SOURCE} | grep -o ': ${[A-Z_]*:=' | grep -o '[A-Z_]*'); do
+    for VAL in $( cat "${BASH_SOURCE}" | grep -o ': ${[A-Z_]*:=' | grep -o '[A-Z_]*'); do
         echo ": \${$VAL:=\"$(eval echo '$'$VAL)\"}"
     done
 }
@@ -162,13 +162,13 @@ fetch_dragon() {
 fetch_dragon
 
 set_converter() {
-    if [ -z "`which convert`" ]; then
+    if [ -z "$(which convert)" ]; then
         >&2 echo "Error: ImageMagick could be located"
         exit 3
     fi
     export CONVERT="convert"
     export MONTAGE="montage"
-    if [ ! -z "`which gm`" ]; then
+    if [ ! -z "$(which gm)" ]; then
         # TODO: Test if GM really is the better choice for these tasks
         export CONVERT="gm convert"
         export MONTAGE="gm montage"
@@ -187,7 +187,7 @@ log2() {
 # http://stackoverflow.com/questions/14434549/how-to-expand-shell-variables-in-a-text-file
 # Input: template-file
 function ctemplate() {
-    local TMP=`mktemp /tmp/juxta_XXXXXXXX`
+    local TMP=$(mktemp /tmp/juxta_XXXXXXXX)
     echo 'cat <<END_OF_TEXT' >  $TMP
     cat  "$1"                >> $TMP
     echo 'END_OF_TEXT'       >> $TMP
@@ -216,7 +216,7 @@ process_base() {
     local ROW=${TOKENS[2]}
     unset IFS
     # TODO: Use a bash-regexp instead
-    local IMAGE=`echo "$1" | sed 's/[0-9]* [0-9]* [0-9]* \(.*\)/\1/'`
+    local IMAGE=$(echo "$1" | sed 's/[0-9]* [0-9]* [0-9]* \(.*\)/\1/')
     local TILE_START_COL=$((COL*RAW_W))
     local TILE_START_ROW=$((ROW*RAW_H))
     local RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
@@ -228,14 +228,14 @@ process_base() {
     else
         local SCALE_MODIFIER=">"
     fi
-    local TILE_SUB=`get_tile_subfolder $COL $ROW`
-    mkdir -p $DEST/$MAX_ZOOM/$TILE_SUB
+    local TILE_SUB=$(get_tile_subfolder $COL $ROW)
+    mkdir -p "$DEST/$MAX_ZOOM/$TILE_SUB"
     if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
         $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality ${TILE_QUALITY} "$DEST/blank.${TILE_FORMAT}"
     fi
-    if [ -s $DEST/$MAX_ZOOM/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT} ]; then
+    if [ -s "$DEST/$MAX_ZOOM/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
         if [ "$VERBOSE" == "true" ]; then
-            echo "    - Skipping #${IMAGE_NUMBER}/${IMAGE_COUNT} grid ${ROW}x${COL} as tiles already exist for `basename \"$IMAGE\"`"
+            echo "    - Skipping #${IMAGE_NUMBER}/${IMAGE_COUNT} grid ${ROW}x${COL} as tiles already exist for $(basename \"$IMAGE\")"
         fi
         return
     fi
@@ -247,7 +247,7 @@ process_base() {
 
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [ "missing" != "$IMAGE" ]; then
-        echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from `basename \"$IMAGE\"`"
+        echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from $(basename \"$IMAGE\")"
         convert "$IMAGE" -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}${SCALE_MODIFIER}" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality $TILE_QUALITY -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
     if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
@@ -272,17 +272,17 @@ process_zoom() {
     local COL=0
     local COL_COUNT=$((MAX_COL+1))
 
-    while [ $COL -le $MAX_COL ]; do
+    while [ "$COL" -le "$MAX_COL" ]; do
         local RAW_COL=$((COL/RAW_W))
-        local TILE_SOURCE_SUB=`get_tile_subfolder $((RAW_COL*2)) $((RAW_ROW*2))`
-        local TILE_DEST_SUB=`get_tile_subfolder $RAW_COL $RAW_ROW`
-        mkdir -p $DEST/$DEST_ZOOM/$TILE_DEST_SUB
+        local TILE_SOURCE_SUB=$(get_tile_subfolder $((RAW_COL*2)) $((RAW_ROW*2)))
+        local TILE_DEST_SUB=$(get_tile_subfolder $RAW_COL $RAW_ROW)
+        mkdir -p "$DEST/$DEST_ZOOM/$TILE_DEST_SUB"
         
-        local TILE=$DEST/$DEST_ZOOM/${TILE_DEST_SUB}${COL}_${ROW}.${TILE_FORMAT}
-        local S00=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2))_$((ROW*2)).${TILE_FORMAT}
-        local S10=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2+1))_$((ROW*2)).${TILE_FORMAT}
-        local S01=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}
-        local S11=$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}
+        local TILE="$DEST/$DEST_ZOOM/${TILE_DEST_SUB}${COL}_${ROW}.${TILE_FORMAT}"
+        local S00="$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2))_$((ROW*2)).${TILE_FORMAT}"
+        local S10="$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2+1))_$((ROW*2)).${TILE_FORMAT}"
+        local S01="$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}"
+        local S11="$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}"
         COL=$((COL+1))
         if [ -s $TILE ]; then
             continue
@@ -293,19 +293,19 @@ process_zoom() {
 
 
 
-        if [ -s $S00 -a -s $S01 -a -s $S10 -a -s $S11 ]; then # 2x2 
+        if [ -s "$S00" -a -s "$S01" -a -s "$S10" -a -s "$S11" ]; then # 2x2 
             # If we are not at the edge, montage is easy. Still need the source existence check above.
-            if [ $COL -lt $MAX_COL -a $ROW -lt $MAX_ROW ]; then
-                montage $S00 $S10 $S01 $S11 -background "#$BACKGROUND" -geometry 128x128 -tile 2x2 -quality ${TILE_QUALITY} $TILE
+            if [ "$COL" -lt "$MAX_COL" -a "$ROW" -lt "$MAX_ROW" ]; then
+                montage "$S00" "$S10" "$S01" "$S11" -background "#$BACKGROUND" -geometry 128x128 -tile 2x2 -quality ${TILE_QUALITY} "$TILE"
             else
-                montage $S00 $S10 $S01 $S11 -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
+                montage "$S00" "$S10" "$S01" "$S11" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} "$TILE"
             fi
-        elif [ -s $S00 -a -s $S10 ]; then # 2x1
-            montage $S00 $S10 -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
-        elif [ -s $S00 -a -s $S01 ]; then # 1x2
-            montage $S00 $S01 -mode concatenate -tile 1x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
-        elif [ -s $S00 ]; then # 1x1
-            $CONVERT $S00 -filter box -scale 50%x50% -quality ${TILE_QUALITY} $TILE
+        elif [ -s "$S00" -a -s "$S10" ]; then # 2x1
+            montage "$S00" "$S10" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} "$TILE"
+        elif [ -s "$S00" -a -s "$S01" ]; then # 1x2
+            montage "$S00" "$S01" -mode concatenate -tile 1x miff:- | convert - -filter box -scale 50%x50% -quality ${TILE_QUALITY} "$TILE"
+        elif [ -s "$S00" ]; then # 1x1
+            $CONVERT "$S00" -filter box -scale 50%x50% -quality ${TILE_QUALITY} "$TILE"
         else # No more source images for the lower right corner
             cp "$BLANK" $TILE
         fi
@@ -323,21 +323,21 @@ create_zoom_levels() {
     fi
     local DEST_ZOOM=$(( SOURCE_ZOOM-1 ))
     local HALF_TILE_SIDE=$((TILE_SIDE/2))
-    if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$DEST_ZOOM ]; then
+    if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d "$DEST/$DEST_ZOOM" ]; then
         echo "  - Skipping creation of zoom level $DEST_ZOOM as it already exists"
         return
     fi
-    mkdir -p $DEST/$DEST_ZOOM
+    mkdir -p "$DEST/$DEST_ZOOM"
 
-    MAX_ROW=`find $DEST/$SOURCE_ZOOM/ -name 0_*.${TILE_FORMAT} | wc -l | tr -d ' '`
+    MAX_ROW=$(find "$DEST/$SOURCE_ZOOM/" -name 0_*.${TILE_FORMAT} | wc -l | tr -d ' ')
     MAX_ROW=$(( ( MAX_ROW - 1) / 2 ))
-    if [ $MAX_ROW -lt 0 ]; then
+    if [ "$MAX_ROW" -lt 0 ]; then
         MAX_ROW=0
     fi
 
-    MAX_COL=`find $DEST/$SOURCE_ZOOM/ -name *_0.${TILE_FORMAT} | wc -l | tr -d ' '`
+    MAX_COL=$(find "$DEST/$SOURCE_ZOOM/" -name *_0.${TILE_FORMAT} | wc -l | tr -d ' ')
     MAX_COL=$(( ( MAX_COL - 1 ) / 2 ))
-    if [ $MAX_COL -lt 0 ]; then
+    if [ "$MAX_COL" -lt 0 ]; then
         MAX_COL=0
     fi
     
@@ -356,7 +356,7 @@ create_zoom_levels() {
     export VERBOSE
     ( for (( R=0 ; R<=$MAX_ROW ; R++ )); do echo $R ; done ) | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'process_zoom "{}"'
     echo ""
-    create_zoom_levels $DEST_ZOOM
+    create_zoom_levels "$DEST_ZOOM"
 }
 
 #
@@ -364,7 +364,7 @@ create_zoom_levels() {
 # The juxta sample HTML page does not use this file for anything.
 #
 create_dzi() {
-    pushd $DEST > /dev/null
+    pushd "$DEST" > /dev/null
     echo "{
     \"Image\": {
         \"xmlns\":    \"http://schemas.microsoft.com/deepzoom/2008\",
@@ -386,19 +386,19 @@ create_dzi() {
 # system or a web server.
 #
 create_html() {
-    pushd $DEST > /dev/null
-    TILE_SOURCE=$(basename `pwd`)
+    pushd "$DEST" > /dev/null
+    TILE_SOURCE=$(basename $(pwd))
     popd > /dev/null
-    HTML=$DEST/index.html
-    TOTAL_IMAGES=`cat $DEST/imagelist.dat | wc -l | tr -d ' '`
+    HTML="$DEST/index.html"
+    TOTAL_IMAGES=$(cat "$DEST/imagelist.dat" | wc -l | tr -d ' ')
     # Yes, mega is 10^6, not 2^20. At least when counting pixels
     MEGAPIXELS=$(( CANVAS_PIXEL_W*$CANVAS_PIXEL_H/1000000 ))
     
-    mkdir -p $TILE_SOURCE/resources/images
-    cp $JUXTA_HOME/web/*.css $TILE_SOURCE/resources/
-    cp $JUXTA_HOME/web/*.js $TILE_SOURCE/resources/
-    unzip -q -o -j -d $TILE_SOURCE/resources/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip ${OSD_ZIP%.*}/openseadragon.min.js
-    unzip -q -o -j -d $TILE_SOURCE/resources/images/ $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip `unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' '`
+    mkdir -p "$TILE_SOURCE/resources/images"
+    cp $JUXTA_HOME/web/*.css "$TILE_SOURCE/resources/"
+    cp $JUXTA_HOME/web/*.js "$TILE_SOURCE/resources/"
+    unzip -q -o -j -d "$TILE_SOURCE/resources/" $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip ${OSD_ZIP%.*}/openseadragon.min.js
+    unzip -q -o -j -d "$TILE_SOURCE/resources/images/" $JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip $(unzip -l $JUXTA_HOME/osd/openseadragon-bin-*.zip | grep -o "opensea.*.png" | tr '\n' ' ')
 
     if [ "limit" == "$FOLDER_LAYOUT" ]; then
         TILE_SOURCES="    tileSources:   {
@@ -427,7 +427,7 @@ create_html() {
 }"
     fi
 
-    SETUP_OVERLAY="var overlays = createOverlay($(cat $DEST/collage_setup.js), myDragon);"
+    SETUP_OVERLAY="var overlays = createOverlay($(cat \"$DEST/collage_setup.js\"), myDragon);"
     
     export TILE_SOURCE
     if [ -s $HTML ]; then
@@ -444,7 +444,7 @@ create_html() {
         fi
     fi
     echo "  - Generating sample page $HTML"
-    ctemplate "$TEMPLATE" > $HTML
+    ctemplate "$TEMPLATE" > "$HTML"
 }
 
 #
@@ -453,8 +453,8 @@ create_html() {
 #
 create_meta_files() {
     echo "  - Creating meta files"
-    rm -f $DEST/meta/*.json
-    mkdir -p $DEST/meta
+    rm -f "$DEST/meta/"*.json
+    mkdir -p "$DEST/meta"
     local ROW=0
     local COL=0
     local TOKENS
@@ -485,10 +485,10 @@ create_meta_files() {
             # Use bash replace instead
             unset IFS
         fi
-        local IMETA="`echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g'`"
-        local DM=$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json
-        if [ ! -s $DM ]; then
-            echo "{ \"prefix\": \"${IMAGE_PATH_PREFIX}\"," >> $DM
+        local IMETA="$(echo \"$IMETA\" | sed -e 's/&/&amp;/g' -e 's/\"/\\&quot;/g')"
+        local DM="$DEST/meta/$((COL/ASYNC_META_SIDE))_$((ROW/ASYNC_META_SIDE)).json"
+        if [ ! -s "$DM" ]; then
+            echo "{ \"prefix\": \"${IMAGE_PATH_PREFIX}\"," >> "$DM"
 #            if [ $PRE -eq $POST ]; then # Probably single image
 #                echo "  \"postfix\": \"\"," >> $DM
 #            else
@@ -503,14 +503,14 @@ create_meta_files() {
             ROW=$(( ROW+1 ))
             COL=0
         fi
-    done < $DEST/imagelist.dat
+    done < "$DEST/imagelist.dat"
     # Close all structures in the metadata files
-    find $DEST/meta/ -name "*.json" -exec bash -c "echo ']}' >> {}" \;
+    find "$DEST/meta/" -name "*.json" -exec bash -c "echo ']}' >> {}" \;
     # Create a preload file for the upper left block of image metadata
     # This is primarily to get around CORS-issued with Chrome on the local file system
-    mkdir -p $DEST/resources/
-    echo -n "var preloaded = " > $DEST/resources/overlays_preload.js
-    cat $DEST/meta/0_0.json >> $DEST/resources/overlays_preload.js
+    mkdir -p "$DEST/resources/"
+    echo -n "var preloaded = " > "$DEST/resources/overlays_preload.js"
+    cat "$DEST/meta/0_0.json" >> "$DEST/resources/overlays_preload.js"
 }
 
 #
@@ -520,19 +520,19 @@ create_meta_files() {
 #
 store_collage_setup() {
     echo "  - Analyzing collection meta data"
-    echo "{ colCount: $RAW_IMAGE_COLS," > $DEST/collage_setup.js
-    echo "  rowCount: $(( ROW + 1 ))," >> $DEST/collage_setup.js
-    echo "  imageCount: `cat $DEST/imagelist.dat | wc -l | tr -d ' '`," >> $DEST/collage_setup.js
-    echo "  tileSize: $TILE_SIDE," >> $DEST/collage_setup.js
-    echo "  rawW: $RAW_W," >> $DEST/collage_setup.js
-    echo "  rawH: $RAW_H," >> $DEST/collage_setup.js
-    echo "  asyncMetaSide: $ASYNC_META_SIDE," >> $DEST/collage_setup.js
-    echo "  metaIncludesOrigin: $INCLUDE_ORIGIN," >> $DEST/collage_setup.js
-    echo "  folderLayout: \"$FOLDER_LAYOUT\"," >> $DEST/collage_setup.js
-    echo "  limitFolderSide: $LIMIT_FOLDER_SIDE," >> $DEST/collage_setup.js
+    echo "{ colCount: $RAW_IMAGE_COLS," > "$DEST/collage_setup.js"
+    echo "  rowCount: $(( ROW + 1 ))," >> "$DEST/collage_setup.js"
+    echo "  imageCount: $(cat \"$DEST/imagelist.dat\" | wc -l | tr -d ' ')," >> "$DEST/collage_setup.js"
+    echo "  tileSize: $TILE_SIDE," >> "$DEST/collage_setup.js"
+    echo "  rawW: $RAW_W," >> "$DEST/collage_setup.js"
+    echo "  rawH: $RAW_H," >> "$DEST/collage_setup.js"
+    echo "  asyncMetaSide: $ASYNC_META_SIDE," >> "$DEST/collage_setup.js"
+    echo "  metaIncludesOrigin: $INCLUDE_ORIGIN," >> "$DEST/collage_setup.js"
+    echo "  folderLayout: \"$FOLDER_LAYOUT\"," >> "$DEST/collage_setup.js"
+    echo "  limitFolderSide: $LIMIT_FOLDER_SIDE," >> "$DEST/collage_setup.js"
 
     # Derive shared pre- and post-fix for all images for light image compression
-    local BASELINE="`cat $DEST/imagelist.dat | head -n 1 | cut -d'|' -f1`"
+    local BASELINE="$(cat \"$DEST/imagelist.dat\" | head -n 1 | cut -d'|' -f1)"
     local LENGTH=${#BASELINE} 
     PRE=$LENGTH
     POST=$LENGTH
@@ -568,12 +568,12 @@ store_collage_setup() {
             #echo "break"
             break
         fi
-    done < $DEST/imagelist.dat
+    done < "$DEST/imagelist.dat"
     IMAGE_PATH_PREFIX=${BASELINE:0:$PRE}
     IMAGE_PATH_POSTFIX=${POST_STR}
-    echo "  prefix: \"${IMAGE_PATH_PREFIX}\"," >> $DEST/collage_setup.js
-    echo "  postfix: \"${IMAGE_PATH_POSTFIX}\"" >> $DEST/collage_setup.js
-    echo "}" >> $DEST/collage_setup.js
+    echo "  prefix: \"${IMAGE_PATH_PREFIX}\"," >> "$DEST/collage_setup.js"
+    echo "  postfix: \"${IMAGE_PATH_POSTFIX}\"" >> "$DEST/collage_setup.js"
+    echo "}" >> "$DEST/collage_setup.js"
     
     if [ "true" == "$INCLUDE_ORIGIN" -o "true" == "$ANY_META" ]; then
         create_meta_files
@@ -586,7 +586,7 @@ store_collage_setup() {
 # Out: RAW_IMAGE_COLS RAW_IMAGE_ROWS
 #
 resolve_dimensions() {
-    IMAGE_COUNT=`cat "$DEST/imagelist.dat" | wc -l | tr -d ' '`
+    IMAGE_COUNT=$(cat "$DEST/imagelist.dat" | wc -l | tr -d ' ')
     if [ "." != ".$RAW_IMAGE_COLS" ]; then # Fixed width
         if [ "true" == "$AUTO_CROP" -a $RAW_IMAGE_COLS -gt $IMAGE_COUNT ]; then
             RAW_IMAGE_COLS=$IMAGE_COUNT
@@ -608,7 +608,7 @@ resolve_dimensions() {
         local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
         
         local RAW_TILES_PER_CANVAS_ELEMENT=$(( IMAGE_COUNT*RAW_W*RAW_H/(CANVAS_ASPECT_W*CANVAS_ASPECT_H) ))
-        local CANVAS_ELEMENT_SIDE=`echo "sqrt($RAW_TILES_PER_CANVAS_ELEMENT)" | bc`
+        local CANVAS_ELEMENT_SIDE=$(echo "sqrt($RAW_TILES_PER_CANVAS_ELEMENT)" | bc)
         if [ $CANVAS_ELEMENT_SIDE -eq 0 ]; then
             local CANVAS_ELEMENT_SIDE=1
         fi
@@ -628,9 +628,9 @@ resolve_dimensions() {
     CANVAS_PIXEL_W=$((RAW_IMAGE_COLS*RAW_W*TILE_SIDE))
     CANVAS_PIXEL_H=$((RAW_IMAGE_ROWS*RAW_H*TILE_SIDE))
     if [ $CANVAS_PIXEL_W -lt $CANVAS_PIXEL_H ]; then
-        MAX_ZOOM=`log2 $CANVAS_PIXEL_H`
+        MAX_ZOOM=$(log2 $CANVAS_PIXEL_H)
     else
-        MAX_ZOOM=`log2 $CANVAS_PIXEL_W`
+        MAX_ZOOM=$(log2 $CANVAS_PIXEL_W)
     fi
     export RAW_IMAGE_COLS;
     export RAW_IMAGE_ROWS;
@@ -657,9 +657,9 @@ usage() {
 #
 verify_source_images() {
     echo "  - Verifying images availability and generating $DEST/imagelist.dat"
-    mkdir -p $DEST
+    mkdir -p "$DEST"
     ICOUNTER=1
-    rm -rf $DEST/imagelist.dat $DEST/imagelist_onlyimages.dat
+    rm -rf "$DEST/imagelist.dat" "$DEST/imagelist_onlyimages.dat"
     while read IMAGE; do
         if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
             continue
@@ -668,7 +668,7 @@ verify_source_images() {
         local IPATH=${TOKENS[0]}
         local IMETA=${TOKENS[1]}
         unset IFS
-        if [ "http://" != ${IPATH:0:7} -a "https://" != ${IPATH:0:8} ]; then
+        if [ "http://" != "${IPATH:0:7}" -a "https://" != "${IPATH:0:8}" ]; then
             if [ ! -s "$IPATH" ]; then
                 if [ "true" == "$IGNORE_MISSING" ]; then
                     echo "  - Skipping unavailable image '$IPATH'"
@@ -679,10 +679,10 @@ verify_source_images() {
                 fi
             fi
         fi
-        echo "$IMAGE" >> $DEST/imagelist.dat
-        echo "$IPATH" >> $DEST/imagelist_onlyimages.dat
+        echo "$IMAGE" >> "$DEST/imagelist.dat"
+        echo "$IPATH" >> "$DEST/imagelist_onlyimages.dat"
         ICOUNTER=$(( ICOUNTER+1 ))
-    done < $IMAGE_LIST
+    done < "$IMAGE_LIST"
     export ICOUNTER
 }
 
@@ -691,9 +691,9 @@ sanitize_input() {
     if [ -z "$1" ]; then
         usage
     fi
-    echo " - Starting processing of $IMAGE_LIST into $DEST"
 
     IMAGE_LIST="$1"
+    echo " - Starting processing of $IMAGE_LIST into $DEST"
     if [ "-r" == "$IMAGE_LIST" ]; then
         echo " - Attempting to re-create HTML and support files without touching files for project '$DEST'"
         if [ ! -d "$DEST" ]; then
@@ -708,11 +708,11 @@ sanitize_input() {
             echo "  - Sourcing $DEST/previous_options.conf to mimick original setup (this won't override explicit parameters)"
             source "$DEST/previous_options.conf"
         fi
-        ICOUNTER=$(cat $DEST/imagelist.dat | wc -l)
+        ICOUNTER=$(cat "$DEST/imagelist.dat" | wc -l)
         echo "  - $DEST/imagelist.dat exists and contains $ICOUNTER image references"
         export RECREATE=true
     else
-        if [ ! -s $IMAGE_LIST ]; then
+        if [ ! -s "$IMAGE_LIST" ]; then
             >&2 echo "Error: Unable to access imagelist '$IMAGE_LIST'"
             usage 1
         fi
@@ -744,32 +744,32 @@ sanitize_input() {
     if [ "$RAW_MODE" == "automin" ]; then
         echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
-        identify -format '%wx%h\n' $( cat $IMAGE_LIST | sed 's/[|].*//' ) > $T
-        local MINW=$( cat $T | cut -dx -f1 | sort -n | head -n 1 )
-        local MINH=$( cat $T | cut -dx -f2 | sort -n | head -n 1 )
-        rm $T
+        identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
+        local MINW=$( cat "$T" | cut -dx -f1 | sort -n | head -n 1 )
+        local MINH=$( cat "$T" | cut -dx -f2 | sort -n | head -n 1 )
+        rm "$T"
         RAW_W=$(( MINW/TILE_SIDE + 1 ))
         RAW_H=$(( MINH/TILE_SIDE + 1 ))
-        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq $MINW ]; then
+        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq "$MINW" ]; then
             RAW_W=$(( RAW_W-1 ))
         fi
-        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq $MINH ]; then
+        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq "$MINH" ]; then
             RAW_H=$(( RAW_H-1 ))
         fi
         echo "    - RAW_MODE==$RAW_MODE found min size ${MINW}x${MINH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
     elif [ "$RAW_MODE" == "automax" ]; then
         echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
-        identify -format '%wx%h\n' $( cat $IMAGE_LIST | sed 's/[|].*//' ) > $T
-        local MAXW=$( cat $T | cut -dx -f1 | sort -n | tail -n 1 )
-        local MAXH=$( cat $T | cut -dx -f2 | sort -n | tail -n 1 )
-        rm $T
+        identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
+        local MAXW=$( cat "$T" | cut -dx -f1 | sort -n | tail -n 1 )
+        local MAXH=$( cat "$T" | cut -dx -f2 | sort -n | tail -n 1 )
+        rm "$T"
         RAW_W=$(( MAXW/TILE_SIDE + 1 ))
         RAW_H=$(( MAXH/TILE_SIDE + 1 ))
-        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq $MAXW ]; then
+        if [ $(( (RAW_W-1)*TILE_SIZE )) -eq "$MAXW" ]; then
             RAW_W=$(( RAW_W-1 ))
         fi
-        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq $MAXH ]; then
+        if [ $(( (RAW_H-1)*TILE_SIZE )) -eq "$MAXH" ]; then
             RAW_H=$(( RAW_H-1 ))
         fi
         echo "    - RAW_MODE==$RAW_MODE found max size ${MAXW}x${MAXH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
@@ -783,33 +783,33 @@ sanitize_input() {
 
 # Out: BATCH
 prepare_batch() {
-    BATCH=`mktemp /tmp/juxta_XXXXXXXX`
+    BATCH=$(mktemp /tmp/juxta_XXXXXXXX)
     echo "  - Preparing batch job"
     COL=0
     ROW=0
     ICOUNTER=1
     while read IMAGE; do
-        echo "$ICOUNTER $COL $ROW $IMAGE" >> $BATCH
+        echo "$ICOUNTER $COL $ROW $IMAGE" >> "$BATCH"
         ICOUNTER=$(( ICOUNTER+1 ))
         COL=$(( COL+1 ))
         if [ $COL -eq $RAW_IMAGE_COLS ]; then
             COL=0
             ROW=$(( ROW+1 ))
         fi
-    done < $DEST/imagelist_onlyimages.dat
+    done < "$DEST/imagelist_onlyimages.dat"
 
     if [ ! $COL -eq 0 ]; then
         RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
         for (( MISSING_COL=$COL ; MISSING_COL<=$RAW_IMAGE_MAX_COL ; MISSING_COL++ )); do
-            echo "$ICOUNTER $MISSING_COL $ROW missing" >> $BATCH
+            echo "$ICOUNTER $MISSING_COL $ROW missing" >> "$BATCH"
             ICOUNTER=$(( ICOUNTER+1 ))
         done
     fi
 }
 
-START_S=`date +%s`
-START_TIME=`date +%Y%m%d-%H%M`
-sanitize_input $@
+START_S=$(date +%s)
+START_TIME=$(date +%Y%m%d-%H%M)
+sanitize_input "$@"
 resolve_dimensions
 set_converter
 
@@ -843,22 +843,22 @@ export VERBOSE
 export IMAGE_COUNT
 export ALLOW_UPSCALE
 
-if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d $DEST/$MAX_ZOOM ]; then
+if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d "$DEST/$MAX_ZOOM" ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
     echo "  - Creating base zoom level $MAX_ZOOM"
-    cat $BATCH | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'process_base "{}"'
+    cat "$BATCH" | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'process_base "{}"'
 fi
-create_zoom_levels $MAX_ZOOM
-END_S=`date +%s`
+create_zoom_levels "$MAX_ZOOM"
+END_S=$(date +%s)
 SPEND_S=$((END_S-START_S))
 if [ "$SPEND_S" -eq "0" ]; then
     SPEND_S=1
 fi
 rm $BATCH
-ICOUNT=`cat $DEST/imagelist_onlyimages.dat | wc -l | tr -d ' '`
+ICOUNT=$(cat "$DEST/imagelist_onlyimages.dat" | wc -l | tr -d ' ')
 
-echo " - Process started $START_TIME and ended `date +%Y%m%d-%H%M`"
+echo " - Process started $START_TIME and ended $(date +%Y%m%d-%H%M)"
 echo " - juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
 echo " - Average speed was $((SPEND_S/ICOUNT)) seconds/image or $((ICOUNT/SPEND_S)) images/second"
 echo " - HTML-page available at $HTML"
