@@ -23,6 +23,7 @@
 : ${THREADS:=3}
 : ${TIMEOUT:=60}
 : ${TEMPLATE:="demo_twitter.template.html"}
+: ${ALREADY_HYDRATED:=false}
 
 : ${RAW_W:=1}
 : ${RAW_H:=1}
@@ -55,6 +56,15 @@ parse_arguments() {
 hydrate() {
     if [ -s "$DOWNLOAD/hydrated.json" ]; then
         echo " - Skipping hydration of '$TWEETIDS' as $DOWNLOAD/hydrated.json already exists"
+        return
+    fi
+    if [ "." != ".$(grep '{' $TWEETIDS)" ]; then
+        echo "Input file $TWEETIDS contains a '{', so it is probably already hydrated"
+        ALREADY_HYDRATED=true
+    fi
+    if [ "true" == "$ALREADY_HYDRATED" ]; then
+        echo "Input file $TWEETIDS is already hydrated"
+        cp $TWEETIDS $DOWNLOAD/hydrated.json
         return
     fi
     echo " - Hydration of '$TWEETIDS' to $DOWNLOAD/hydrated.json"
