@@ -4,7 +4,10 @@
 # as well links to parent- and sub-folders with images.
 # The juxta-generated files will be a folder named '_juxta' as well as an index.html-file in each folder.
 
-# STATUS: Under construction
+# Note: If any folders contains more than 10,000 images, RAW_MODE=fixed as well as RAW_W and RAW_H must
+# be specified. Sample: RAW_MODE=fixed RAW_W=8 RAW_H=6 ./demo_gallery.sh MyPictures
+
+# TODO: Add switch for index.html or not in links to sub-folders
 
 
 # Glob for finding images in the folder
@@ -14,7 +17,8 @@
 
 : ${BACKGROUND:="000000"}
 : ${AGGRESSIVE_IMAGE_SKIP:=true}
-: ${RAW_MODE:=automax}
+: ${RAW_MODE:=percentile90}
+: ${ALLOW_UPSCALE:=true}
 
 usage() {
     echo "Usage:"
