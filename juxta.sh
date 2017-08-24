@@ -69,12 +69,17 @@ popd > /dev/null
 # RAW_W=4 and RAW_H=3 means (4*256)x(3*256) = 1024x768 pixels.
 : ${RAW_W:=4}
 : ${RAW_H:=3}
-# How to determine RAW_W and RAW_H. Possible values are fixed, automin and automax
+# How to determine RAW_W and RAW_H. Possible values are
 # fixed: Use the values defined for RAW_W and RAW_H as-is
 # automin: Iterate all source images, determining the smallest width and the smallest height
 #          and calculate RAW_W and RAW_H from that
 # automax: Iterate all source images, determining the largest width and the largest height
 #          and calculate RAW_W and RAW_H from that
+# percentileNNN: Iterate all source images, extract all widths and all heights separately,
+#          extract the width & height at the NNN percentile (0-100) and calculate RAW_W and RAW_H
+#          from that. This ensures that outliers will not dominate the selection.
+#          percentile10 or percentile90 are "outlier proof" versions of automin & automax.
+# WARNING: Don't use other modes than fixed if the number of images is high (10,000+).
 : ${RAW_MODE:=fixed}
 
 # Where to position the images if their aspect does not match the ideal
@@ -147,11 +152,11 @@ dump_options() {
 }
 
 # Saving and restoring the state ensures that changed variables does not spill out to the calling process
-local STATE_LOCATION=$(mktemp /tmp/juxta_state_XXXXXXXX)
+STATE_LOCATION=$(mktemp /tmp/juxta_state_XXXXXXXX)
 save_state() {
     rm -f $STATE_LOCATION
     for VAL in $( cat "${BASH_SOURCE}" | grep -o ': ${[A-Z_]*:=' | grep -o '[A-Z_]*'); do
-        echo "$VAL=\"$(eval echo '$'$VAL)\"" >> $STATE_LOCATION
+        echo "$VAL=\"$(eval echo '$'$VAL)\"" >> "$STATE_LOCATION"
     done
 }
 restore_state() {
@@ -672,7 +677,7 @@ usage() {
 verify_source_images() {
     echo "  - Verifying images availability and generating $DEST/imagelist.dat"
     mkdir -p "$DEST"
-    ICOUNTER=1
+    ICOUNTER=0
     rm -rf "$DEST/imagelist.dat" "$DEST/imagelist_onlyimages.dat"
     while read IMAGE; do
         if [ "." == ".$IMAGE" -o "#" == "${IMAGE:0:1}" ]; then
@@ -755,47 +760,61 @@ sanitize_input() {
             echo "    - Warning: This is not an excessively high tile count. Consider using the DZI-compatible layout with FOLDER_LAYOUT=dzi instead"
         fi
     fi
-    if [ "$RAW_MODE" == "automin" ]; then
+    if [[ "$RAW_MODE" != "fixed" ]]; then
         echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
         local OIFS=$IFS
         IFS=$'\n' # Handles spaces in filenames
         identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
         IFS=$OLDIFS
-        local MINW=$( cat "$T" | cut -dx -f1 | sort -n | head -n 1 )
-        local MINH=$( cat "$T" | cut -dx -f2 | sort -n | head -n 1 )
-        rm "$T"
-        RAW_W=$(( MINW/TILE_SIDE + 1 ))
-        RAW_H=$(( MINH/TILE_SIDE + 1 ))
-        if [ $(( (RAW_W-1)*TILE_SIDE )) -eq "$MINW" ]; then
-            RAW_W=$(( RAW_W-1 ))
+
+        if [ "${RAW_MODE:0:10}" == "percentile" ]; then
+            local PERCENTILE=${RAW_MODE:10}
+            local PER_IC=$(cat "$T" | wc -l)
+            local PER_INDEX=$(( PERCENTILE*PER_IC/100 ))
+            if [[ "$PER_INDEX" -le "1" ]]; then
+                PER_INDEX=1
+            fi
+            local PER_W=$( cat "$T" | cut -dx -f1 | sort -n | head -n "+$PER_INDEX" | tail -n 1 )
+            local PER_H=$( cat "$T" | cut -dx -f2 | sort -n | head -n "+$PER_INDEX" | tail -n 1 )
+            RAW_W=$(( PER_W/TILE_SIDE + 1 ))
+            RAW_H=$(( PER_H/TILE_SIDE + 1 ))
+            if [ $(( (RAW_W-1)*TILE_SIDE )) -eq "$PER_W" ]; then
+                RAW_W=$(( RAW_W-1 ))
+            fi
+            if [ $(( (RAW_H-1)*TILE_SIDE )) -eq "$PER_H" ]; then
+                RAW_H=$(( RAW_H-1 ))
+            fi
+            echo "    - RAW_MODE==$RAW_MODE calculated size ${PER_W}x${PER_H} from $PER_IC images and set RAW_W=$RAW_W & RAW_H=$RAW_H"
+        elif [ "$RAW_MODE" == "automin" ]; then
+            local MINW=$( cat "$T" | cut -dx -f1 | sort -n | head -n 1 )
+            local MINH=$( cat "$T" | cut -dx -f2 | sort -n | head -n 1 )
+            RAW_W=$(( MINW/TILE_SIDE + 1 ))
+            RAW_H=$(( MINH/TILE_SIDE + 1 ))
+            if [ $(( (RAW_W-1)*TILE_SIDE )) -eq "$MINW" ]; then
+                RAW_W=$(( RAW_W-1 ))
+            fi
+            if [ $(( (RAW_H-1)*TILE_SIDE )) -eq "$MINH" ]; then
+                RAW_H=$(( RAW_H-1 ))
+            fi
+            echo "    - RAW_MODE==$RAW_MODE found min size ${MINW}x${MINH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
+        elif [ "$RAW_MODE" == "automax" ]; then
+            local MAXW=$( cat "$T" | cut -dx -f1 | sort -n | tail -n 1 )
+            local MAXH=$( cat "$T" | cut -dx -f2 | sort -n | tail -n 1 )
+            RAW_W=$(( MAXW/TILE_SIDE + 1 ))
+            RAW_H=$(( MAXH/TILE_SIDE + 1 ))
+            if [ $(( (RAW_W-1)*TILE_SIDE )) -eq "$MAXW" ]; then
+                RAW_W=$(( RAW_W-1 ))
+            fi
+            if [ $(( (RAW_H-1)*TILE_SIDE )) -eq "$MAXH" ]; then
+                RAW_H=$(( RAW_H-1 ))
+            fi
+            echo "    - RAW_MODE==$RAW_MODE found max size ${MAXW}x${MAXH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
+        else
+            >&2 echo "Error: RAW_MODE==$RAW_MODE where supported values are fixed, automin and automax"
+            usage 65
         fi
-        if [ $(( (RAW_H-1)*TILE_SIDE )) -eq "$MINH" ]; then
-            RAW_H=$(( RAW_H-1 ))
-        fi
-        echo "    - RAW_MODE==$RAW_MODE found min size ${MINW}x${MINH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
-    elif [ "$RAW_MODE" == "automax" ]; then
-        echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
-        local T=$( mktemp )
-        local OIFS=$IFS
-        IFS=$'\n' # Handles spaces in filenames
-        identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
-        IFS=$OLDIFS
-        local MAXW=$( cat "$T" | cut -dx -f1 | sort -n | tail -n 1 )
-        local MAXH=$( cat "$T" | cut -dx -f2 | sort -n | tail -n 1 )
-        rm "$T"
-        RAW_W=$(( MAXW/TILE_SIDE + 1 ))
-        RAW_H=$(( MAXH/TILE_SIDE + 1 ))
-        if [ $(( (RAW_W-1)*TILE_SIDE )) -eq "$MAXW" ]; then
-            RAW_W=$(( RAW_W-1 ))
-        fi
-        if [ $(( (RAW_H-1)*TILE_SIDE )) -eq "$MAXH" ]; then
-            RAW_H=$(( RAW_H-1 ))
-        fi
-        echo "    - RAW_MODE==$RAW_MODE found max size ${MAXW}x${MAXH} and set RAW_W=$RAW_W & RAW_H=$RAW_H"
-    elif [ "$RAW_MODE" != "fixed" ]; then
-        >&2 echo "Error: RAW_MODE==$RAW_MODE where supported values are fixed, automin and automax"
-        usage 65
+        rm $T
     fi
     export FOLDER_LAYOUT
     export LIMIT_FOLDER_SIDE
