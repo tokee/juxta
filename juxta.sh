@@ -848,9 +848,6 @@ fi
 # We only change stored options if we are not recreating
 dump_options > "$DEST/previous_options.conf"
 echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
-#¤¤¤
-restore_state #¤¤¤ Remove this
-return
 
 export RAW_W
 export RAW_H
