@@ -745,7 +745,10 @@ sanitize_input() {
     if [ "$RAW_MODE" == "automin" ]; then
         echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
+        local OIFS=$IFS
+        IFS=$'\n' # Handles spaces in filenames
         identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
+        IFS=$OLDIFS
         local MINW=$( cat "$T" | cut -dx -f1 | sort -n | head -n 1 )
         local MINH=$( cat "$T" | cut -dx -f2 | sort -n | head -n 1 )
         rm "$T"
@@ -761,7 +764,10 @@ sanitize_input() {
     elif [ "$RAW_MODE" == "automax" ]; then
         echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
+        local OIFS=$IFS
+        IFS=$'\n' # Handles spaces in filenames
         identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
+        IFS=$OLDIFS
         local MAXW=$( cat "$T" | cut -dx -f1 | sort -n | tail -n 1 )
         local MAXH=$( cat "$T" | cut -dx -f2 | sort -n | tail -n 1 )
         rm "$T"
