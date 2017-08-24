@@ -146,6 +146,19 @@ dump_options() {
     done
 }
 
+# Saving and restoring the state ensures that changed variables does not spill out to the calling process
+local STATE_LOCATION=$(mktemp /tmp/juxta_state_XXXXXXXX)
+save_state() {
+    rm -f $STATE_LOCATION
+    for VAL in $( cat "${BASH_SOURCE}" | grep -o ': ${[A-Z_]*:=' | grep -o '[A-Z_]*'); do
+        echo "$VAL=\"$(eval echo '$'$VAL)\"" >> $STATE_LOCATION
+    done
+}
+restore_state() {
+    source $STATE_LOCATION
+    rm $STATE_LOCATION
+}
+
 fetch_dragon() {
     if [ -s "$JUXTA_HOME/osd/$OSD_ZIP" ]; then
         return
@@ -499,7 +512,7 @@ create_meta_files() {
             echo -n ","$'\n'"\"$IMETA\"" >> "$DM"
         fi
         COL=$(( COL+1 ))
-        if [ $COL -ge $RAW_IMAGE_COLS ]; then
+        if [ "$COL" -ge "$RAW_IMAGE_COLS" ]; then
             ROW=$(( ROW+1 ))
             COL=0
         fi
@@ -604,7 +617,7 @@ resolve_dimensions() {
         if [ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt "$IMAGE_COUNT" ]; then
             RAW_IMAGE_COLS=$(( RAW_IMAGE_COLS+1 ))
         fi
-    else
+    else # Neither fixed width nor fixed heighs.
         local RAW_PIXEL_W=$((RAW_W*TILE_SIDE))
         local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
         
@@ -816,6 +829,7 @@ prepare_batch() {
 
 START_S=$(date +%s)
 START_TIME=$(date +%Y%m%d-%H%M)
+save_state # Should be first
 sanitize_input "$@"
 resolve_dimensions
 set_converter
@@ -834,6 +848,9 @@ fi
 # We only change stored options if we are not recreating
 dump_options > "$DEST/previous_options.conf"
 echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
+#¤¤¤
+restore_state #¤¤¤ Remove this
+return
 
 export RAW_W
 export RAW_H
@@ -864,6 +881,7 @@ if [ "$SPEND_S" -eq "0" ]; then
 fi
 rm "$BATCH"
 ICOUNT=$(cat "$DEST/imagelist_onlyimages.dat" | wc -l | tr -d ' ')
+restore_state # Should be last
 
 echo " - Process started $START_TIME and ended $(date +%Y%m%d-%H%M)"
 echo " - juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
