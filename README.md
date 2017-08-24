@@ -64,6 +64,16 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 
 ## Demos
 
+### Recursive image gallery
+
+The script `demo_gallery.sh` performs a recursive descend from a starting folder, creating
+a collage in each folder that contains images, as well as links to sub-folders with images.
+The files are stored in sub-folders named `.juxta` and an `index.html` file is created in
+each folder. Sample run of the script:
+```shell
+./demo_gallery.sh my_picture_folder
+```
+
 ### Covers
 
 The script `demo_coverbrowser.sh` fetches images from coverbrowser.com and generates a collage
