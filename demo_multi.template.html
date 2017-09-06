@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi sources</title>
+    <link rel="stylesheet" type="text/css" href="${DATA_ROOT}resources/juxta.css" />
+    <script src="${DATA_ROOT}resources/openseadragon.min.js"></script>
+    <script type="text/javascript" src="${DATA_ROOT}resources/overlays_preload.js"></script>
+    <script type="text/javascript" src="${DATA_ROOT}resources/overlays.js"></script>
+    <!-- Contact person: toes@kb.dk -->
+    <style>
+        html, body, .page {
+          height: 100%; /* needed for proper layout */
+        }
+        body {
+          background: #000000;
+          color: #ffffff;
+          overflow: hidden;
+          padding: 0;
+          margin: 0;
+        }
+        p {
+          margin-bottom: 1em;
+        }
+        .page {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .page-header {
+          flex: 0 0 auto;
+          background-color: #cccccc;
+          color: #000000;
+          padding: 0.5em 1em 0.5em 1em;
+        }
+        .page-content {
+          flex: 1 1 auto;
+          position: relative;/* need this to position inner content */
+          overflow-y: auto;
+        }
+        .page-footer {
+          flex: 0 0 auto;
+          background-color: #dcdcdc;
+          color: #000000;
+        }
+        
+        #pageinfo {
+          position: absolute;
+          top: 5%;
+          left: 5%;
+          width: 90%;
+          height: 10%;
+        }
+        .page-header ul {
+          padding: 0;
+          margin: 0;
+        }
+        .page-header li {
+          display: inline;
+          list-style-type: none;
+          padding-right: 20px;
+        }
+        .page-header h1 {
+          margin-top: 0;
+          font-size: 1em;
+        }
+    </style>
+</head>
+
+<body>
+        <div class="page">
+<!--<div id="pageinfo">
+    <h1>${DESIGNATION}: ${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels)</h1>
+</div>-->
+<div class="page-header">
+    <h1>${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels)</h1>
+    <!--Parent: ${PARENT}<br/>-->
+<!--    <ul>$(echo "$SOURCES" | tr '\n' '\0' | xargs -0 -n 1 -I {} echo "<li>{}</li>") </ul>-->
+</div>
+
+<div id="zoom-display" class="page-content openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
+
+<script type="text/javascript">
+  var myDragon = OpenSeadragon({
+    id:            "zoom-display",
+
+    zoomPerScroll: 2.0,    
+    showNavigator:  false,
+    wrapHorizontal: false,
+    prefixUrl: "${DATA_ROOT}resources/images/",
+    ${TILE_SOURCES}
+  });
+  ${SETUP_OVERLAY}
+</script>
+<script type="text/javascript">
+overlays.createHeader = function(x, y, image, meta) {
+  imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
+  return '<a href="' + image + '">' + imageId + '</a>';
+}
+
+overlays.showFooter = function(x, y, image, meta) {
+  return false;
+}
+</script>
+
+<!-- Must be below the creation of myDragon -->
+<script type="text/javascript" src="${DATA_ROOT}resources/overlays.js"></script>
+<script type="text/javascript">
+</script>
+</div><!-- page -->
+</body>
+</html>
