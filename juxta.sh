@@ -687,7 +687,7 @@ verify_source_images() {
         local IPATH=${TOKENS[0]}
         local IMETA=${TOKENS[1]}
         unset IFS
-        if [ "http://" != "${IPATH:0:7}" -a "https://" != "${IPATH:0:8}" ]; then
+        if [ "http://" != "${IPATH:0:7}" -a "https://" != "${IPATH:0:8}" -a "missing" != "$IPATH" ]; then
             if [ ! -s "$IPATH" ]; then
                 if [ "true" == "$IGNORE_MISSING" ]; then
                     echo "  - Skipping unavailable image '$IPATH'"
