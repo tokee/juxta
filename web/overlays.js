@@ -86,6 +86,9 @@ function createOverlay(juxtaProperties, dragon) {
     this.showFullInfo = function(boxWidth, boxHeight) {
         return boxWidth >= 150;
     }
+    this.showInfoBox = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
+        return validPos && "missing" != image;
+    }
     this.showFooter = function(x, y, image, meta) {
         // No longer valid
         //return (typeof(juxtaMeta) != 'undefined');
@@ -94,7 +97,7 @@ function createOverlay(juxtaProperties, dragon) {
 
     this.juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
         var sf = showFooter(x, y, image, meta);
-        if (validPos) {
+        if (showInfoBox(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta)) {
             infobox.style.visibility='visible';
 
             infobox.style.left = boxX + 'px';
