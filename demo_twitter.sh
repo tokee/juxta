@@ -17,7 +17,7 @@
 # TODO: Pipe the hydrate output through gzip to save disk space
 # TODO: Better guessing as to where twarc is installed
 
-: ${TWARC:="$HOME/.local/bin/twarc"}
+: ${TWARC:="/usr/local/bin/twarc"}
 : ${IMAGE_BUCKET_SIZE:=20000}
 : ${MAX_IMAGES:=99999999999}
 : ${THREADS:=3}
@@ -44,12 +44,6 @@ parse_arguments() {
         >&2 echo "No collage name specified"
         exit 2
     fi
-    if [ ! -x "$TWARC" ]; then
-        >&2 echo "Unable to locate twarc executable (tried $TWARC)"
-        >&2 echo "Please state the folder using environment variables, such as"
-        >&2 echo "TWARC=/home/myself/bin/twarc ./demo_twitter.sh mytweetIDs.dat mytweets"
-        exit 3
-    fi
     # TODO: Verify that jq is installed
 }
 
@@ -66,6 +60,12 @@ hydrate() {
         echo "Input file $TWEETIDS is already hydrated"
         cp $TWEETIDS $DOWNLOAD/hydrated.json
         return
+    fi
+    if [ ! -x "$TWARC" ]; then
+        >&2 echo "Unable to locate twarc executable (tried $TWARC)"
+        >&2 echo "Please state the folder using environment variables, such as"
+        >&2 echo "TWARC=/home/myself/bin/twarc ./demo_twitter.sh mytweetIDs.dat mytweets"
+        exit 3
     fi
     echo " - Hydration of '$TWEETIDS' to $DOWNLOAD/hydrated.json"
     $TWARC hydrate "$TWEETIDS" > "$DOWNLOAD/hydrated.json"
