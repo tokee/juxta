@@ -14,12 +14,14 @@ that happen.
 
 ## Things to consider
 
-juxta creates one big collage. At maximum zoom, the size of the images (and their aspect ratio) is defined by `RAW_WxRAW_H`, where each block is 256x256 pixels, so setting `RAW_W=3 RAW_H=2` means `768x512 pixels`. If there are 1 millions of images, that means a final collage of ~400 gigapixel. An obvious precation is to create a test-collage of 1000 images or so, to get an idea of how it looks, before running a big job.
+juxta creates one big collage. At maximum zoom, the size of the images (and their aspect ratio) is defined by `RAW_WxRAW_H`, where each block is 256x256 pixels, so setting `RAW_W=3 RAW_H=2` means `768x512 pixels`. If there are 1 millions of images, that means a final collage of ~400 gigapixel. An obvious precaution is to create a test-collage of 1000 images or so, to get an idea of how it looks, before running a big job.
 
-Also note that the number of inodes used will be a little more than `RAW_WxRAW_H`. With the example above, be sure to check that there at at least 10 million free inodes on the file system.
-
+Also note that the number of inodes used will be a little more than `RAW_WxRAW_H`. With the example above, be sure to check that there at at least 10 million free inodes on the file system (call `df -i` under Linux/OS-X).
 
 ## Tweet-IDs as source
+
+**Important:** This requires [twarc](https://github.com/docnow/twarc), a (free) API-key from
+Twitter and an understanding of Twitters [Developer Agreement & Policy](https://dev.twitter.com/overview/terms/agreement-and-policy).
 
 The base usage of the script is to have a file with a list of tweet-IDs,
 such as
@@ -44,11 +46,11 @@ If the script is stopped, restarting will cause it to skip the parts that are al
 
 ## Tweets as source
 
-If the tweets are already available in the format used by twarc hydrate, step 1 in _Tweet-IDs as source_ is not needed. `demo_tritter.sh` does not handle this explicitly, but it is easy to hack:
+If the tweets are already available in the format used by twarc hydrate, step 1 in _Tweet-IDs as source_ is not needed. `demo_tritter.sh` auto.guesses if the input is already hydrated and for safety it can be stated as an argument.
 
- 1. Create a folder `tweet_collage_downloads`
- 2. Copy the tweets to `tweet_collage_downloads/hydrated.json`
- 3. Start `demo_twitter.sh` with an existing dummy file and with `tweet_collage` as destination: `./demo_twitter.sh tweet_collage_downloads/hydrated.json tweet_collage`. This will cause `demo_tritter.sh` to skip the hydration phase as `hydrated.json` is already present
+```Shell
+ALREADY_HYDRATED=true ./demo_twitter.sh mytweets.json tweet_collage
+```
 
 ## Tweets + images both available
 
