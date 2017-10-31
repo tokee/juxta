@@ -1,0 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter images demo</title>
+    <link rel="stylesheet" type="text/css" href="resources/juxta.css" />
+    <script src="resources/openseadragon.min.js"></script>
+    <script type="text/javascript" src="resources/overlays_preload.js"></script>
+    <script type="text/javascript" src="resources/overlays.js"></script>
+
+</head>
+
+<body>
+<h1>Twitter images demo</h1>
+<p>Sample page with ${TOTAL_IMAGES} images. See <a href="https://github.com/tokee/juxta">the juxta GitHub page</a> for details.</p>
+
+<div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
+
+<script type="text/javascript">
+  var myDragon = OpenSeadragon({
+    id:            "zoom-display",
+    
+    zoomPerScroll: 2.0,
+    showNavigator:  false,
+    wrapHorizontal: false,
+    prefixUrl: "resources/images/",
+    ${TILE_SOURCES}
+  });
+  ${SETUP_OVERLAY}
+</script>
+<script type="text/javascript">
+var baseURL = 'https://twitter.com/HopefullyNonExisting12/status/';
+overlays.showFooter = function(x, y, image, meta) {
+  return false;
+}
+overlays.createHeader = function(x, y, image, meta) {
+  tweetID = meta.split(" ")[0];
+  timestamp = meta.split(" ")[1].replace("T", " ");
+  return '<a href="' + baseURL + tweetID + '">' + timestamp + '</a>';
+}
+</script>
+
+<p>Generated `date +"%Y-%m-%d %H:%M"`</p>
+</body>
+</html>
