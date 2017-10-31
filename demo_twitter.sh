@@ -26,6 +26,7 @@
 : ${TIMEOUT:=60}
 : ${TEMPLATE:="demo_twitter.template.html"}
 : ${ALREADY_HYDRATED:=false}
+: ${FULLTEXT:=false} # Experimental
 
 : ${RAW_W:=1}
 : ${RAW_H:=1}
@@ -56,6 +57,7 @@ parse_arguments() {
         >&2 echo "Error: jq not available. Install with 'sudo apt-get install jq'"
         exit 9
     fi
+    export FULLTEXT
 }
 
 # Output: HYDRATED
@@ -98,38 +100,47 @@ hydrate() {
 }
 
 extract_image_data() {
-    if [ -s "$DOWNLOAD/date-id-imageURL.dat" ]; then
-        echo " - Skipping extraction of date, ID and imageURL as $DOWNLOAD/date-id-imageURL.dat already exists"
-        return
-    fi
-    echo " - Extracting date, ID and imageURL to $DOWNLOAD/date-id-imageURL.dat"
     # TODO: Better handling of errors than throwing them away
-    zcat "$HYDRATED" | jq --indent 0 -r 'if (.entities .media[] .type) == "photo" then [.id_str,.created_at,.entities .media[] .media_url_https // .entities .media[] .media_url] else empty end' > "$DOWNLOAD/date-id-imageURL.dat" 2>/dev/null
-    
+    if [[ "true" == "$FULLTEXT" ]]; then
+        if [ -s "$DOWNLOAD/date-id-imageURL.dat" ]; then
+            echo " - Skipping extraction of date, ID and imageURL as $DOWNLOAD/date-id-imageURL.dat already exists"
+            return
+        fi
+        echo " - Extracting date, ID and imageURL to $DOWNLOAD/date-id-imageURL.dat"
+        zcat "$HYDRATED" | jq --indent 0 -r 'if (.entities .media[] .type) == "photo" then [.id_str,.created_at,.entities .media[] .media_url_https // .entities .media[] .media_url] else empty end' > "$DOWNLOAD/date-id-imageURL.dat" 2>/dev/null
+    else
+        if [ -s "$DOWNLOAD/date-id-imageURL-fulltext.dat" ]; then
+            echo " - Skipping extraction of date, ID, imageURL and fulltext as $DOWNLOAD/date-id-imageURL-fulltext.dat already exists"
+            return
+        fi
+        echo " - Extracting date, ID, imageURL and fulltext to $DOWNLOAD/date-id-imageURL-fulltext.dat"
+        zcat "$HYDRATED" | jq --indent 0 -r 'if (.entities .media[] .type) == "photo" then [.id_str,.created_at,(.entities .media[] .media_url_https // .entities .media[] .media_url),.full_text ] else empty end' > "$DOWNLOAD/date-id-imageURL-fulltext.dat" 2>/dev/null
+    fi
     # TODO: $DOWNLOAD/hydrated.json -> $DOWNLOAD/date-id-imageURL.dat
 }
 
-# 1 [786532479343599600,"Thu Oct 13 11:42:10 +0000 2016","https://pbs.twimg.com/media/CupTGBlWcAA-yzz.jpg"]
+# 1 ["786532479343599600","Thu Oct 13 11:42:10 +0000 2016","https://pbs.twimg.com/media/CupTGBlWcAA-yzz.jpg"]
+# 1 ["786532479343599600","Thu Oct 13 11:42:10 +0000 2016","https://pbs.twimg.com/media/CupTGBlWcAA-yzz.jpg","Some text\nWith newlines"]
 download_image() {
     local LINE="$@"
     local IFS=$' '
     local TOKENS=($LINE)
     local COUNT=${TOKENS[0]}
     unset IFS
-    LINE=${LINE#*\[}
+    LINE="["${LINE#*\[}
 
-    # 786532479343599600,"Thu Oct 13 11:42:10 +0000 2016","https://pbs.twimg.com/media/CupTGBlWcAA-yzz.jpg"]
-    IFS=,
-    local TOKENS=($LINE)
-    local ID=${TOKENS[0]}
-    local ID=$( echo $ID | tr -d '"' )
-    local DATE_STR=${TOKENS[1]}
-    local TDATE=$( date -d $DATE_STR +"%Y-%m-%dT%H:%M:%S" )
-    unset IFS
-    local LINE=${LINE#*,}
-    local LINE=${LINE#*,}
-    local IMAGE_URL=${LINE%?}
-    local IMAGE_NAME=$(echo "$IMAGE_URL" | sed -e 's/^[a-zA-Z]*:\/\///' -e 's/[^-A-Za-z0-9_.]/_/g' )
+    # ["786532479343599600","Thu Oct 13 11:42:10 +0000 2016","https://pbs.twimg.com/media/CupTGBlWcAA-yzz.jpg"]
+    # ["786532479343599600","Thu Oct 13 11:42:10 +0000 2016","https://pbs.twimg.com/media/CupTGBlWcAA-yzz.jpg","Some text\nWith newlines"]
+    
+    local ID=$( jq '.[0]' <<< "$LINE" )
+    local DATE_STR=$( jq '.[1]' <<< "$LINE" )
+    local TDATE=$( date -d "$DATE_STR" +"%Y-%m-%dT%H:%M:%S" )
+    local IMAGE_URL=$( jq '.[2]' <<< "$LINE" )
+    local IMAGE_NAME=$(sed -e 's/^[a-zA-Z]*:\/\///' -e 's/[^-A-Za-z0-9_.]/_/g' <<< "$IMAGE_URL")
+    if [[ "true" == "$FULLTEXT" ]]; then
+        local T_TEXT=$( jq '.[3]' <<< "$LINE" )
+    fi
+
     local BUCKET=$((COUNT / IMAGE_BUCKET_SIZE * IMAGE_BUCKET_SIZE ))
     mkdir -p "$DOWNLOAD/images/$BUCKET"
     local IDEST="$DOWNLOAD/images/$BUCKET/$IMAGE_NAME"
@@ -137,7 +148,11 @@ download_image() {
         curl -s -m $TIMEOUT "$IMAGE_URL" > "$IDEST"
     fi
     if [ -s "$IDEST" ]; then
-        echo "$COUNT/$MAX $TDATE $ID $IDEST"
+        if [[ "true" == "$FULLTEXT" ]]; then
+            echo "$COUNT/$MAX $TDATE $ID $IDEST $T_TEXT"
+        else
+            echo "$COUNT/$MAX $TDATE $ID $IDEST"
+        fi
     else
         >&2 echo "Unable to download $IMAGE_URL"
     fi    
@@ -148,6 +163,7 @@ download_images() {
     if [ -s "$DOWNLOAD/counter-max-date-id-imagePath.dat" ]; then
         echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists, but all images might not be there"
     fi
+    
     echo " - Downloading images defined in $DOWNLOAD/date-id-imageURL.dat"
 
     # Create job list
@@ -172,12 +188,19 @@ download_images() {
     export DOWNLOAD
     export TIMEOUT
     #cat $ITMP | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'echo "{}"'
-    cat $ITMP | tr '\n' '\0' | xargs -0 -P $THREADS -n 1 -I {} bash -c 'download_image "{}"' | tee "$DOWNLOAD/counter-max-date-id-imagePath.dat"
+    # TODO: Add synchronization to avoid jumbled output
+    if [[ "true" == "$FULLTEXT" ]]; then
+        local O="$DOWNLOAD/counter-max-date-id-imagePath.dat"
+    else
+        local O="$DOWNLOAD/counter-max-date-id-imagePath-fulltext.dat"
+    fi
+    tr '\n' '\0' <<< "$ITMP" | xargs -0 -P $THREADS -n 1 -I {} bash -c 'download_image "{}"' | tee "$O"
     rm $ITMP
 }
 
 prepare_juxta_input() {
     echo " - Sorting and preparing juxta image list $DOWNLOAD/twitter_images.dat"
+    # TODO: Enhance split with fulltext
     cat "$DOWNLOAD/counter-max-date-id-imagePath.dat" | sed -e 's/^[0-9\/]* //' -e 's/^\([^ ][^ ]*\) \([0-9][0-9]*\) \([^ ][^ ]*\)$/\3|\2 \1/' > "$DOWNLOAD/twitter_images.dat"
 }
 
