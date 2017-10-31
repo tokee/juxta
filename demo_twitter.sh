@@ -14,10 +14,12 @@
 # - jq (sudo apt install jq)
 #
 # TODO: Consider adding user.screen_name as metadata
-# TODO: Pipe the hydrate output through gzip to save disk space
-# TODO: Better guessing as to where twarc is installed
 
-: ${TWARC:="/usr/local/bin/twarc"}
+###############################################################################
+# CONFIG
+###############################################################################
+
+: ${TWARC:="/usr/local/bin/twarc"} # Also tries default path
 : ${IMAGE_BUCKET_SIZE:=20000}
 : ${MAX_IMAGES:=99999999999}
 : ${THREADS:=3}
@@ -28,48 +30,71 @@
 : ${RAW_W:=1}
 : ${RAW_H:=1}
 
+################################################################################
+# FUNCTIONS
+################################################################################
+
 usage() {
-    echo "./demo_twitter.sh tweet-ID-list collage_name"
+    echo "./demo_twitter.sh tweet-ID-list [collage_name]"
     exit $1
 }
 
 parse_arguments() {
     TWEETIDS="$1"
-    if [ ! -s "$TWEETIDS" ]; then
-        >&2 echo "No tweet-ID-list at '$TWEETIDS'"
+    if [[ ! -s "$TWEETIDS" ]]; then
+        >&2 echo "Error: No tweet-ID-list at '$TWEETIDS'"
         usage 1
     fi
     DEST="$2"
-    if [ ! -s "$TWEETIDS" ]; then
-        >&2 echo "No collage name specified"
-        exit 2
+    if [[ "." == ".$DEST" ]]; then
+        DEST=$(basename "$TWEETIDS") # foo.json.gz
+        DEST="${DEST%.*}" # foo.json
+        DEST="twitter_${DEST%.*}" # foo
+        echo "No collage name specified, using $DEST"
     fi
-    # TODO: Verify that jq is installed
+    if [[ "." == .$(which jq) ]]; then
+        >&2 echo "Error: jq not available. Install with 'sudo apt-get install jq'"
+        exit 9
+    fi
 }
 
+# Output: HYDRATED
 hydrate() {
-    if [ -s "$DOWNLOAD/hydrated.json" ]; then
-        echo " - Skipping hydration of '$TWEETIDS' as $DOWNLOAD/hydrated.json already exists"
-        return
-    fi
-    # TODO: Make this faster by piping through head -n 1 but beware the empty line output
-    if [ "." != ".$(grep '{' $TWEETIDS)" ]; then
+    export HYDRATED="$DOWNLOAD/hydrated.json.gz"
+    
+    if [[ "." != .$( grep '{' "$TWEETIDS" | head -n 1 ) ]]; then
         echo "Input file $TWEETIDS contains a '{', so it is probably already hydrated"
         ALREADY_HYDRATED=true
+    elif [[ -s "$DOWNLOAD/hydrated.json" ]]; then
+        echo " - Skipping hydration of '$TWEETIDS' as $DOWNLOAD/hydrated.json already exists"
+        export HYDRATED="$DOWNLOAD/hydrated.json"
+        return
+    elif [[ -s "$DOWNLOAD/hydrated.json.gz" ]]; then
+        echo " - Skipping hydration of '$TWEETIDS' as $DOWNLOAD/hydrated.json.gz already exists"
+        return
     fi
+    
     if [ "true" == "$ALREADY_HYDRATED" ]; then
-        echo "Input file $TWEETIDS is already hydrated"
-        cp $TWEETIDS $DOWNLOAD/hydrated.json
+        if [[ "$TWEETIDS" == *.gz ]]; then
+            echo "Input file $TWEETIDS is already hydrated. Copying to $DOWNLOAD/hydrated.json.gz"
+            cp $TWEETIDS $DOWNLOAD/hydrated.json.gz
+        else
+            echo "Input file $TWEETIDS is already hydrated. GZIPping to $DOWNLOAD/hydrated.json.gz"
+            gzip -c $TWEETIDS > $DOWNLOAD/hydrated.json.gz
+        fi
         return
     fi
     if [ ! -x "$TWARC" ]; then
-        >&2 echo "Unable to locate twarc executable (tried $TWARC)"
-        >&2 echo "Please state the folder using environment variables, such as"
-        >&2 echo "TWARC=/home/myself/bin/twarc ./demo_twitter.sh mytweetIDs.dat mytweets"
-        exit 3
+        TWARC=$(which twarc)
+        if [ ! -x "$TWARC" ]; then
+            >&2 echo "Unable to locate twarc executable (tried $TWARC)"
+            >&2 echo "Please state the folder using environment variables, such as"
+            >&2 echo "TWARC=/home/myself/bin/twarc ./demo_twitter.sh mytweetIDs.dat mytweets"
+            exit 3
+        fi
     fi
-    echo " - Hydration of '$TWEETIDS' to $DOWNLOAD/hydrated.json"
-    $TWARC hydrate "$TWEETIDS" > "$DOWNLOAD/hydrated.json"
+    echo " - Hydration of '$TWEETIDS' to $DOWNLOAD/hydrated.json.gz"
+    $TWARC hydrate "$TWEETIDS" | gzip > "$DOWNLOAD/hydrated.json"
 }
 
 extract_image_data() {
@@ -79,7 +104,7 @@ extract_image_data() {
     fi
     echo " - Extracting date, ID and imageURL to $DOWNLOAD/date-id-imageURL.dat"
     # TODO: Better handling of errors than throwing them away
-    cat "$DOWNLOAD/hydrated.json" | jq --indent 0 -r 'if (.entities .media[] .type) == "photo" then [.id_str,.created_at,.entities .media[] .media_url_https // .entities .media[] .media_url] else empty end' > "$DOWNLOAD/date-id-imageURL.dat" 2>/dev/null
+    zcat "$HYDRATED" | jq --indent 0 -r 'if (.entities .media[] .type) == "photo" then [.id_str,.created_at,.entities .media[] .media_url_https // .entities .media[] .media_url] else empty end' > "$DOWNLOAD/date-id-imageURL.dat" 2>/dev/null
     
     # TODO: $DOWNLOAD/hydrated.json -> $DOWNLOAD/date-id-imageURL.dat
 }
@@ -156,7 +181,11 @@ prepare_juxta_input() {
     cat "$DOWNLOAD/counter-max-date-id-imagePath.dat" | sed -e 's/^[0-9\/]* //' -e 's/^\([^ ][^ ]*\) \([0-9][0-9]*\) \([^ ][^ ]*\)$/\3|\2 \1/' > "$DOWNLOAD/twitter_images.dat"
 }
 
-parse_arguments $@
+###############################################################################
+# CODE
+###############################################################################
+
+parse_arguments "$@"
 DOWNLOAD="${DEST}_downloads"
 mkdir -p "$DOWNLOAD"
 hydrate
