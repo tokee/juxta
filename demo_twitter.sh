@@ -52,6 +52,7 @@ hydrate() {
         echo " - Skipping hydration of '$TWEETIDS' as $DOWNLOAD/hydrated.json already exists"
         return
     fi
+    # TODO: Make this faster by piping through head -n 1 but beware the empty line output
     if [ "." != ".$(grep '{' $TWEETIDS)" ]; then
         echo "Input file $TWEETIDS contains a '{', so it is probably already hydrated"
         ALREADY_HYDRATED=true
