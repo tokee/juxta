@@ -35,8 +35,9 @@
 : ${ALLOW_UPSCALE:=true}
 
 pushd ${BASH_SOURCE%/*} > /dev/null
-JUXTA_HOME="$(pwd)"
+: ${JUXTA_HOME:="$(pwd)"}
 popd > /dev/null
+export JUXTA_HOME
 
 ################################################################################
 # FUNCTIONS
