@@ -681,7 +681,7 @@ usage() {
 # Out: ICOUNTER (number of valid images)
 #
 verify_source_images() {
-    if [[ "true" == "$SKIP_IMAGE_VERIFICATION" && ( -d "$DEST/imagelist.dat" && -d "$DEST/imagelist_onlyimages.dat" ) ]]; then
+    if [[ "true" == "$SKIP_IMAGE_VERIFICATION" && ( -s "$DEST/imagelist.dat" && -s "$DEST/imagelist_onlyimages.dat" ) ]]; then
         echo "  - Skipping image verification as SKIP_IMAGE_VERIFICATION == true and both $DEST/imagelist.dat and $DEST/imagelist_onlyimages.dat exists"
         export ICOUNTER=$( wc -l <<< "$IMAGE_LIST" )
         return
