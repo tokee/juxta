@@ -478,10 +478,6 @@ create_html() {
 # used for the graphical overlays.
 #
 create_meta_files() {
-    if [[ "true" == "$AGGRESSIVE_META_SKIP" && "." != $(find "$DEST/meta/" -name "*.json") ]]; then
-        echo "  - skipping creation of meta files as AGGRESSIVE_META_SKIP == true and at least one meta file was found"
-        return
-    fi
     echo "  - Creating meta files"
     rm -f "$DEST/meta/"*.json
     mkdir -p "$DEST/meta"
@@ -549,6 +545,11 @@ create_meta_files() {
 # re-executed, these settings will be sourced.
 #
 store_collage_setup() {
+    if [[ "true" == "$AGGRESSIVE_META_SKIP" && -s "$DEST/collage_setup.js" && "." != $(find "$DEST/meta/" -name "*.json") ]]; then
+        echo "  - skipping creation of meta files as AGGRESSIVE_META_SKIP == true and $DEST/collage_setup.js and at least one meta file was found"
+        return
+    fi
+
     echo "  - Analyzing collection meta data"
     echo "{ colCount: $RAW_IMAGE_COLS," > "$DEST/collage_setup.js"
     echo "  rowCount: $(( ROW + 1 ))," >> "$DEST/collage_setup.js"
