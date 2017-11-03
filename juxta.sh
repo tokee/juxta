@@ -139,6 +139,8 @@ popd > /dev/null
 
 # If true, no images are processed if any destination-images exist
 : ${AGGRESSIVE_IMAGE_SKIP:=false}
+# If true, images are not verified if the files imagelist.dat and imagelist_onlyimages.dat exists
+: ${SKIP_IMAGE_VERIFICATION:=false}
 
 # Where to get OpenSeadragon
 : ${OSD_VERSION:=2.2.1}
@@ -679,6 +681,12 @@ usage() {
 # Out: ICOUNTER (number of valid images)
 #
 verify_source_images() {
+    if [[ "true" == "$SKIP_IMAGE_VERIFICATION" && ( -d "$DEST/imagelist.dat" && -d "$DEST/imagelist_onlyimages.dat" ) ]]; then
+        echo "  - Skipping image verification as SKIP_IMAGE_VERIFICATION == true and both $DEST/imagelist.dat and $DEST/imagelist_onlyimages.dat exists"
+        export ICOUNTER=$( wc -l <<< "$IMAGE_LIST" )
+        return
+    fi
+                    
     echo "  - Verifying images availability and generating $DEST/imagelist.dat"
     mkdir -p "$DEST"
     ICOUNTER=0
