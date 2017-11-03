@@ -153,6 +153,7 @@ download_images() {
     if [ -s "$DOWNLOAD/counter-max-date-id-imagePath.dat" ]; then
         if [[ "true" == "$AGGRESSIVE_IMAGE_DOWNLOAD_SKIP" ]]; then
             echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists and AGGRESSIVE_IMAGE_DOWNLOAD_SKIP==treu. Skipping image download"
+            return
         else 
             echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists, but all images might not be there"
         fi
