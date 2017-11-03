@@ -28,16 +28,18 @@
 : ${ALREADY_HYDRATED:=false}
 : ${AGGRESSIVE_TWITTER_SKIP:=false} # true = skip when there are existing structures
 : ${BACKGROUND:="000000"}
-: ${FORCE_HYDRATE_GZ:=
 
 : ${RAW_W:=2}
 : ${RAW_H:=2}
 : ${ALLOW_UPSCALE:=true}
 
+
+
 pushd ${BASH_SOURCE%/*} > /dev/null
 : ${JUXTA_HOME:="$(pwd)"}
 popd > /dev/null
 export JUXTA_HOME
+
 
 ################################################################################
 # FUNCTIONS
