@@ -34,6 +34,10 @@
 : ${RAW_H:=2}
 : ${ALLOW_UPSCALE:=true}
 
+pushd ${BASH_SOURCE%/*} > /dev/null
+JUXTA_HOME="$(pwd)"
+popd > /dev/null
+
 ################################################################################
 # FUNCTIONS
 ################################################################################
@@ -211,4 +215,4 @@ export TEMPLATE
 export RAW_W
 export RAW_H
 export THREADS
-INCLUDE_ORIGIN=false . ./juxta.sh "$DOWNLOAD/twitter_images.dat" "$DEST"
+INCLUDE_ORIGIN=false . ${JUXTA_HOME}/juxta.sh "$DOWNLOAD/twitter_images.dat" "$DEST"
