@@ -19,12 +19,13 @@
 # CONFIG
 ###############################################################################
 
+pushd ${BASH_SOURCE%/*} > /dev/null
 : ${TWARC:="/usr/local/bin/twarc"} # Also tries default path
 : ${IMAGE_BUCKET_SIZE:=20000}
 : ${MAX_IMAGES:=99999999999}
 : ${THREADS:=3}
 : ${TIMEOUT:=60}
-: ${TEMPLATE:="demo_twitter.template.html"}
+: ${TEMPLATE:="$(pwd)/demo_twitter.template.html"}
 : ${ALREADY_HYDRATED:=false}
 : ${AGGRESSIVE_TWITTER_SKIP:=false} # true = skip when there are existing structures
 : ${BACKGROUND:="000000"}
@@ -33,13 +34,10 @@
 : ${RAW_H:=2}
 : ${ALLOW_UPSCALE:=true}
 
-
-
-pushd ${BASH_SOURCE%/*} > /dev/null
 : ${JUXTA_HOME:="$(pwd)"}
 popd > /dev/null
-export JUXTA_HOME
 
+export JUXTA_HOME
 
 ################################################################################
 # FUNCTIONS
