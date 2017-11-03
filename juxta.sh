@@ -423,8 +423,8 @@ create_html() {
     mkdir -p "$TILE_SOURCE/resources/images"
     cp -n "$JUXTA_HOME/web/"*.css "$TILE_SOURCE/resources/"
     cp -n "$JUXTA_HOME/web/"*.js "$TILE_SOURCE/resources/"
-    unzip -f -q -o -j -d "$TILE_SOURCE/resources/" "$JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip" ${OSD_ZIP%.*}/openseadragon.min.js
-    unzip -f -q -o -j -d "$TILE_SOURCE/resources/images/" "$JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip" $(unzip -l "$JUXTA_HOME/osd/openseadragon-bin-"*.zip | grep -o "opensea.*.png" | tr '\n' ' ')
+    unzip -q -o -j -d "$TILE_SOURCE/resources/" "$JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip" ${OSD_ZIP%.*}/openseadragon.min.js
+    unzip -q -o -j -d "$TILE_SOURCE/resources/images/" "$JUXTA_HOME/osd/openseadragon-bin-${OSD_VERSION}.zip" $(unzip -l "$JUXTA_HOME/osd/openseadragon-bin-"*.zip | grep -o "opensea.*.png" | tr '\n' ' ')
 
     if [ "limit" == "$FOLDER_LAYOUT" ]; then
         TILE_SOURCES="    tileSources:   {
