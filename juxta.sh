@@ -690,7 +690,7 @@ usage() {
 verify_source_images() {
     if [[ "true" == "$SKIP_IMAGE_VERIFICATION" && -s "$DEST/imagelist.dat" && -s "$DEST/imagelist_onlyimages.dat" ]]; then
         echo "  - Skipping image verification as SKIP_IMAGE_VERIFICATION == true and both $DEST/imagelist.dat and $DEST/imagelist_onlyimages.dat exists"
-        export ICOUNTER=$( wc -l <<< "$IMAGE_LIST" )
+        export ICOUNTER=$( wc -l < "$IMAGE_LIST" )
         export IMAGE_LIST_SIZE=$ICOUNTER
         return
     fi
@@ -748,7 +748,7 @@ sanitize_input() {
             echo "  - Sourcing $DEST/previous_options.conf to mimick original setup (this won't override explicit parameters)"
             source "$DEST/previous_options.conf"
         fi
-        ICOUNTER=$(wc -l <<< "$DEST/imagelist.dat")
+        ICOUNTER=$(wc -l < "$DEST/imagelist.dat")
         export IMAGE_LIST_SIZE=$ICOUNTER
         echo "  - $DEST/imagelist.dat exists and contains $ICOUNTER image references"
         export RECREATE=true
@@ -922,7 +922,7 @@ SPEND_S=$((END_S-START_S))
 if [ "$SPEND_S" -eq "0" ]; then
     SPEND_S=1
 fi
-ICOUNT=$(cat "$DEST/imagelist_onlyimages.dat" | wc -l | tr -d ' ')
+ICOUNT=$IMAGE_LIST_SIZE # (cat "$DEST/imagelist_onlyimages.dat" | wc -l | tr -d ' ')
 restore_state # Should be last
 
 echo " - Process started $START_TIME and ended $(date +%Y%m%d-%H%M)"
