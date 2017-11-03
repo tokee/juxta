@@ -914,6 +914,7 @@ if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d "$DEST/$MAX_ZOOM" ]; then
 else
     echo "  - Creating base zoom level $MAX_ZOOM"
     cat "$BATCH" | tr '\n' '\0' | xargs -0 -P "$THREADS" -n 1 -I {} bash -c 'process_base "{}"'
+    rm "$BATCH"
 fi
 create_zoom_levels "$MAX_ZOOM"
 END_S=$(date +%s)
@@ -921,7 +922,6 @@ SPEND_S=$((END_S-START_S))
 if [ "$SPEND_S" -eq "0" ]; then
     SPEND_S=1
 fi
-rm "$BATCH"
 ICOUNT=$(cat "$DEST/imagelist_onlyimages.dat" | wc -l | tr -d ' ')
 restore_state # Should be last
 
