@@ -681,7 +681,7 @@ usage() {
 # Out: ICOUNTER (number of valid images)
 #
 verify_source_images() {
-    if [[ "true" == "$SKIP_IMAGE_VERIFICATION" && ( -s "$DEST/imagelist.dat" && -s "$DEST/imagelist_onlyimages.dat" ) ]]; then
+    if [[ "true" == "$SKIP_IMAGE_VERIFICATION" && -s "$DEST/imagelist.dat" && -s "$DEST/imagelist_onlyimages.dat" ]]; then
         echo "  - Skipping image verification as SKIP_IMAGE_VERIFICATION == true and both $DEST/imagelist.dat and $DEST/imagelist_onlyimages.dat exists"
         export ICOUNTER=$( wc -l <<< "$IMAGE_LIST" )
         return
@@ -865,7 +865,11 @@ sanitize_input "$@"
 resolve_dimensions
 set_converter
 
-prepare_batch # Needs to be here, but why?
+if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d "$DEST/$MAX_ZOOM" ]; then
+    echo "  - Skipping creation of batch job as AGGRESSIVE_IMAGE_SKIP == true and full zoom level $MAX_ZOOM as already exists"
+else
+    prepare_batch # Needs to be here, but why?
+fi
 store_collage_setup
 create_html
 create_dzi
