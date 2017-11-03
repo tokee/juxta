@@ -28,6 +28,7 @@
 : ${ALREADY_HYDRATED:=false}
 : ${AGGRESSIVE_IMAGE_DOWNLOAD_SKIP:=false}
 : ${BACKGROUND:="000000"}
+: ${FORCE_HYDRATE_GZ:=
 
 : ${RAW_W:=2}
 : ${RAW_H:=2}
@@ -68,7 +69,8 @@ hydrate() {
     if [[ "." != .$( grep '{' "$TWEETIDS" | head -n 1 ) ]]; then
         echo "Input file $TWEETIDS contains a '{', so it is probably already hydrated"
         ALREADY_HYDRATED=true
-    elif [[ -s "$DOWNLOAD/hydrated.json" ]]; then
+    fi
+    if [[ -s "$DOWNLOAD/hydrated.json" ]]; then
         echo " - Skipping hydration of '$TWEETIDS' as $DOWNLOAD/hydrated.json already exists"
         export HYDRATED="$DOWNLOAD/hydrated.json"
         return
