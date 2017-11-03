@@ -26,6 +26,7 @@
 : ${TIMEOUT:=60}
 : ${TEMPLATE:="demo_twitter.template.html"}
 : ${ALREADY_HYDRATED:=false}
+: ${AGGRESSIVE_IMAGE_DOWNLOAD_SKIP:=false}
 
 : ${RAW_W:=1}
 : ${RAW_H:=1}
@@ -146,7 +147,11 @@ export -f download_image
 
 download_images() {
     if [ -s "$DOWNLOAD/counter-max-date-id-imagePath.dat" ]; then
-        echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists, but all images might not be there"
+        if [[ "true" == "$AGGRESSIVE_IMAGE_DOWNLOAD_SKIP" ]]; then
+            echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists and AGGRESSIVE_IMAGE_DOWNLOAD_SKIP==treu. Skipping image download"
+        else 
+            echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists, but all images might not be there"
+        fi
     fi
     echo " - Downloading images defined in $DOWNLOAD/date-id-imageURL.dat"
 
