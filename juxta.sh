@@ -139,6 +139,8 @@ popd > /dev/null
 
 # If true, no images are processed if any destination-images exist
 : ${AGGRESSIVE_IMAGE_SKIP:=false}
+# If true, no meta*.json are generated if any exist
+: ${AGGRESSIVE_META_SKIP:=false}
 # If true, images are not verified if the files imagelist.dat and imagelist_onlyimages.dat exists
 : ${SKIP_IMAGE_VERIFICATION:=false}
 
@@ -414,7 +416,7 @@ create_html() {
     TILE_SOURCE=$(basename "$(pwd)")
     popd > /dev/null
     HTML="$DEST/index.html"
-    TOTAL_IMAGES=$(cat "$DEST/imagelist.dat" | wc -l | tr -d ' ')
+    TOTAL_IMAGES=$IMAGE_LIST_SIZE
     # Yes, mega is 10^6, not 2^20. At least when counting pixels
     MEGAPIXELS=$(( CANVAS_PIXEL_W*$CANVAS_PIXEL_H/1000000 ))
     
@@ -476,6 +478,10 @@ create_html() {
 # used for the graphical overlays.
 #
 create_meta_files() {
+    if [[ "true" == "$AGGRESSIVE_META_SKIP" && "." != $(find "$DEST/meta/" -name "*.json") ]]; then
+        echo "  - skipping creation of meta files as AGGRESSIVE_META_SKIP == true and at least one meta file was found"
+        return
+    fi
     echo "  - Creating meta files"
     rm -f "$DEST/meta/"*.json
     mkdir -p "$DEST/meta"
@@ -546,7 +552,7 @@ store_collage_setup() {
     echo "  - Analyzing collection meta data"
     echo "{ colCount: $RAW_IMAGE_COLS," > "$DEST/collage_setup.js"
     echo "  rowCount: $(( ROW + 1 ))," >> "$DEST/collage_setup.js"
-    local IC=$(cat "$DEST/imagelist.dat" | wc -l | tr -d ' ')
+    local IC=$IMAGE_LIST_SIZE
     echo "  imageCount: $IC," >> "$DEST/collage_setup.js"
     echo "  tileSize: $TILE_SIDE," >> "$DEST/collage_setup.js"
     echo "  rawW: $RAW_W," >> "$DEST/collage_setup.js"
@@ -611,7 +617,7 @@ store_collage_setup() {
 # Out: RAW_IMAGE_COLS RAW_IMAGE_ROWS
 #
 resolve_dimensions() {
-    IMAGE_COUNT=$(cat "$DEST/imagelist.dat" | wc -l | tr -d ' ')
+    IMAGE_COUNT=$IMAGE_LIST_SIZE
     if [ "." != ".$RAW_IMAGE_COLS" ]; then # Fixed width
         if [ "true" == "$AUTO_CROP" -a "$RAW_IMAGE_COLS" -gt "$IMAGE_COUNT" ]; then
             RAW_IMAGE_COLS=$IMAGE_COUNT
@@ -678,12 +684,13 @@ usage() {
 # for each of them. If a file is not present, the image is ignored.
 #
 # Produces: imagelist.dat (images & meta-data), imagelist_onlyimages.dat
-# Out: ICOUNTER (number of valid images)
+# Out: ICOUNTER (number of valid images) IMAGE_LIST_SIZE (same)
 #
 verify_source_images() {
     if [[ "true" == "$SKIP_IMAGE_VERIFICATION" && -s "$DEST/imagelist.dat" && -s "$DEST/imagelist_onlyimages.dat" ]]; then
         echo "  - Skipping image verification as SKIP_IMAGE_VERIFICATION == true and both $DEST/imagelist.dat and $DEST/imagelist_onlyimages.dat exists"
         export ICOUNTER=$( wc -l <<< "$IMAGE_LIST" )
+        export IMAGE_LIST_SIZE=$ICOUNTER
         return
     fi
                     
@@ -715,9 +722,10 @@ verify_source_images() {
         ICOUNTER=$(( ICOUNTER+1 ))
     done < "$IMAGE_LIST"
     export ICOUNTER
+    export IMAGE_LIST_SIZE=$ICOUNTER
 }
 
-# Out: RECREATE ICOUNTER FOLDER_LAYOUT LIMIT_FOLDER_SIDE
+# Out: RECREATE ICOUNTER FOLDER_LAYOUT LIMIT_FOLDER_SIDE IMAGE_LIST_SIZE
 sanitize_input() {
     if [ -z "$1" ]; then
         usage
@@ -739,7 +747,8 @@ sanitize_input() {
             echo "  - Sourcing $DEST/previous_options.conf to mimick original setup (this won't override explicit parameters)"
             source "$DEST/previous_options.conf"
         fi
-        ICOUNTER=$(cat "$DEST/imagelist.dat" | wc -l)
+        ICOUNTER=$(wc -l <<< "$DEST/imagelist.dat")
+        export IMAGE_LIST_SIZE=$ICOUNTER
         echo "  - $DEST/imagelist.dat exists and contains $ICOUNTER image references"
         export RECREATE=true
     else
