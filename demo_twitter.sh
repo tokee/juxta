@@ -27,9 +27,11 @@
 : ${TEMPLATE:="demo_twitter.template.html"}
 : ${ALREADY_HYDRATED:=false}
 : ${AGGRESSIVE_IMAGE_DOWNLOAD_SKIP:=false}
+: ${BACKGROUND:="000000"}
 
-: ${RAW_W:=1}
-: ${RAW_H:=1}
+: ${RAW_W:=2}
+: ${RAW_H:=2}
+: ${ALLOW_UPSCALE:=true}
 
 ################################################################################
 # FUNCTIONS
@@ -202,4 +204,4 @@ export TEMPLATE
 export RAW_W
 export RAW_H
 export THREADS
-INCLUDE_ORIGIN=false ./juxta.sh "$DOWNLOAD/twitter_images.dat" "$DEST"
+INCLUDE_ORIGIN=false . ./juxta.sh "$DOWNLOAD/twitter_images.dat" "$DEST"
