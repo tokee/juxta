@@ -26,7 +26,7 @@
 : ${TIMEOUT:=60}
 : ${TEMPLATE:="demo_twitter.template.html"}
 : ${ALREADY_HYDRATED:=false}
-: ${AGGRESSIVE_IMAGE_DOWNLOAD_SKIP:=false}
+: ${AGGRESSIVE_TWITTER_SKIP:=false} # true = skip when there are existing structures
 : ${BACKGROUND:="000000"}
 : ${FORCE_HYDRATE_GZ:=
 
@@ -151,8 +151,8 @@ export -f download_image
 
 download_images() {
     if [ -s "$DOWNLOAD/counter-max-date-id-imagePath.dat" ]; then
-        if [[ "true" == "$AGGRESSIVE_IMAGE_DOWNLOAD_SKIP" ]]; then
-            echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists and AGGRESSIVE_IMAGE_DOWNLOAD_SKIP==treu. Skipping image download"
+        if [[ "true" == "$AGGRESSIVE_TWITTER_SKIP" ]]; then
+            echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists and AGGRESSIVE_TWITTER_SKIP==treu. Skipping image download"
             return
         else 
             echo " - $DOWNLOAD/counter-max-date-id-imagePath.dat already exists, but all images might not be there"
@@ -187,6 +187,10 @@ download_images() {
 }
 
 prepare_juxta_input() {
+    if [[ "true" == "$AGGRESSIVE_TWITTER_SKIP" && -s "$DOWNLOAD/twitter_images.dat" ]]; then
+        echo " - Skipping sorting and preparing juxta image list $DOWNLOAD/twitter_images.dat as it already exists AGGRESSIVE_TWITTER_SKIP=true"
+        return
+    fi
     echo " - Sorting and preparing juxta image list $DOWNLOAD/twitter_images.dat"
     cat "$DOWNLOAD/counter-max-date-id-imagePath.dat" | sed -e 's/^[0-9\/]* //' -e 's/^\([^ ][^ ]*\) \([0-9][0-9]*\) \([^ ][^ ]*\)$/\3|\2 \1/' > "$DOWNLOAD/twitter_images.dat"
 }
