@@ -234,6 +234,12 @@ get_tile_subfolder() {
 }
 export -f get_tile_subfolder
 
+prepare_base() {
+    if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
+        $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality "$TILE_QUALITY" "$DEST/blank.${TILE_FORMAT}"
+    fi
+}
+
 process_base() {
     local TOKENS
     IFS=$' ' TOKENS=($1)
@@ -249,18 +255,15 @@ process_base() {
     local RAW_PIXEL_H=$((RAW_H*TILE_SIDE))
     local GEOM_W=$((RAW_PIXEL_W-2*MARGIN_W))
     local GEOM_H=$((RAW_PIXEL_H-2*MARGIN_H))
-    if [ "true" == "$ALLOW_UPSCALE" ]; then
+    if [[ "true" == "$ALLOW_UPSCALE" ]]; then
         local SCALE_MODIFIER=""
     else
         local SCALE_MODIFIER=">"
     fi
     local TILE_SUB=$(get_tile_subfolder $COL $ROW)
     mkdir -p "$DEST/$MAX_ZOOM/$TILE_SUB"
-    if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
-        $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality "$TILE_QUALITY" "$DEST/blank.${TILE_FORMAT}"
-    fi
-    if [ -s "$DEST/$MAX_ZOOM/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
-        if [ "$VERBOSE" == "true" ]; then
+    if [[ -s "$DEST/$MAX_ZOOM/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]]; then
+        if [[ "$VERBOSE" == "true" ]]; then
             echo "    - Skipping #${IMAGE_NUMBER}/${IMAGE_COUNT} grid ${ROW}x${COL} as tiles already exist for $(basename "$IMAGE")"
         fi
         return
@@ -272,12 +275,12 @@ process_base() {
     # http://www.imagemagick.org/Usage/crop/#crop_tile
 
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
-    if [ "missing" != "$IMAGE" ]; then
+    if [[ "missing" != "$IMAGE" ]]; then
         echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from $(basename "$IMAGE")"
         convert "$IMAGE" -auto-orient -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}${SCALE_MODIFIER}" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality "$TILE_QUALITY" -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
-    if [ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]; then
-        if [ "missing" == "$IMAGE" ]; then
+    if [[ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]]; then
+        if [[ "missing" == "$IMAGE" ]]; then
             echo "    - Creating blank tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${ROW}x${COL} as there are no more source images"
         else
             echo "    - Error: Could not create tiles from source image #${IMAGE_NUMBER}/${IMAGE_COUNT}. Using blank tiles instead. $IMAGE"
@@ -298,7 +301,7 @@ process_zoom() {
     local COL=0
     #local COL_COUNT=$((MAX_COL+1))
 
-    while [ "$COL" -le "$MAX_COL" ]; do
+    while [[ "$COL" -le "$MAX_COL" ]]; do
         local RAW_COL=$((COL/RAW_W))
         local TILE_SOURCE_SUB=$(get_tile_subfolder $((RAW_COL*2)) $((RAW_ROW*2)))
         local TILE_DEST_SUB=$(get_tile_subfolder $RAW_COL $RAW_ROW)
@@ -310,7 +313,7 @@ process_zoom() {
         local S01="$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2))_$((ROW*2+1)).${TILE_FORMAT}"
         local S11="$DEST/$SOURCE_ZOOM/${TILE_SOURCE_SUB}$((COL*2+1))_$((ROW*2+1)).${TILE_FORMAT}"
         COL=$((COL+1))
-        if [ -s "$TILE" ]; then
+        if [[ -s "$TILE" ]]; then
             continue
         fi
 
@@ -319,25 +322,24 @@ process_zoom() {
 
 
 
-        if [ -s "$S00" -a -s "$S01" -a -s "$S10" -a -s "$S11" ]; then # 2x2 
+        if [[ -s "$S00" && -s "$S01" && -s "$S10" && -s "$S11" ]]; then # 2x2 
             # If we are not at the edge, montage is easy. Still need the source existence check above.
-            if [ "$COL" -lt "$MAX_COL" -a "$ROW" -lt "$MAX_ROW" ]; then
+            if [[ "$COL" -lt "$MAX_COL" && "$ROW" -lt "$MAX_ROW" ]]; then
                 montage "$S00" "$S10" "$S01" "$S11" -background "#$BACKGROUND" -geometry 128x128 -tile 2x2 -quality "$TILE_QUALITY" "$TILE"
             else
                 montage "$S00" "$S10" "$S01" "$S11" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
             fi
-        elif [ -s "$S00" -a -s "$S10" ]; then # 2x1
+        elif [[ -s "$S00" && -s "$S10" ]]; then # 2x1
             montage "$S00" "$S10" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
-        elif [ -s "$S00" -a -s "$S01" ]; then # 1x2
+        elif [[ -s "$S00" && -s "$S01" ]]; then # 1x2
             montage "$S00" "$S01" -mode concatenate -tile 1x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
-        elif [ -s "$S00" ]; then # 1x1
+        elif [[ -s "$S00" ]]; then # 1x1
             $CONVERT "$S00" -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
         else # No more source images for the lower right corner
             cp "$BLANK" "$TILE"
         fi
     done
     echo -n "$ROW "
-    
 }
 export -f process_zoom
 
@@ -916,6 +918,7 @@ if [ "true" == "$AGGRESSIVE_IMAGE_SKIP" -a -d "$DEST/$MAX_ZOOM" ]; then
     echo "  - Skipping creation of full zoom level $MAX_ZOOM as it already exists"
 else
     echo "  - Creating base zoom level $MAX_ZOOM"
+    prepare_base
     cat "$BATCH" | tr '\n' '\0' | xargs -0 -P "$THREADS" -n 1 -I {} bash -c 'process_base "{}"'
     rm "$BATCH"
 fi
