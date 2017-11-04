@@ -74,7 +74,7 @@ parse_arguments() {
 hydrate() {
     export HYDRATED="$DOWNLOAD/hydrated.json.gz"
     
-    if [[ "." != .$( grep '{' "$TWEETIDS" | head -n 1 ) ]]; then
+    if [[ "." != .$( grep -m 1 '{' "$TWEETIDS" ) ]]; then
         echo "Input file $TWEETIDS contains a '{', so it is probably already hydrated"
         ALREADY_HYDRATED=true
     fi
