@@ -721,6 +721,9 @@ verify_source_images() {
         echo "$IMAGE" >> "$DEST/imagelist.dat"
         echo "$IPATH" >> "$DEST/imagelist_onlyimages.dat"
         ICOUNTER=$(( ICOUNTER+1 ))
+        if [[ "$ICOUNTER" -ge "$MAX_IMAGES" ]]; then
+            break
+        fi
     done < "$IMAGE_LIST"
     export ICOUNTER
     export IMAGE_LIST_SIZE=$ICOUNTER
