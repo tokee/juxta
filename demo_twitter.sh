@@ -28,8 +28,9 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 : ${TEMPLATE:="$(pwd)/demo_twitter.template.html"}
 : ${ALREADY_HYDRATED:=false}
 : ${AGGRESSIVE_TWITTER_SKIP:=false} # true = skip when there are existing structures
-: ${BACKGROUND:="000000"}
+: ${DOWNLOAD_CACHE:=""} # Will default to collagename_downloads
 
+: ${BACKGROUND:="000000"}
 : ${RAW_W:=2}
 : ${RAW_H:=2}
 : ${ALLOW_UPSCALE:=true}
@@ -65,6 +66,8 @@ parse_arguments() {
         >&2 echo "Error: jq not available. Install with 'sudo apt-get install jq'"
         exit 9
     fi
+    : ${DOWNLOAD:="$DOWNLOAD_CACHE"}
+    : ${DOWNLOAD:="${DEST}_downloads"}
 }
 
 # Output: HYDRATED
@@ -139,7 +142,7 @@ download_image() {
     local LINE=${LINE#*,}
     local LINE=${LINE#*,}
     local IMAGE_URL=${LINE%?}
-    local IMAGE_NAME=$(echo "$IMAGE_URL" | sed -e 's/^[a-zA-Z]*:\/\///' -e 's/[^-A-Za-z0-9_.]/_/g' )
+    local IMAGE_NAME=$(echo "$IMAGE_URL" | sed -e 's/^[a-zA-Z]*:\/\///' -e 's/[^-A-Za-z0-9_.]/_/g')
     local BUCKET=$((COUNT / IMAGE_BUCKET_SIZE * IMAGE_BUCKET_SIZE ))
     mkdir -p "$DOWNLOAD/images/$BUCKET"
     local IDEST="$DOWNLOAD/images/$BUCKET/$IMAGE_NAME"
@@ -205,7 +208,6 @@ prepare_juxta_input() {
 ###############################################################################
 
 parse_arguments "$@"
-DOWNLOAD="${DEST}_downloads"
 mkdir -p "$DOWNLOAD"
 hydrate
 extract_image_data
