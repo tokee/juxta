@@ -320,8 +320,7 @@ process_zoom() {
         # We use box + scale as we are binning: http://www.imagemagick.org/Usage/filter/#box
         # Or is the box-filter not used? http://stackoverflow.com/questions/8517304/what-is-the-difference-for-sample-resample-scale-resize-adaptive-resize-thumbnai
 
-
-
+        # TODO: Consider checking only for $S11 as the rest should always be there if $S11 exists
         if [[ -s "$S00" && -s "$S01" && -s "$S10" && -s "$S11" ]]; then # 2x2 
             # If we are not at the edge, montage is easy. Still need the source existence check above.
             if [[ "$COL" -lt "$MAX_COL" && "$ROW" -lt "$MAX_ROW" ]]; then
@@ -329,9 +328,11 @@ process_zoom() {
             else
                 montage "$S00" "$S10" "$S01" "$S11" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
             fi
+            # TODO: Only check $S10?
         elif [[ -s "$S00" && -s "$S10" ]]; then # 2x1
             montage "$S00" "$S10" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
         elif [[ -s "$S00" && -s "$S01" ]]; then # 1x2
+            # TODO: Only check $S01?
             montage "$S00" "$S01" -mode concatenate -tile 1x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
         elif [[ -s "$S00" ]]; then # 1x1
             $CONVERT "$S00" -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
