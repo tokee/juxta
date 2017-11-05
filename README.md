@@ -209,3 +209,11 @@ juxta is very much "hope you hit a stable version at git clone" at the moment, s
 /juxta.sh -r mycollage
 ```
 Running with `-r` ensures that the tile files are not touched by juxta. However, for this to work properly, it is essential that all tile-related parameters, such as `RAW_W` and `RAW_H`, are set to the same as the original call to juxta. The only safe parameters to tweak on an upgrade are `TEMPLATE`, `ASYNC_META_SIDE`, `ASYNC_META_CACHE`, `OSD_VERSION`, `OSD_ZIP` & `OSD_URL`.
+
+## Create a single image mosaic
+
+`vips arrayjoin` seems extremely well-suited for this.
+
+For this to scale we cannot use vips from the command line. Okay we could, but that would require multi-pass processing and we would like to do it in one go.
+As https://github.com/jcupitt/libvips/issues/471 suggests, Python should be capable of handling at least some millions of arguments to the `arrayjoin`-call. So Python it is.
+TODO: Create a small script inspired from the vips-issue that performs the join to a single image. 
