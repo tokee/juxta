@@ -152,7 +152,7 @@ TEMPLATE=demo_twitter.template.html RAW_W=1 RAW_H=1 INCLUDE_ORIGIN=false ./juxta
 
    The template `demo_kb.template.html` can be used as a starting point. Override either of `createHeader` and `createFooter`. In this example, it could be  
    
-   ```javascript
+```javascript
 overlays.createHeader = function(x, y, image, meta) {
   imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
   return '<a href="' + meta + '">' + imageID + '</a>';
