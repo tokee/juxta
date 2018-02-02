@@ -9,6 +9,7 @@
     <script src="${DATA_ROOT}resources/openseadragon.min.js"></script>
     <script type="text/javascript" src="${DATA_ROOT}resources/overlays_preload.js"></script>
     <script type="text/javascript" src="${DATA_ROOT}resources/overlays.js"></script>
+    <script type="text/javascript" src="resources/groups.js"></script>
     <!-- Contact person: toes@kb.dk -->
     <style>
         html, body, .page {
@@ -66,6 +67,52 @@
           margin-top: 0;
           font-size: 1em;
         }
+        #groupheader {
+          left: 0;
+          top: 0;
+          width: 20em;
+          height: 1.2em;
+          position: absolute;
+          z-index: 8;
+
+          background: #FFFFFF;
+          color: black;  
+          opacity: 0.9;
+          text-align: center;
+          visibility: hidden;
+          pointer-events: none;
+            
+          padding: 0.2em 0.5em 0.2em 0.5em;
+          border-top: 3px solid #99f;
+          border-right: 3px solid #99f;
+          border-left: 3px solid #99f;
+          border-top-left-radius: 10px;
+          border-top-right-radius: 10px;
+        }
+        #groupbox {
+          width: 0px; height: 0px;
+          left: 10px;
+          top: 100px;
+          position: absolute;
+          z-index: 9;
+          pointer-events: none;
+          overflow: hidden;
+          visibility: hidden;
+        
+          border: 3px solid #99f;
+        }
+        #infobox {
+          width: 0px; height: 0px;
+          left: 10px;
+          top: 100px;
+          position: absolute;
+          z-index: 9;
+          pointer-events: none;
+          overflow: hidden;
+          visibility: hidden;
+        
+          border: 3px solid red;
+        }
     </style>
 </head>
 
@@ -80,7 +127,10 @@
 <!--    <ul>$(echo "$SOURCES" | tr '\n' '\0' | xargs -0 -n 1 -I {} echo "<li>{}</li>") </ul>-->
 </div>
 
-<div id="zoom-display" class="page-content openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
+<div id="zoom-display" class="page-content openseadragon">
+    <div id="groupbox"></div><div id="groupheader"></div>
+    <div id="header"></div><div id="infobox"></div><div id="footer"></div>
+</div>
 
 <script type="text/javascript">
   var myDragon = OpenSeadragon({
@@ -102,6 +152,50 @@ overlays.createHeader = function(x, y, image, meta) {
 
 overlays.showFooter = function(x, y, image, meta) {
   return false;
+}
+
+overlays.beforeCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
+  if (image == "missing") {
+    groupbox.style.visibility='hidden';
+    groupheader.style.visibility='hidden';
+    return;
+  }      
+  groupDesignation = groups.elements[currentImageGridY()];
+  first = -1;
+  last = -1;
+  for (var i = 0 ; i < groups.elements.length ; i++) {
+    if (groups.elements[i] == groupDesignation) {
+      if (first == -1) {
+        first = i;
+      }
+      last = i;
+    }
+  }
+  if (first == -1 || last == -1) {
+    console.log("Error determining group from currentImageGridY==" + currentImageGridY());
+    return;
+  }
+  topLeft = rawToWeb(0, first);
+  bottomRight = rawToWeb(overlays.jprops.colCount, last+1);
+
+  groupheader.style.width = (boxWidth-16) + 'px';
+  groupheader.style.height = '1em';
+  groupheader.innerHTML= groupDesignation.replace(/.dat$/,"");
+  groupheader.style.left = Math.floor(topLeft.x) + 'px';
+  groupheader.style.top = (Math.floor(topLeft.y)-groupheader.clientHeight-3) + 'px';
+
+  groupbox.style.left = Math.floor(topLeft.x) + 'px';
+  groupbox.style.top = Math.floor(topLeft.y) + 'px';
+  groupbox.style.width = Math.floor(bottomRight.x-topLeft.x) + 'px';
+  groupbox.style.height = Math.floor(bottomRight.y-topLeft.y) + 'px';
+
+  groupbox.style.visibility='visible';
+  groupheader.style.visibility='visible';
+}
+
+overlays.juxtaCallbackNotValid = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
+  groupbox.style.visibility='hidden';
+  groupheader.style.visibility='hidden';
 }
 </script>
 

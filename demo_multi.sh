@@ -8,6 +8,8 @@
 : ${ALLOW_UPSCALE:=true}
 # If true, the generated index.html will be put one level above the destination folder
 : ${MOVE_INDEX_UP:=false}
+: ${MAX_SOURCES:=9999999} # Equivalent to MAX_IMAGES, but for sources
+: ${MAX_IMAGES:=9999999}  # Why do we need this here?
 
 pushd ${BASH_SOURCE%/*} > /dev/null
 JUXTA_HOME=$(pwd)
@@ -36,6 +38,9 @@ for ARG in "$@"; do
         DEST="$ARG"
         break
     fi
+    if [[ "$SCOUNT" -gt "$MAX_SOURCES" ]]; then
+        continue
+    fi
     if [[ ! -f "$ARG" ]]; then
         >&2 echo "Error: Source file '$ARG' cannot be read"
         usage 3
@@ -52,29 +57,42 @@ if [[ ".$RAW_IMAGE_COLS" == "." ]]; then
     RAW_IMAGE_COLS=$(echo "sqrt($TOTAL_IMAGES)" | bc)
     echo "Warning: RAW_IMAGE_COLS not specified. Setting RAW_IMAGE_COLS to sqrt($TOTAL_IMAGES images)=$RAW_IMAGE_COLS "
 fi
+echo "Montaging $(wc -l <<< "$SOURCES") image sources containing a total of $TOTAL_IMAGES images"
 
 # Create merged source file with blanks inserted to get visual grouping
-mkdir -p "$DEST"
+mkdir -p "$DEST/resources"
 rm -f "$DEST/multi_source.dat"
+echo "var groups = { elements: [" >  "$DEST/resources/groups.js"
+ROW=0 # Only used when debugging. Consider removal
 while read -r SOURCE; do
     COL=0
     while read -r IMG; do
+        if [[ $COL -eq 0 ]]; then
+            #echo "$ROW $SOURCE"
+            echo "\"${SOURCE}\"," >> "$DEST/resources/groups.js"
+        fi
         COL=$((COL+1))
         echo "$IMG" >> "$DEST/multi_source.dat"
         if [[ "$COL" -eq "$RAW_IMAGE_COLS" ]]; then
+            ROW=$((ROW+1))
             COL=0
         fi
     done < $SOURCE
+    if [[ $COL -gt 0 ]]; then
+        ROW=$((ROW+1))
+    fi
     while [[ "$COL" -ne 0 && "$COL" -lt "$RAW_IMAGE_COLS" ]]; do
         echo "missing" >> "$DEST/multi_source.dat"
         COL=$((COL+1))
     done
 done <<< "$SOURCES"
+echo "]}" >>  "$DEST/resources/groups.js"
 
 # Ensure that index can be moves if needed
 if [[ "$MOVE_INDEX_UP" == "true" ]]; then
     DATA_ROOT="${DEST%/}/"
 fi
+
 . $JUXTA_HOME/juxta.sh "$DEST/multi_source.dat" "$DEST"
 if [[ "$MOVE_INDEX_UP" == "true" ]]; then
     mv "$DEST/index.html" $(dirname "$DEST")

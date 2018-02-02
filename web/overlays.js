@@ -55,9 +55,16 @@ function createOverlay(juxtaProperties, dragon) {
         return rwp;
     }
 
+    this.currentImageGridX = function() {
+        return Math.floor(imagePoint.x / jprops.tileSize / jprops.rawW);
+    }
+    this.currentImageGridY = function() {
+        return Math.floor(imagePoint.y / jprops.tileSize / jprops.rawH);
+    }
+    
     this.handleChange = function() {
-        var rawX = Math.floor(imagePoint.x / jprops.tileSize / jprops.rawW);
-        var rawY = Math.floor(imagePoint.y / jprops.tileSize / jprops.rawH);
+        var rawX = currentImageGridX();
+        var rawY = currentImageGridY();
         roundWebPoint = rawToWeb(rawX, rawY);
         roundWebBRPoint = rawToWeb(rawX+1, rawY+1);
         roundWebBRPoint.x = roundWebBRPoint.x-1;
@@ -95,7 +102,15 @@ function createOverlay(juxtaProperties, dragon) {
         return meta != "";
     }
 
+    this.beforeCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) { }
+    this.afterCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) { }
+
+    // Called on mouse-move outside of a valid image
+    this.juxtaCallbackNotValid = function() { }
+
+    // Called when the mouse is moved over a valid image
     this.juxtaCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
+        beforeCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
         var sf = showFooter(x, y, image, meta);
         if (showInfoBox(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta)) {
             infobox.style.visibility='visible';
@@ -147,6 +162,7 @@ function createOverlay(juxtaProperties, dragon) {
             header.style.visibility='hidden';
             footer.style.visibility='hidden';
         }
+        afterCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
     };
 
     this.result = {
@@ -220,6 +236,7 @@ function createOverlay(juxtaProperties, dragon) {
     this.prepareMeta = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos) {
         if (!validPos) {
             // TODO: Set meta to "" and fire event
+            juxtaCallbackNotValid();
             return
         };
         //console.log("prepareMeta(" + x + ", " + y + ", ...) called");
