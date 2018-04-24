@@ -35,6 +35,9 @@ popd > /dev/null
 
 # Maximum number of threads to use for generating tiles
 : ${THREADS:=3}
+# Maximum number of images to process from the input list
+# -1 means no limit
+: ${MAX_IMAGES:="-1"}
 
 # The tile edge size. This can theoretically be anything, but the strong default is 256.
 # Don't change this unless you know what you are doing
@@ -724,7 +727,7 @@ verify_source_images() {
         echo "$IMAGE" >> "$DEST/imagelist.dat"
         echo "$IPATH" >> "$DEST/imagelist_onlyimages.dat"
         ICOUNTER=$(( ICOUNTER+1 ))
-        if [[ "$ICOUNTER" -ge "$MAX_IMAGES" ]]; then
+        if [[ "$MAX_IMAGES" != "-1" && "$ICOUNTER" -ge "$MAX_IMAGES" ]]; then
             break
         fi
     done < "$IMAGE_LIST"
