@@ -75,7 +75,7 @@
     <h1>${DESIGNATION}: ${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels)</h1>
 </div>-->
 <div class="page-header">
-    <h1>${DESIGNATION}: ${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels)</h1>
+    <h1>${DESIGNATION}: ${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels$(if [ "." != ".$ZIPNAME" ]; then echo ", all images: <a href="$ZIPNAME">$ZIPNAME</a> - $(du -h "$ZIPNAME" |  cut -d$'\t'  -f1)B" ; fi))</h1>
     <!--Parent: ${PARENT}<br/>-->
     <ul> $(echo "$SUBS" | tr '\n' '\0' | xargs -0 -n 1 -I {} echo "<li><a href="{}index.html">{}</a></li>") </ul>
 </div>
