@@ -9,7 +9,6 @@
 
 # TODO: Add switch for index.html or not in links to sub-folders
 
-
 # Glob for finding images in the folder
 : ${FORMAT_GLOB:="*.jpg *.jpeg *.png *.tif *.tiff *.bmp"}
 # We move index.html one step up, and data resides in the .juxta-folder
@@ -19,6 +18,7 @@
 : ${AGGRESSIVE_IMAGE_SKIP:=true}
 : ${RAW_MODE:=percentile90}
 : ${ALLOW_UPSCALE:=true}
+: ${MAKE_ZIP:=false} # If true, a ZIP with all the images for a given page is created
 
 usage() {
     echo "Usage:"
@@ -94,6 +94,14 @@ process() {
     echo "$IMAGES" > .juxta/glob_images.dat
     if [[ "." != ".$IMAGES" ]]; then
         local DIFF=""
+        if [[ "true" == "$MAKE_ZIP" ]]; then
+            log "Creating ZIP-file with all images for bulk download"
+            ZIPNAME="$(basename $(pwd)).zip"
+            zip -u $ZIPNAME -@ < .juxta/glob_images.dat
+        else
+            ZIPNAME=""
+        fi
+        
         if [[ ! -s .juxta/active_images.dat  ||  "." != .$(diff .juxta/glob_images.dat .juxta/active_images.dat) ]]; then
             log "Creating collage for $(echo "$IMAGES" | wc -l) images in ${DESIGNATION}"
             # TODO: Delete any existing tile structures
@@ -102,7 +110,7 @@ process() {
             #log "Skipping collage-creation for ${DESIGNATION} as images are unchanged"
         fi
         mv .juxta/glob_images.dat .juxta/active_images.dat
-        DESIGNATION="$DESIGNATION" PARENT="$PARENT" SUBS="$SUBS" . $JUXTA_HOME/juxta.sh .juxta/active_images.dat .juxta/
+        ZIPNAME="$ZIPNAME" DESIGNATION="$DESIGNATION" PARENT="$PARENT" SUBS="$SUBS" . $JUXTA_HOME/juxta.sh .juxta/active_images.dat .juxta/
         mv .juxta/index.html ./index.html
 
         CONTENT_FOLDERS="$DESIGNATION/"
