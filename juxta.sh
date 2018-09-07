@@ -163,7 +163,7 @@ STATE_LOCATION=$(mktemp /tmp/juxta_state_XXXXXXXX)
 save_state() {
     rm -f $STATE_LOCATION
     for VAL in $( cat "${BASH_SOURCE}" | grep -o ': ${[A-Z_]*:=' | grep -o '[A-Z_]*'); do
-        echo "$VAL=\"$(eval echo '$'$VAL)\"" >> "$STATE_LOCATION"
+        echo "$VAL=\"$(eval echo \"'$'$VAL\")\"" >> "$STATE_LOCATION"
     done
 }
 restore_state() {
