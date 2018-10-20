@@ -363,13 +363,13 @@ create_zoom_levels() {
     fi
     mkdir -p "$DEST/$DEST_ZOOM"
 
-    MAX_ROW=$(find "$DEST/$SOURCE_ZOOM/" -name 0_*.${TILE_FORMAT} | wc -l | tr -d ' ')
+    MAX_ROW=$(find "$DEST/$SOURCE_ZOOM/" -name "0_*.${TILE_FORMAT}" | wc -l | tr -d ' ')
     MAX_ROW=$(( ( MAX_ROW - 1) / 2 ))
     if [[ "$MAX_ROW" -lt 0 ]]; then
         MAX_ROW=0
     fi
 
-    MAX_COL=$(find "$DEST/$SOURCE_ZOOM/" -name *_0.${TILE_FORMAT} | wc -l | tr -d ' ')
+    MAX_COL=$(find "$DEST/$SOURCE_ZOOM/" -name "*_0.${TILE_FORMAT}" | wc -l | tr -d ' ')
     MAX_COL=$(( ( MAX_COL - 1 ) / 2 ))
     if [[ "$MAX_COL" -lt 0 ]]; then
         MAX_COL=0
@@ -799,7 +799,7 @@ sanitize_input() {
         local OIFS=$IFS
         IFS=$'\n' # Handles spaces in filenames
         identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
-        IFS=$OLDIFS
+        IFS=$OIFS
 
         if [[ "${RAW_MODE:0:10}" == "percentile" ]]; then
             local PERCENTILE=${RAW_MODE:10}
