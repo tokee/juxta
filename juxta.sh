@@ -421,7 +421,7 @@ create_dzi() {
 #
 create_html() {
     pushd "$DEST" > /dev/null
-    TILE_SOURCE=$(basename "$(pwd)")
+    TILE_SOURCE=$(pwd)
     popd > /dev/null
     HTML="$DEST/index.html"
     TOTAL_IMAGES=$IMAGE_LIST_SIZE
