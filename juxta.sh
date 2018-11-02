@@ -90,6 +90,11 @@ popd > /dev/null
 # Where to position the images if their aspect does not match the ideal
 # Possible values are NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
 : ${RAW_GRAVITY:=center}
+# Optional extra arguments for the convert command, e.g. "-flatten" to remove transparency
+: ${CONVERT_EXTRA:=""}
+# Optional extra arguments for the convert command, positioned as first argument
+# Example: "-colorspace RGB" to handle CMYK problems
+: ${CONVERT_EXTRA_FIRST:=""}
 
 # If either of these are defined, a fixed width or height layout is used
 # If none are defined, the canvas aspect is used
@@ -241,7 +246,7 @@ export -f get_tile_subfolder
 
 prepare_base() {
     if [ ! -s "$DEST/blank.${TILE_FORMAT}" ]; then
-        $CONVERT -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality "$TILE_QUALITY" "$DEST/blank.${TILE_FORMAT}"
+        $CONVERT $CONVERT_EXTRA_FIRST -size ${TILE_SIDE}x${TILE_SIDE} xc:#${BACKGROUND} -quality "$TILE_QUALITY" $CONVERT_EXTRA "$DEST/blank.${TILE_FORMAT}"
     fi
 }
 
@@ -282,7 +287,7 @@ process_base() {
     # Cannot use GraphicsMagic here as output naming does not work like ImageMagic's
     if [[ "missing" != "$IMAGE" ]]; then
         echo "    - Creating tiles for #${IMAGE_NUMBER}/${IMAGE_COUNT} at grid ${COL}x${ROW} from $(basename "$IMAGE")"
-        convert "$IMAGE" -auto-orient -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}${SCALE_MODIFIER}" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality "$TILE_QUALITY" -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" "${DEST}/${MAX_ZOOM}/${TILE_SUB}%[filename:tile].${TILE_FORMAT}" 2> /dev/null
+        convert $CONVERT_EXTRA_FIRST "$IMAGE" -auto-orient -size ${RAW_PIXEL_W}x${RAW_PIXEL_H} -strip -geometry "${GEOM_W}x${GEOM_H}${SCALE_MODIFIER}" -background "#$BACKGROUND" -gravity ${RAW_GRAVITY} -extent ${GEOM_W}x${GEOM_H} -gravity center -extent ${RAW_PIXEL_W}x${RAW_PIXEL_H} +gravity -crop ${TILE_SIDE}x${TILE_SIDE} -quality "$TILE_QUALITY" -set filename:tile "%[fx:page.x/${TILE_SIDE}+${TILE_START_COL}]_%[fx:page.y/${TILE_SIDE}+${TILE_START_ROW}]" $CONVERT_EXTRA "${DEST}/${MAX_ZOOM}/${TILE_SUB}%[filename:tile].${TILE_FORMAT}" 2> /dev/null
     fi
     if [[ ! -s "$DEST/${MAX_ZOOM}/${TILE_SUB}${TILE_START_COL}_${TILE_START_ROW}.${TILE_FORMAT}" ]]; then
         if [[ "missing" == "$IMAGE" ]]; then
@@ -331,16 +336,16 @@ process_zoom() {
             if [[ "$COL" -lt "$MAX_COL" && "$ROW" -lt "$MAX_ROW" ]]; then
                 montage "$S00" "$S10" "$S01" "$S11" -background "#$BACKGROUND" -geometry 128x128 -tile 2x2 -quality "$TILE_QUALITY" "$TILE"
             else
-                montage "$S00" "$S10" "$S01" "$S11" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
+                montage "$S00" "$S10" "$S01" "$S11" -mode concatenate -tile 2x miff:- | convert $CONVERT_EXTRA_FIRST - -filter box -scale 50%x50% -quality "$TILE_QUALITY" $CONVERT_EXTRA "$TILE"
             fi
             # TODO: Only check $S10?
         elif [[ -s "$S00" && -s "$S10" ]]; then # 2x1
-            montage "$S00" "$S10" -mode concatenate -tile 2x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
+            montage "$S00" "$S10" -mode concatenate -tile 2x miff:- | convert $CONVERT_EXTRA_FIRST - -filter box -scale 50%x50% -quality "$TILE_QUALITY" $CONVERT_EXTRA "$TILE"
         elif [[ -s "$S00" && -s "$S01" ]]; then # 1x2
             # TODO: Only check $S01?
-            montage "$S00" "$S01" -mode concatenate -tile 1x miff:- | convert - -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
+            montage "$S00" "$S01" -mode concatenate -tile 1x miff:- | convert $CONVERT_EXTRA_FIRST - -filter box -scale 50%x50% -quality "$TILE_QUALITY" $CONVERT_EXTRA "$TILE"
         elif [[ -s "$S00" ]]; then # 1x1
-            $CONVERT "$S00" -filter box -scale 50%x50% -quality "$TILE_QUALITY" "$TILE"
+            $CONVERT $CONVERT_EXTRA_FIRST "$S00" -filter box -scale 50%x50% -quality "$TILE_QUALITY" $CONVERT_EXTRA "$TILE"
         else # No more source images for the lower right corner
             cp "$BLANK" "$TILE"
         fi
