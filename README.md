@@ -2,9 +2,10 @@
 Generates a collage of a given set of images, for display on a webpage using the deep zoom tool OpenSeadragon.
 Each source image can have associated meta-data, which is displayed on mouse-over. Some samples:
 
- * http://labs.statsbiblioteket.dk/juxta/subject3795/ (1,000 * 1 MPixel historical postcards)
- * http://labs.statsbiblioteket.dk/juxta/subject208/ (5,000 * 28 MPixel historical maps)
- * http://ruebot.net/visualizations/womensmarch/ (6,104,790 * 0.5 MPixel twitter images)
+ * http://labs.statsbiblioteket.dk/juxta/subject3795/ (1,000 * 1 MPixel historical postcards - 1 GigaPixel)
+ * http://labs.statsbiblioteket.dk/juxta/subject208/ (5,000 * 28 MPixel historical maps - 136 GigaPixel)
+ * http://ruebot.net/visualizations/womensmarch/ (6,104,790 * 0.5 MPixel twitter images - 3 TeraPixel)
+ * https://ruebot.net/45-images/ (17,525,913 * 0.25 MPixel twitter images - 4 TeraPixel)
 
 ## Technical notes
 juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel image file. The tile generation is threaded and localized to the individual source images. This means that memory overhead is independent of the total collage size. The difference between generating a collage of 10 vs. 10 million images is only CPU time. Associated meta-data are stored in chunks and only requested on mouse-over, keeping browser page-open time and memory requirements independent of collage size.
@@ -19,7 +20,7 @@ Processing 24,000 ~1MPixel images on a laptop using 2 threads took 2½ hour and 
 
 The theoretical limits for collage size / source image count are dictated by bash & JavaScripts max integers. The bash-limit depends on system, but should be 2⁶³ on most modern systems. For JavaScript it is 2⁵³. Think yotta-pixels.
 
-The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size of `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see issue #5); but that is solvable, should the case arise.
+The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size of `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see [issue #5](https://github.com/tokee/juxta/issues/5)); but that is solvable, should the case arise.
 
 Depending on browser, mouse-over meta-data will only work for the upper left images of the collage, when opening the collage from the local file system. This is by design (see CORS). It should work for all browsers when accessing the collage through a webserver.
 
@@ -181,7 +182,7 @@ The script `demo_scale.sh` creates a few sample images and a collage of arbitrar
 | 50000|   2002|   25|   3288|  67K| 618|
 |500000|  19652|   25|  32804| 669K|6158|
 
-This was measured after issue #5 (limit the number of files/folder) was completed. As can be seen, performance is linear with the number of images.
+This was measured after [issue #5](https://github.com/tokee/juxta/issues/5) (limit the number of files/folder) was completed. As can be seen, performance is linear with the number of images.
 
 ### Upper limit
 
