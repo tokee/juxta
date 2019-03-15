@@ -84,7 +84,6 @@ popd > /dev/null
 #          extract the width & height at the NNN percentile (0-100) and calculate RAW_W and RAW_H
 #          from that. This ensures that outliers will not dominate the selection.
 #          percentile10 or percentile90 are "outlier proof" versions of automin & automax.
-# WARNING: Don't use other modes than fixed if the number of images is high (10,000+).
 : ${RAW_MODE:=fixed}
 
 # Where to position the images if their aspect does not match the ideal
@@ -798,12 +797,15 @@ sanitize_input() {
             echo "    - Warning: This is not an excessively high tile count. Consider using the DZI-compatible layout with FOLDER_LAYOUT=dzi instead"
         fi
     fi
+
     if [[ "$RAW_MODE" != "fixed" ]]; then
         echo "  - Determining image dimensions from $ICOUNTER images as RAW_MODE==$RAW_MODE"
         local T=$( mktemp )
         local OIFS=$IFS
         IFS=$'\n' # Handles spaces in filenames
-        identify -format '%wx%h\n' $( cat "$IMAGE_LIST" | sed 's/[|].*//' ) > "$T"
+        # -n 100 could be more elegant by calculating the optimum bases on total image count and threads
+        # but getting the image size is fast so this seems like a high-complexity-for-low-payoff situation
+        tr '\n' '\0' < "$IMAGE_LIST" | xargs -0 -P $THREADS -n 100 identify -format '%wx%h\n' > "$T"
         IFS=$OIFS
 
         if [[ "${RAW_MODE:0:10}" == "percentile" ]]; then
