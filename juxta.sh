@@ -854,6 +854,10 @@ sanitize_input() {
             >&2 echo "Error: RAW_MODE==$RAW_MODE where supported values are fixed, automin and automax"
             usage 65
         fi
+        if [[ "." == ".$RAW_H" || "0" -eq "$RAW_H" || "." == ".$RAW_W" || "0" -eq "$RAW_W" ]]; then
+            >&2 echo "Error: RAW-dimensions must be present and positive but was RAW_W=$RAW_W RAW_H=$RAW_H"
+            exit 31
+        fi
         rm $T
     fi
     export FOLDER_LAYOUT
