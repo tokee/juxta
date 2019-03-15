@@ -123,7 +123,7 @@ download_collection() {
                     fi
                 fi
             fi
-            if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
+            if [ -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
                 echo "downloads/$COLLECTION/${IMAGE_SHORT}|${LINK}§${TITLE}§${DESCRIPTION}" >> downloads/$COLLECTION/sources.dat
             else
                 echo "$IMAGE_URL" >> downloads/$COLLECTION/sources_unavailable.dat
