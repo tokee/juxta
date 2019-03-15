@@ -18,6 +18,8 @@
 : ${BACKGROUND:=000000}
 : ${TEMPLATE:=demo_kb.template.html}
 
+: ${SKIP_DOWNLOAD:="false"} # Only used when debugging problematic targets
+
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
 # TODO: Get full images: http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
@@ -103,21 +105,29 @@ download_collection() {
             # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010/full/full/0/native.jpg
             local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' -e 's/\/full\/full\/0\/native\/full\/full\/0\/native.jpg/\/full\/full\/0\/native.jpg/' )
             DOWNLOADED=$((DOWNLOADED+1))
-            if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
-                echo "    - Downloading image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_SHORT"
-                # TODO: Fetch full image with
-                # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
-                # 
-                # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
-                # echo "Downloading $IMAGE_URL to downloads/$COLLECTION/$IMAGE_SHORT"
-                curl -s -m 60 "$IMAGE_URL" > downloads/$COLLECTION/$IMAGE_SHORT
-                if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
-                    >&2 echo "Error: Unable to download $IMAGE_URL to downloads/$COLLECTION/$IMAGE_SHORT"
-                    rm -f downloads/$COLLECTION/$IMAGE_SHORT
-                    continue
+            if [[ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]]; then
+                if [[ "$SKIP_DOWNLOAD" == "true" ]]; then
+                    echo "    - Skipping download of image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_SHORT as SKIP_DOWNLOAD=true"
+                else
+                    echo "    - Downloading image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_SHORT"
+                    # TODO: Fetch full image with
+                    # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
+                    # 
+                    # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
+                    # echo "Downloading $IMAGE_URL to downloads/$COLLECTION/$IMAGE_SHORT"
+                    curl -s -m 60 "$IMAGE_URL" > downloads/$COLLECTION/$IMAGE_SHORT
+                    if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
+                        >&2 echo "Error: Unable to download $IMAGE_URL to downloads/$COLLECTION/$IMAGE_SHORT"
+                        rm -f downloads/$COLLECTION/$IMAGE_SHORT
+                        continue
+                    fi
                 fi
             fi
-            echo "downloads/$COLLECTION/${IMAGE_SHORT}|${LINK}§${TITLE}§${DESCRIPTION}" >> downloads/$COLLECTION/sources.dat
+            if [ ! -s downloads/$COLLECTION/$IMAGE_SHORT ]; then
+                echo "downloads/$COLLECTION/${IMAGE_SHORT}|${LINK}§${TITLE}§${DESCRIPTION}" >> downloads/$COLLECTION/sources.dat
+            else
+                echo "$IMAGE_URL" >> downloads/$COLLECTION/sources_unavailable.dat
+            fi
             if [ "$DOWNLOADED" -ge "$MAX_IMAGES" ]; then
                 break
             fi
