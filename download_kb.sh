@@ -4,6 +4,7 @@
 # Intended for further processing with tools such as juxta or PixPlot
 #
 # API described on https://github.com/Det-Kongelige-Bibliotek/access-digital-objects
+# Collection browsable at http://www.kb.dk/images/billed/2010/okt/billeder/subject2108/en/?
 
 ###############################################################################
 # CONFIG
@@ -155,3 +156,4 @@ download_collection() {
 
 check_parameters "$@"
 download_collection
+echo "Finished downloading $COLLECTION with MAX_IMAGES=$MAX_IMAGES $(date +'%Y-%m-%d %H:%M')"
