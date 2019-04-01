@@ -100,4 +100,6 @@ elif [ "rainbow" == "$IMAGE_SORT" ]; then
 else
     SORTED_SOURCE="downloads/$COLLECTION/sources.dat"
 fi
-. ./juxta.sh $SORTED_SOURCE $COLLECTION
+
+: ${DEST:="$COLLECTION"}
+. ./juxta.sh $SORTED_SOURCE $DEST
