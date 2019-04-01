@@ -47,6 +47,9 @@ if [ "create" == "$COMMAND" -a "." == ".$COLLECTIONS" ]; then
     >&2 echo "Error: A collection must be provided"
     usage 2
 fi
+# Multi-collection handling
+ALLC=$(tr ' ' '_' <<< "$COLLECTIONS" | sed 's/_$//')
+: ${DEST:="$ALLC"}
 
 # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects
 # http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/subject2109/
@@ -62,10 +65,8 @@ if [ "list" == "$COMMAND" ]; then
     exit
 fi
 
-# Multi-collection handling
-ALLC=$(tr ' ' '_' <<< "$COLLECTIONS" | sed 's/_$//')
-mkdir -p downloads/$ALLC
-rm -r downloads/$ALLC/sources.dat
+mkdir -p downloads/$DEST
+rm -r downloads/$DEST/sources.dat
 if [[ "$MAX_IMAGES" -lt "$MAX_IMAGES_PER_COLLECTION" ]]; then
     MAX_IMAGES_PER_COLLECTION=$MAX_IMAGES
 fi
@@ -74,13 +75,13 @@ MAX_IMAGES=$MAX_IMAGES_PER_COLLECTION
 for COLLECTION in $COLLECTIONS; do
     echo "Downloading collection $COLLECTION"
     . $DOWNLOAD_SCRIPT "$COLLECTION"
-    cat downloads/$COLLECTION/sources.dat >> downloads/$ALLC/sources.dat
+    cat downloads/$COLLECTION/sources.dat >> downloads/$DEST/sources.dat
 done
 MAX_IMAGES=$OLD_MI
 
-COLLECTION="$ALLC"
+COLLECTION="$DEST"
 if [ "intensity" == "$IMAGE_SORT" ]; then
-    DAT=downloads/$COLLECTION/sources_intensity_${MAX_IMAGES}.dat
+    DAT=downloads/$DEST/sources_intensity_${MAX_IMAGES}.dat
     if [ -s "$DAT" ]; then
         echo "- Skipping sort by intensity as $DAT already exists"
     else 
@@ -101,5 +102,4 @@ else
     SORTED_SOURCE="downloads/$COLLECTION/sources.dat"
 fi
 
-: ${DEST:="$COLLECTION"}
 . ./juxta.sh $SORTED_SOURCE $DEST
