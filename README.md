@@ -35,7 +35,7 @@ Developed and tested under Ubuntu 16.04. As of 2017-02-03 it worked under OS X, 
 OpenSeadragon and the mouse-over code has been tested with IE10, Firefox, Chrome & Safari on desktop machines, as well as Safari on iPhone &iPad and whatever build-in browser CyanogenMOD has.
 
 
-## Usage
+## Basic usage
 1. Create a list of images
    `find myimages -iname "*.jpg" > images.dat`
 
@@ -44,6 +44,8 @@ OpenSeadragon and the mouse-over code has been tested with IE10, Firefox, Chrome
 
 3. View the collage in a browser
  `firefox mycollage.html`
+
+But! This will produce something with poor choice in colors, clumsy layout and no links to the full images. You probably want to tweak all that: `juxta.sh` is the core script, intended to be called with options geared towards different use cases. If you want to use it as gallery creator, check the "Recursive image gallery" section below.
 
 ## Advanced
 Processing can be controlled by setting environment variables. Most important options are
@@ -64,6 +66,8 @@ A collection of small clip art images could be
 find myimages -iname "*.png" -o -iname "*.gif" > clipart.dat
 BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.dat mycollage
 ```
+
+There are a lot of secondary options, which are all documented in the `juxta.sh`-script.
 
 ## Demos
 
