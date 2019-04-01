@@ -15,6 +15,9 @@ popd > /dev/null
 : ${BACKGROUND:=000000}
 : ${TEMPLATE:=demo_kb.template.html}
 
+: ${MAX_IMAGES:=100000}
+: ${MAX_IMAGES_PER_COLLECTION:="-1"}
+
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
 # TODO: Get full images: http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
@@ -24,8 +27,8 @@ usage() {
     echo "Usage:"
     echo "./demo_kb.sh list"
     echo "             Shows available collections"
-    echo "./demo_kb.sh create collection"
-    echo "             Creates a page for the given collection ID"
+    echo "./demo_kb.sh create collection*"
+    echo "             Creates a page for the given collection IDs"
     exit $1
 }
 
@@ -38,8 +41,9 @@ if [ "list" != "$COMMAND" -a "create" != "$COMMAND" ]; then
     >&2 echo "Error: Unknown command '$COMMAND'"
     usage 1
 fi
-export COLLECTION="$2"
-if [ "create" == "$COMMAND" -a "." == ".$COLLECTION" ]; then
+shift
+export COLLECTIONS="$@"
+if [ "create" == "$COMMAND" -a "." == ".$COLLECTIONS" ]; then
     >&2 echo "Error: A collection must be provided"
     usage 2
 fi
@@ -58,7 +62,23 @@ if [ "list" == "$COMMAND" ]; then
     exit
 fi
 
-. $DOWNLOAD_SCRIPT "$COLLECTION"
+# Multi-collection handling
+ALLC=$(tr ' ' '_' <<< "$COLLECTIONS" | sed 's/_$//')
+mkdir -p downloads/$ALLC
+rm -r downloads/$ALLC/sources.dat
+if [[ "$MAX_IMAGES" -lt "$MAX_IMAGES_PER_COLLECTION" ]]; then
+    MAX_IMAGES_PER_COLLECTION=$MAX_IMAGES
+fi
+OLD_MI=$MAX_IMAGES
+MAX_IMAGES=$MAX_IMAGES_PER_COLLECTION
+for COLLECTION in $COLLECTIONS; do
+    echo "Downloading collection $COLLECTION"
+    . $DOWNLOAD_SCRIPT "$COLLECTION"
+    cat downloads/$COLLECTION/sources.dat >> downloads/$ALLC/sources.dat
+done
+MAX_IMAGES=$OLD_MI
+
+COLLECTION="$ALLC"
 if [ "intensity" == "$IMAGE_SORT" ]; then
     DAT=downloads/$COLLECTION/sources_intensity_${MAX_IMAGES}.dat
     if [ -s "$DAT" ]; then
