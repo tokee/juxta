@@ -15,8 +15,8 @@ popd > /dev/null
 : ${BACKGROUND:=000000}
 : ${TEMPLATE:=demo_kb.template.html}
 
-: ${MAX_IMAGES:=100000}
-: ${MAX_IMAGES_PER_COLLECTION:="-1"}
+: ${MAX_IMAGES:="1000000000"} # 1b
+: ${MAX_IMAGES_PER_COLLECTION:="$MAX_IMAGES"}
 
 # TODO: Extract the title of the collection and show it on the generated page
 # TODO: Better guessing of description text based on md:note fields
