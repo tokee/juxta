@@ -71,7 +71,7 @@ process() {
 
     # Any images in current folder?
     shopt -s nocaseglob 
-    local IMAGES=$(ls -d $FORMAT_GLOB 2> /dev/null)
+    local IMAGES=$(ls -d -- $FORMAT_GLOB 2> /dev/null)
     shopt -u nocaseglob 
     if [[ "." == .$(echo "$IMAGES" | tr -d '\n') ]]; then
         IMAGES=""
