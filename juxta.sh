@@ -805,7 +805,11 @@ sanitize_input() {
         IFS=$'\n' # Handles spaces in filenames
         # -n 100 could be more elegant by calculating the optimum bases on total image count and threads
         # but getting the image size is fast so this seems like a high-complexity-for-low-payoff situation
-        cut -d\| -f1 < "$IMAGE_LIST" | tr '\n' '\0' | xargs -0 -P $THREADS -n 100 identify -format '%wx%h\n' | grep "[0-9]\+x[0-9]\+" > "$T"
+        local HMAX=$MAX_IMAGES
+        if [[ "-1" -eq "$MAX_IMAGES" ]]; then
+            local HMAX=10000000000
+        fi            
+        cut -d\| -f1 < "$IMAGE_LIST" | head -n $HMAX | tr '\n' '\0' | xargs -0 -P $THREADS -n 100 identify -format '%wx%h\n' | grep "[0-9]\+x[0-9]\+" > "$T"
         IFS=$OIFS
 
         if [[ "${RAW_MODE:0:10}" == "percentile" ]]; then
