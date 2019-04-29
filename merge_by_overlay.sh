@@ -9,6 +9,8 @@
 # Used by demo_lunch.sh to visualise before & after images of lunch trays.
 #
 
+# TODO: Add merge_by_overlay.template.html based on working files from demo_lunch.sh
+
 ###############################################################################
 # CONFIG
 ###############################################################################
@@ -62,9 +64,9 @@ check_parameters() {
 ################################################################################
 # FUNCTIONS
 ################################################################################
+
 # http://stackoverflow.com/questions/14434549/how-to-expand-shell-variables-in-a-text-file
 # Input: template-file
-
 function ctemplate() {
     if [[ ! -s "$1" ]]; then
         >&2 echo "Error: Template '$1' could not be found"
