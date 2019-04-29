@@ -71,6 +71,23 @@ There are a lot of secondary options, which are all documented in the `juxta.sh`
 
 ## Demos
 
+### Lunch
+
+University Of North Texas has a collection of image pairs of lunch trays: 
+[https://digital.library.unt.edu/explore/collections/DPWMSC/](Documenting Plate Waste in Middle School Cafeterias Using Digital Still Photography).
+The script `demo_lunch.sh` creates 2 collages of lunch trays: One for the trays before lunch 
+and one after. It then overlays the two collages and introduces a loupe-effect, making it
+easy to visually explore the trays. Calling
+```shell
+./demo_lunch.sh
+```
+will perform all the steps and store the result in the folder `lunch`. As it downloads 2828
+images from the UNT-server, do consider if you need the full set to see the effect. Calling
+```shell
+MAX_IMAGES=100 ./demo_lunch.sh
+```
+gives a fine impression of the idea with 100 image pairs.
+
 ### Recursive image gallery
 
 The script `demo_gallery.sh` performs a recursive descend from a starting folder, creating
