@@ -22,7 +22,10 @@
 
 usage() {
     echo "Usage:"
-    echo "./demo_scale.sh imageroot"
+    echo "./demo_gallery.sh imageroot"
+    echo ""
+    echo "Smaller test run with"
+    echo "MAX_IMAGES=20 ./demo_gallery.sh imageroot"
     exit $1
 }
 log() {
