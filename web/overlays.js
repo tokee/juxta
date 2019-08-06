@@ -45,6 +45,8 @@ function createOverlay(juxtaProperties, dragon) {
         myDragon.addHandler('animation', handleChange);
         myDragon.addHandler('canvas-drag', focusChanged);
         myDragon.addHandler('canvas-click', focusChanged);
+        //myDragon.addHandler('canvas-key', juxtaKeyCallback);
+        window.addEventListener("keydown", juxtaKeyCallback);
         tracker.setTracking(true);  
     }
 
@@ -62,9 +64,7 @@ function createOverlay(juxtaProperties, dragon) {
         return Math.floor(imagePoint.y / jprops.tileSize / jprops.rawH);
     }
     
-    this.handleChange = function() {
-        var rawX = currentImageGridX();
-        var rawY = currentImageGridY();
+    this.handleChange = function(rawX = currentImageGridX(), rawY = currentImageGridY()) {
         roundWebPoint = rawToWeb(rawX, rawY);
         roundWebBRPoint = rawToWeb(rawX+1, rawY+1);
         roundWebBRPoint.x = roundWebBRPoint.x-1;
@@ -165,6 +165,67 @@ function createOverlay(juxtaProperties, dragon) {
         afterCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
     };
 
+    // Called when a key is pressed
+    this.juxtaKeyCallback = function (e) {
+        switch (e.keyCode) {
+        case 38: // up
+            if (e.ctrlKey) {
+                result.y = 0;
+            } else {
+                if (result.y > 0) {
+                    result.y--;
+                }
+            }
+            updateResultFromKeyPress();
+            break;
+        case 40: // down
+            if (e.ctrlKey) {
+                result.y = jprops.rowCount-1;
+            } else {
+                if (result.y < jprops.rowCount-1) {
+                    result.y++;
+                }
+            }
+            updateResultFromKeyPress();
+            break;
+        case 37: // left
+            if (e.ctrlKey) {
+                result.x = 0;
+            } else {
+                if (result.x > 0 || result.y > 0) {
+                    result.x--;
+                }
+                if (result.x == -1) {
+                    result.x = jprops.colCount-1;
+                    result.y--;
+                }
+            }
+            updateResultFromKeyPress();
+            break;
+        case 39: // right
+            if (e.ctrlKey) {
+                result.x = jprops.colCount-1;
+            } else {
+                if (result.x < jprops.colCount-1 || result.y < jprops.rowCount-1) {
+                    result.x++;
+                }
+                if (result.x == jprops.colCount) {
+                    result.x = 0;
+                    result.y++;
+                }
+            }
+            updateResultFromKeyPress();
+            break;
+        }
+        // TODO: preventDefault
+        // TODO: Handle unfilled bottom row
+        
+        // up=38, down=40, left=37, right=39
+        //console.log("boxX=" + result.x + "/" + jprops.colCount);
+        //console.log(e.keyCode);
+        //e.preventDefault = true;
+    }
+    
     this.result = {
         fired: true,
         x: 0, y: 0,
@@ -182,7 +243,12 @@ function createOverlay(juxtaProperties, dragon) {
         juxtaCallback(result.x, result.y, result.boxX, result.boxY, result.boxWidth, result.boxHeight,
                       result.validPos, result.image, result.meta);
     }
-
+    // x & y are valid, fake the rest
+    updateResultFromKeyPress = function() {
+        handleChange(result.x, result.y);
+        // TODO: Add pan if not fully visible (and it can be fully visible)
+    }
+    
     // Returns false if a new request must be started
     this.tryFire = function() {
         if (result.fired) {
