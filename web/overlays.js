@@ -46,8 +46,15 @@ function createOverlay(juxtaProperties, dragon) {
         myDragon.addHandler('canvas-drag', focusChanged);
         myDragon.addHandler('canvas-click', focusChanged);
         //myDragon.addHandler('canvas-key', juxtaKeyCallback);
-        window.addEventListener("keydown", juxtaKeyCallback);
-        tracker.setTracking(true);  
+        //window.addEventListener("keydown", juxtaKeyCallback);
+        tracker.setTracking(true);
+        myDragon.addHandler('canvas-key', function (e) { 
+            juxtaKeyCallback(e.originalEvent);
+            //e.preventDefault = true; // disable default keyboard controls
+            // TODO: Allow WASD?
+            e.preventVerticalPan = true; // disable vertical panning with arrows and W or S keys
+            e.preventHorizontalPan = true; // disable horizontal panning with arrows and A or D keys
+        });
     }
 
     this.rawToWeb = function(rawX, rawY) {
@@ -166,6 +173,7 @@ function createOverlay(juxtaProperties, dragon) {
     };
 
     // Called when a key is pressed
+    // TODO: Bind 1-9 to zoom (1 box, 2 boxes, 3 boxes (1x3, 3x1 or 2x2), 4, 5 (1x5, 5x1, 2x3, 3x2), 6 (2x3, 3x2)...
     this.juxtaKeyCallback = function (e) {
         switch (e.keyCode) {
         case 38: // up
@@ -243,9 +251,46 @@ function createOverlay(juxtaProperties, dragon) {
         juxtaCallback(result.x, result.y, result.boxX, result.boxY, result.boxWidth, result.boxHeight,
                       result.validPos, result.image, result.meta);
     }
+
+    this.ensureSelectionIsVisible = function() {
+        var boxVE = new OpenSeadragon.Rect(result.boxX, result.boxY, result.boxWidth, result.boxHeight);
+        var boxV = myDragon.viewport.viewerElementToViewportRectangle(boxVE);
+        var deltaV = new OpenSeadragon.Point(0, 0);
+        var visibleV = myDragon.viewport.getBounds();
+        console.log("box=" + JSON.stringify(boxV) + ", visible=" + JSON.stringify(visibleV));
+        var changed = false;
+
+        var hMarginV = visibleV.width/100;
+        if (boxV.x < visibleV.x) {
+            deltaV.x = boxV.x-visibleV.x-hMarginV;
+            changed = true;
+        } else if (boxV.x+boxV.width > visibleV.x+visibleV.width) {
+            deltaV.x = (boxV.x+boxV.width)-(visibleV.x+visibleV.width)+hMarginV;
+            changed = true;
+        }
+        
+        var vMarginV = visibleV.height/100;
+        if (boxV.y < visibleV.y) {
+            deltaV.y = boxV.y-visibleV.y-vMarginV;
+            changed = true;
+        } else if (boxV.y+boxV.height > visibleV.y+visibleV.height) {
+            deltaV.y = (boxV.y+boxV.height)-(visibleV.y+visibleV.height)+vMarginV;
+            changed = true;
+        }
+        
+        if (changed) {
+            console.log("delta=" + JSON.stringify(deltaV));
+            myDragon.viewport.panBy(deltaV, false);
+        }
+        return changed;
+    }
+    
     // x & y are valid, fake the rest
     updateResultFromKeyPress = function() {
         handleChange(result.x, result.y);
+        if (ensureSelectionIsVisible()) { // ###
+            handleChange(result.x, result.y);
+        }
         // TODO: Add pan if not fully visible (and it can be fully visible)
     }
     
