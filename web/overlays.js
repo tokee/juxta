@@ -15,6 +15,8 @@ function createOverlay(juxtaProperties, dragon) {
     this.metaCacheMax = 10;
     this.metaCache = [];
 
+    this.boxPanMarginFraction = 1/100;
+    
     // Connect overlay handling to the dragon
     if (myDragon.isOpen()) {
         attachToOpenDragon(juxtaProperties, myDragon);
@@ -42,7 +44,7 @@ function createOverlay(juxtaProperties, dragon) {
             element: myDragon.container,
             moveHandler: focusChanged
         });
-        myDragon.addHandler('animation', handleChange);
+        myDragon.addHandler('animation', handleChangeEvent);
         myDragon.addHandler('canvas-drag', focusChanged);
         myDragon.addHandler('canvas-click', focusChanged);
         //myDragon.addHandler('canvas-key', juxtaKeyCallback);
@@ -76,11 +78,15 @@ function createOverlay(juxtaProperties, dragon) {
         roundWebBRPoint = rawToWeb(rawX+1, rawY+1);
         roundWebBRPoint.x = roundWebBRPoint.x-1;
         roundWebBRPoint.y = roundWebBRPoint.y-1;
-        var zoom = myDragon.viewport.getZoom(true);
         juxtaExpand(rawX, rawY,
                     Math.floor(roundWebPoint.x), Math.floor(roundWebPoint.y),
                     Math.floor(roundWebBRPoint.x-roundWebPoint.x), Math.floor(roundWebBRPoint.y-roundWebPoint.y));
-    }                      
+    }
+    // Used for catching animation events, so result.x&y are not changed
+    this.handleChangeEvent = function() {
+        console.log("Animation callback");
+        handleChange(result.x, result.y);
+    }
 
     // https://openseadragon.github.io/examples/viewport-coordinates/
     this.focusChanged = function(event) {
@@ -172,9 +178,96 @@ function createOverlay(juxtaProperties, dragon) {
         afterCallback(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta);
     };
 
+    this.fitView = function(images) {
+        console.log("Fitting view to hold at least " + images + " images");
+        var candidates = [];
+        switch (images) {
+        case 1:
+            candidates.push([1, 1]);
+            break;
+        case 2:
+            candidates.push([1, 2]);
+            candidates.push([2, 1]);
+            break;
+        case 3:
+            candidates.push([1, 3]);
+            candidates.push([3, 1]);
+            candidates.push([2, 2]);
+            break;
+        case 4:
+            candidates.push([1, 4]);
+            candidates.push([4, 1]);
+            candidates.push([2, 2]);
+            break;
+        case 5:
+            candidates.push([1, 5]);
+            candidates.push([5, 1]);
+            candidates.push([2, 3]);
+            candidates.push([3, 2]);
+            break;
+        case 6:
+            candidates.push([1, 6]);
+            candidates.push([6, 1]);
+            candidates.push([2, 3]);
+            candidates.push([3, 2]);
+            break;
+        case 7:
+            candidates.push([1, 7]);
+            candidates.push([7, 1]);
+            candidates.push([3, 3]);
+            candidates.push([4, 2]);
+            candidates.push([2, 4]);
+            break;
+        case 8:
+            candidates.push([1, 8]);
+            candidates.push([8, 1]);
+            candidates.push([3, 3]);
+            candidates.push([4, 2]);
+            candidates.push([2, 4]);
+            break;
+        case 9:
+            candidates.push([1, 9]);
+            candidates.push([9, 1]);
+            candidates.push([3, 3]);
+            candidates.push([5, 2]);
+            candidates.push([2, 5]);
+            break;
+        default:
+            console.err("Error: Unsupported image count of " + images + " in fitView");
+            return;
+        }
+        var smallestVE = [Infinity, Infinity];
+        var smallestFraction = Infinity;
+        // ###
+        var visibleV = myDragon.viewport.getBounds();
+        var visibleVE = myDragon.viewport.viewportToViewerElementRectangle(visibleV);
+        for (var i = 0 ; i < candidates.length ; i++) {
+            var candidateBoxes = candidates[i];
+            var candidateVE = [candidateBoxes[0]*result.boxWidth, candidateBoxes[1]*result.boxHeight];
+            var candidateFraction = Math.max(candidateVE[0]/visibleVE.width, candidateVE[1]/visibleVE.height);
+            if (candidateFraction < smallestFraction) {
+                smallestVE = candidateVE;
+            }
+        }
+        // Best box-layout found, adjusting view
+        var fittedVE = new OpenSeadragon.Rect(result.boxX, result.boxY, smallestVE[0], smallestVE[1]);
+        var fittedV = myDragon.viewport.viewerElementToViewportRectangle(fittedVE);
+        var hMarginV = visibleV.width*boxPanMarginFraction;
+        var vMarginV = visibleV.width*boxPanMarginFraction;
+        fittedV.x -= hMarginV;
+        fittedV.y -= vMarginV;
+        fittedV.width += 2*hMarginV;
+        fittedV.height += 2*vMarginV;
+        console.log("Fitting from " + JSON.stringify(result));
+        console.log("Fitting ve   " + JSON.stringify(fittedVE));
+        console.log("Fitting v    " + JSON.stringify(fittedV));
+        myDragon.viewport.fitBounds(fittedV);
+     }
+    
     // Called when a key is pressed
     // TODO: Bind 1-9 to zoom (1 box, 2 boxes, 3 boxes (1x3, 3x1 or 2x2), 4, 5 (1x5, 5x1, 2x3, 3x2), 6 (2x3, 3x2)...
     this.juxtaKeyCallback = function (e) {
+        console.log("Keycall pre-result " + JSON.stringify(result));
         switch (e.keyCode) {
         case 38: // up
             if (e.ctrlKey) {
@@ -225,6 +318,14 @@ function createOverlay(juxtaProperties, dragon) {
             updateResultFromKeyPress();
             break;
         }
+        if (e.keyCode >= 49 && e.keyCode <= 57) { // ###
+            console.log("Before fit: " + JSON.stringify(result));
+            fitView(e.keyCode-48); 
+            console.log("Before upd: " + JSON.stringify(result));
+            //updateResultFromKeyPress();
+            console.log("After upd:  " + JSON.stringify(result));
+        }
+        
         // TODO: preventDefault
         // TODO: Handle unfilled bottom row
         
@@ -257,10 +358,9 @@ function createOverlay(juxtaProperties, dragon) {
         var boxV = myDragon.viewport.viewerElementToViewportRectangle(boxVE);
         var deltaV = new OpenSeadragon.Point(0, 0);
         var visibleV = myDragon.viewport.getBounds();
-        console.log("box=" + JSON.stringify(boxV) + ", visible=" + JSON.stringify(visibleV));
         var changed = false;
 
-        var hMarginV = visibleV.width/100;
+        var hMarginV = visibleV.width*boxPanMarginFraction;
         if (boxV.x < visibleV.x) {
             deltaV.x = boxV.x-visibleV.x-hMarginV;
             changed = true;
@@ -269,7 +369,7 @@ function createOverlay(juxtaProperties, dragon) {
             changed = true;
         }
         
-        var vMarginV = visibleV.height/100;
+        var vMarginV = visibleV.height*boxPanMarginFraction;
         if (boxV.y < visibleV.y) {
             deltaV.y = boxV.y-visibleV.y-vMarginV;
             changed = true;
@@ -279,7 +379,6 @@ function createOverlay(juxtaProperties, dragon) {
         }
         
         if (changed) {
-            console.log("delta=" + JSON.stringify(deltaV));
             myDragon.viewport.panBy(deltaV, false);
         }
         return changed;
@@ -287,11 +386,12 @@ function createOverlay(juxtaProperties, dragon) {
     
     // x & y are valid, fake the rest
     updateResultFromKeyPress = function() {
+        console.log("updateResultFromKeyPress (" + result.x + ", " + result.y + ")");
         handleChange(result.x, result.y);
-        if (ensureSelectionIsVisible()) { // ###
+        if (ensureSelectionIsVisible()) {
+            console.log("Enforcing visibility changed view. Updating box position with (" + result.x + ", " + result.y + ")");
             handleChange(result.x, result.y);
         }
-        // TODO: Add pan if not fully visible (and it can be fully visible)
     }
     
     // Returns false if a new request must be started
