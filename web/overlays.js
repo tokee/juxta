@@ -238,7 +238,7 @@ function createOverlay(juxtaProperties, dragon) {
         }
         var smallestVE = [Infinity, Infinity];
         var smallestFraction = Infinity;
-        // ###
+
         var visibleV = myDragon.viewport.getBounds();
         var visibleVE = myDragon.viewport.viewportToViewerElementRectangle(visibleV);
         for (var i = 0 ; i < candidates.length ; i++) {
@@ -266,10 +266,14 @@ function createOverlay(juxtaProperties, dragon) {
      }
     
     // Called when a key is pressed
-    // TODO: Bind 1-9 to zoom (1 box, 2 boxes, 3 boxes (1x3, 3x1 or 2x2), 4, 5 (1x5, 5x1, 2x3, 3x2), 6 (2x3, 3x2)...
     this.juxtaKeyCallback = function (e) {
+//        var visibleV = myDragon.viewport.getBounds();
+//        var visibleVE = myDragon.viewport.viewportToViewerElementRectangle(visibleV);
+//        var hImages = visibleVE.width/result.boxWidth;
+//        var vImages = visibleVE.height/result.boxHeight;
+//        console.log("hv: " + hImages + ", " + vImages);
         switch (e.keyCode) {
-        case 38: // up
+        case 38: // up ###
             if (e.ctrlKey) {
                 result.y = 0;
             } else {
@@ -306,6 +310,9 @@ function createOverlay(juxtaProperties, dragon) {
         case 39: // right
             if (e.ctrlKey) {
                 result.x = jprops.colCount-1;
+
+                handleChange(result.x, result.y);
+
             } else {
                 if (result.x < jprops.colCount-1 || result.y < jprops.rowCount-1) {
                     result.x++;
@@ -317,8 +324,13 @@ function createOverlay(juxtaProperties, dragon) {
             }
             updateResultFromKeyPress();
             break;
+        case 36: // home
+            result.x = 0;
+            result.y = 0;
+            updateResultFromKeyPress();
+            break;
         }
-        if (e.keyCode >= 49 && e.keyCode <= 57) { // ###
+        if (e.keyCode >= 49 && e.keyCode <= 57) {
 //            console.log("Before fit: " + JSON.stringify(result));
             fitView(e.keyCode-48); 
 //            console.log("Before upd: " + JSON.stringify(result));
