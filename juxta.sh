@@ -154,7 +154,7 @@ popd > /dev/null
 : ${SKIP_IMAGE_VERIFICATION:=false}
 
 # Where to get OpenSeadragon
-: ${OSD_VERSION:=2.2.1}
+: ${OSD_VERSION:=2.4.1}
 : ${OSD_ZIP:="openseadragon-bin-${OSD_VERSION}.zip"}
 : ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v${OSD_VERSION}/$OSD_ZIP"}
 
