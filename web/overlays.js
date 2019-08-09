@@ -57,6 +57,7 @@ function createOverlay(juxtaProperties, dragon) {
             e.preventVerticalPan = true; // disable vertical panning with arrows and W or S keys
             e.preventHorizontalPan = true; // disable horizontal panning with arrows and A or D keys
         });
+        dragonbox.querySelector('.openseadragon-canvas').focus();
     }
 
     this.rawToWeb = function(rawX, rawY) {
@@ -84,7 +85,6 @@ function createOverlay(juxtaProperties, dragon) {
     }
     // Used for catching animation events, so result.x&y are not changed
     this.handleChangeEvent = function() {
-        console.log("Animation callback");
         handleChange(result.x, result.y);
     }
 
@@ -247,6 +247,7 @@ function createOverlay(juxtaProperties, dragon) {
             var candidateFraction = Math.max(candidateVE[0]/visibleVE.width, candidateVE[1]/visibleVE.height);
             if (candidateFraction < smallestFraction) {
                 smallestVE = candidateVE;
+                smallestFraction = candidateFraction;
             }
         }
         // Best box-layout found, adjusting view
@@ -258,16 +259,15 @@ function createOverlay(juxtaProperties, dragon) {
         fittedV.y -= vMarginV;
         fittedV.width += 2*hMarginV;
         fittedV.height += 2*vMarginV;
-        console.log("Fitting from " + JSON.stringify(result));
-        console.log("Fitting ve   " + JSON.stringify(fittedVE));
-        console.log("Fitting v    " + JSON.stringify(fittedV));
+//        console.log("Fitting from " + JSON.stringify(result));
+//        console.log("Fitting ve   " + JSON.stringify(fittedVE));
+//        console.log("Fitting v    " + JSON.stringify(fittedV));
         myDragon.viewport.fitBounds(fittedV);
      }
     
     // Called when a key is pressed
     // TODO: Bind 1-9 to zoom (1 box, 2 boxes, 3 boxes (1x3, 3x1 or 2x2), 4, 5 (1x5, 5x1, 2x3, 3x2), 6 (2x3, 3x2)...
     this.juxtaKeyCallback = function (e) {
-        console.log("Keycall pre-result " + JSON.stringify(result));
         switch (e.keyCode) {
         case 38: // up
             if (e.ctrlKey) {
@@ -319,11 +319,11 @@ function createOverlay(juxtaProperties, dragon) {
             break;
         }
         if (e.keyCode >= 49 && e.keyCode <= 57) { // ###
-            console.log("Before fit: " + JSON.stringify(result));
+//            console.log("Before fit: " + JSON.stringify(result));
             fitView(e.keyCode-48); 
-            console.log("Before upd: " + JSON.stringify(result));
+//            console.log("Before upd: " + JSON.stringify(result));
             //updateResultFromKeyPress();
-            console.log("After upd:  " + JSON.stringify(result));
+//            console.log("After upd:  " + JSON.stringify(result));
         }
         
         // TODO: preventDefault
@@ -331,7 +331,7 @@ function createOverlay(juxtaProperties, dragon) {
         
         // up=38, down=40, left=37, right=39
         //console.log("boxX=" + result.x + "/" + jprops.colCount);
-        //console.log(e.keyCode);
+//        console.log(e.keyCode);
         //e.preventDefault = true;
     }
     
@@ -386,10 +386,9 @@ function createOverlay(juxtaProperties, dragon) {
     
     // x & y are valid, fake the rest
     updateResultFromKeyPress = function() {
-        console.log("updateResultFromKeyPress (" + result.x + ", " + result.y + ")");
         handleChange(result.x, result.y);
         if (ensureSelectionIsVisible()) {
-            console.log("Enforcing visibility changed view. Updating box position with (" + result.x + ", " + result.y + ")");
+            //console.log("Enforcing visibility changed view. Updating box position with (" + result.x + ", " + result.y + ")");
             handleChange(result.x, result.y);
         }
     }
