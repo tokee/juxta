@@ -220,16 +220,15 @@ function createOverlay(juxtaProperties, dragon) {
     
     // Called when a key is pressed
     this.juxtaKeyCallback = function (e) {
-//        var visibleV = myDragon.viewport.getBounds();
-//        var visibleVE = myDragon.viewport.viewportToViewerElementRectangle(visibleV);
-//        var hImages = visibleVE.width/result.boxWidth;
-//        var vImages = visibleVE.height/result.boxHeight;
-        //        console.log("hv: " + hImages + ", " + vImages);
+        var visibleV = myDragon.viewport.getBounds();
+        var visibleVE = myDragon.viewport.viewportToViewerElementRectangle(visibleV);
+        var hImages = Math.floor(visibleVE.width/result.boxWidth);
+        var vImages = Math.floor(visibleVE.height/result.boxHeight);
 
         switch (e.keyCode) {
         case 38: // up ###
             if (e.ctrlKey) {
-                result.y = 0;
+                result.y = Math.max(result.y-vImages, 0);
             } else {
                 if (result.y > 0) {
                     result.y--;
@@ -239,7 +238,7 @@ function createOverlay(juxtaProperties, dragon) {
             break;
         case 40: // down
             if (e.ctrlKey) {
-                result.y = jprops.rowCount-1;
+                result.y = Math.min(result.y+vImages, jprops.rowCount-1);
             } else {
                 if (result.y < jprops.rowCount-1) {
                     result.y++;
@@ -249,7 +248,7 @@ function createOverlay(juxtaProperties, dragon) {
             break;
         case 37: // left
             if (e.ctrlKey) {
-                result.x = 0;
+                result.x = Math.max(result.x-hImages, 0);
             } else {
                 if (result.x > 0 || result.y > 0) {
                     result.x--;
@@ -263,10 +262,7 @@ function createOverlay(juxtaProperties, dragon) {
             break;
         case 39: // right
             if (e.ctrlKey) {
-                result.x = jprops.colCount-1;
-
-                handleChange(result.x, result.y);
-
+                result.x = Math.min(result.x+hImages, jprops.colCount-1);
             } else {
                 if (result.x < jprops.colCount-1 || result.y < jprops.rowCount-1) {
                     result.x++;
