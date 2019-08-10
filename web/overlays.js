@@ -181,60 +181,14 @@ function createOverlay(juxtaProperties, dragon) {
     this.fitView = function(images) {
         console.log("Fitting view to hold at least " + images + " images");
         var candidates = [];
-        switch (images) {
-        case 1:
-            candidates.push([1, 1]);
-            break;
-        case 2:
-            candidates.push([1, 2]);
-            candidates.push([2, 1]);
-            break;
-        case 3:
-            candidates.push([1, 3]);
-            candidates.push([3, 1]);
-            candidates.push([2, 2]);
-            break;
-        case 4:
-            candidates.push([1, 4]);
-            candidates.push([4, 1]);
-            candidates.push([2, 2]);
-            break;
-        case 5:
-            candidates.push([1, 5]);
-            candidates.push([5, 1]);
-            candidates.push([2, 3]);
-            candidates.push([3, 2]);
-            break;
-        case 6:
-            candidates.push([1, 6]);
-            candidates.push([6, 1]);
-            candidates.push([2, 3]);
-            candidates.push([3, 2]);
-            break;
-        case 7:
-            candidates.push([1, 7]);
-            candidates.push([7, 1]);
-            candidates.push([3, 3]);
-            candidates.push([4, 2]);
-            candidates.push([2, 4]);
-            break;
-        case 8:
-            candidates.push([1, 8]);
-            candidates.push([8, 1]);
-            candidates.push([3, 3]);
-            candidates.push([4, 2]);
-            candidates.push([2, 4]);
-            break;
-        case 9:
-            candidates.push([1, 9]);
-            candidates.push([9, 1]);
-            candidates.push([3, 3]);
-            candidates.push([5, 2]);
-            candidates.push([2, 5]);
-            break;
-        default:
-            console.err("Error: Unsupported image count of " + images + " in fitView");
-            return;
+
+        for (var y = 1 ; y <= images ; y++) {
+            var x = Math.floor(images/y);
+            if (y*x < images) {
+                ++x;
+            }
+            candidates.push([x, y]);
+            console.log("Pushing " + x + ", " + y);
         }
         var smallestVE = [Infinity, Infinity];
         var smallestFraction = Infinity;
