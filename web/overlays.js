@@ -188,7 +188,6 @@ function createOverlay(juxtaProperties, dragon) {
                 ++x;
             }
             candidates.push([x, y]);
-            console.log("Pushing " + x + ", " + y);
         }
         var smallestVE = [Infinity, Infinity];
         var smallestFraction = Infinity;
@@ -225,7 +224,8 @@ function createOverlay(juxtaProperties, dragon) {
 //        var visibleVE = myDragon.viewport.viewportToViewerElementRectangle(visibleV);
 //        var hImages = visibleVE.width/result.boxWidth;
 //        var vImages = visibleVE.height/result.boxHeight;
-//        console.log("hv: " + hImages + ", " + vImages);
+        //        console.log("hv: " + hImages + ", " + vImages);
+
         switch (e.keyCode) {
         case 38: // up ###
             if (e.ctrlKey) {
@@ -285,8 +285,12 @@ function createOverlay(juxtaProperties, dragon) {
             break;
         }
         if (e.keyCode >= 49 && e.keyCode <= 57) {
+            var requestedImages = e.keyCode-48;
+            if (e.ctrlKey) {
+                requestedImages = Math.pow(2, requestedImages);
+            }
 //            console.log("Before fit: " + JSON.stringify(result));
-            fitView(e.keyCode-48); 
+            fitView(requestedImages);
 //            console.log("Before upd: " + JSON.stringify(result));
             //updateResultFromKeyPress();
 //            console.log("After upd:  " + JSON.stringify(result));
