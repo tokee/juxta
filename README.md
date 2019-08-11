@@ -69,6 +69,13 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 
 There are a lot of secondary options, which are all documented in the `juxta.sh`-script.
 
+## Keyboard shortcuts
+
+- Arrow keys pans
+- CTRL+arrows pans a full screen (in a hackish way - this should be improved)
+- Pressing a number key (1-9) ensures that that number of images is visible and optimally zoomed
+- Pressing CTRL+number ensures that 2^number of images (1-512) is visible and optimally zoomed
+
 ## Demos
 
 ### Recursive image gallery
