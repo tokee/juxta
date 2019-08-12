@@ -2,6 +2,7 @@
 
 # An interesting project at University Of North Texas (https://digital.library.unt.edu) documents
 # lunch trays before eating and after: https://digital.library.unt.edu/ark:/67531/metadc36227/#top
+#
 # This script creates _two_ collages: One of the images before eating and one after.
 # These are presented on top of each other and panning & zooming is synchronized.
 # A circular area around the mouse shows the after-eating trays, simulating a magnifying
