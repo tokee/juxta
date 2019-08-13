@@ -44,7 +44,11 @@ overlays.createFooter = function(x, y, image, meta) {
   if ( copyright == '') {
     copyright = "Unknown";
   }
-  return meta.split("§")[2] + '<br/><span class="copyright"><span class="copyrightlabel">Copyright:</span> <span class="copyrighttext">' + copyright + '</span></span>';
+  var description = meta.split("§")[2];
+  if (description != '') {
+    description += '<br/>';
+  }
+  return description + '<span class="copyright"><span class="copyrightlabel">Copyright:</span> <span class="copyrighttext">' + copyright + '</span></span>';
 }
 </script>
 
