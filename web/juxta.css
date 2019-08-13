@@ -21,6 +21,11 @@ a:link 		{ color: #33f; }
 a:visited 	{ color: #808; }
 a:active 	{ color: #f00; }
 
+.copyright {
+    font-size: x-small;
+    color: #666;
+}
+
 #zoom-display {
     position: relative;
     height: 900px;

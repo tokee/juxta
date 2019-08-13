@@ -40,7 +40,11 @@ overlays.createHeader = function(x, y, image, meta) {
 }
 
 overlays.createFooter = function(x, y, image, meta) {
-  return meta.split("§")[2];
+  var copyright = meta.split("§")[3];
+  if ( copyright == '') {
+    copyright = "Unknown";
+  }
+  return meta.split("§")[2] + '<br/><span class="copyright"><span class="copyrightlabel">Copyright:</span> <span class="copyrighttext">' + copyright + '</span></span>';
 }
 </script>
 

@@ -23,6 +23,7 @@
 # Note that there is no formal guarantee that image names are unique across collections.
 : ${FIND_EQUAL_NAME:="false"} 
 : ${SKIP_DOWNLOAD:="false"} # Only used when debugging problematic targets
+: ${SKIP_XMLLINT:="false"}
 
 : ${COLLECTION:="$1"}
 
@@ -65,14 +66,25 @@ download_collection() {
         T="${DOWNLOAD_FOLDER}/$COLLECTION/page_${PAGE}.xml"
         if [ ! -s "$T" ]; then
             echo "  - Fetching page ${PAGE}: $URL"
-            curl -s -m 60 "$URL" | xmllint --format - > $T
+            if [[ "true" == "$SKIP_XMLLINT" ]]; then
+                curl -s -m 60 "$URL" > $T
+            else
+                curl -s -m 60 "$URL" | xmllint --format - > $T
+            fi
         else
             echo " - $COLLECTION browse page $PAGE already fetched"
         fi
         if [ "$HITS" -eq "-1" ]; then
-            local HITS=$( cat $T | grep totalResults | sed 's/.*>\([0-9]*\)<.*/\1/' )
+            local HITS=$( grep totalResults < $T | sed 's/.*>\([0-9]*\)<.*/\1/' )
+            if [[ ".$HITS" == .$(grep totalResults < $T) ]]; then
+                # <meta name="totalResults" content="2604" />
+                local HITS=$( grep totalResults < $T | sed 's/.*content="\([0-9]*\)".*/\1/' )
+            fi
             echo " - Total hits for ${COLLECTION}: $HITS"
-            if [ "$HITS" -lt "$MAX_IMAGES" ]; then
+            if [[ -z "$HITS" ]]; then
+                >&2 echo "Warning: Unable to locate totalResults in $URL"
+                POSSIBLE=$MAX_IMAGES
+            elif [ "$HITS" -lt "$MAX_IMAGES" ]; then
                 POSSIBLE=$HITS
             else
                 POSSIBLE=$MAX_IMAGES
@@ -82,6 +94,7 @@ download_collection() {
         for ITEM in $( cat $T | tr '\n' ' ' | sed $'s/<item /\\\n<item /g' | grep "<item " ); do
             local LINK=$( echo "$ITEM" | grep -o '<link>[^<]*</link>' | sed ' s/<\/\?link>//g' )
             local DESCRIPTION=$( echo "$ITEM" | grep -o '<description>[^<]*</description>' | sed ' s/<\/\?description>//g' )
+            local COPYRIGHT=$( echo "$ITEM" | grep -o '<md:accessCondition[^>]*displayLabel="Copyright"[^>]*>[^<]*</md:accessCondition>' | sed ' s/<md:accessCondition[^>]*displayLabel="Copyright"[^>]*>\([^<]*\)<\/md:accessCondition>/\1/' )
             local TITLE=$( echo "$ITEM" | grep -o '<title>[^<]*</title>' | sed ' s/<\/\?title>//g' )
             local IMAGE_URL=$( echo "$ITEM" | grep -o "<[^<]*displayLabel=.image.[^>]>*[^<]*<" | sed 's/.*type=.uri..\(http[^<]*\).*/\1/' )
             # The server is not consistent, so we hack. Encountered results are
@@ -134,7 +147,7 @@ download_collection() {
 
             # Update mappings
             if [ -s "${IMAGE_DEST}" ]; then
-                echo "${IMAGE_DEST}|${LINK}§${TITLE}§${DESCRIPTION}" >> "${DOWNLOAD_FOLDER}/$COLLECTION/sources.dat"
+                echo "${IMAGE_DEST}|${LINK}§${TITLE}§${DESCRIPTION}§${COPYRIGHT}" >> "${DOWNLOAD_FOLDER}/$COLLECTION/sources.dat"
             else
                 echo "$IMAGE_URL" >> "${DOWNLOAD_FOLDER}/$COLLECTION/sources_unavailable.dat"
             fi
@@ -143,7 +156,7 @@ download_collection() {
                 break
             fi
         done
-        if [ $(( PAGE*PAGE_SIZE )) -ge $HITS ]; then
+        if [ $(( PAGE*PAGE_SIZE )) -ge "$HITS" ]; then
             break
         fi
         PAGE=$(( PAGE+1 ))
