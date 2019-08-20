@@ -169,9 +169,9 @@ TEMPLATE=demo_twitter.template.html RAW_W=1 RAW_H=1 INCLUDE_ORIGIN=false ./juxta
 ```javascript
 overlays.createHeader = function(x, y, image, meta) {
   imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
-  return '<a href="' + meta + '">' + imageID + '</a>';
+  return '<a href="' + meta + '">' + imageId + '</a>';
 }
-overlays.showFooter(x, y, image, meta) {
+overlays.createFooter = function(x, y, image, meta) {
   return false;
 }
 ```
