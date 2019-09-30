@@ -68,7 +68,7 @@ popd > /dev/null
 : ${DATA_ROOT:=""}
 # OpenSeadragon parameter that controls the limit of zooming
 # https://openseadragon.github.io/docs/OpenSeadragon.html#.Options
-: ${MAX_ZOOM_PIXEL_RATIO:="1.1"}
+: ${MAX_ZOOM_PIXEL_RATIO:="2.0"}
 
 # The size of the raw (fully zoomed) images, measured in 256x256 pixel tiles.
 # RAW_W=4 and RAW_H=3 means (4*256)x(3*256) = 1024x768 pixels.
