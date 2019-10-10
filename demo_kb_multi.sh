@@ -31,10 +31,13 @@ popd > /dev/null
 
 usage() {
     echo "Usage:"
-    echo "./demo_kb.sh list"
+    echo "./demo_kb_multi.sh list"
     echo "             Shows available collections"
-    echo "./demo_kb.sh create collection*"
+    echo "./demo_kb_multi.sh create collection*"
     echo "             Creates a page for the given collection IDs"
+    echo "Sample:"
+    echo "./demo_kb_multi.sh create subject3795"
+
     exit $1
 }
 
@@ -55,7 +58,7 @@ if [ "create" == "$COMMAND" -a "." == ".$COLLECTIONS" ]; then
 fi
 # Multi-collection handling
 ALLC=$(tr ' ' '_' <<< "$COLLECTIONS" | sed 's/_$//')
-: ${DEST:="$ALLC"}
+: ${ROOTDEST:="$ALLC"}
 
 # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects
 # http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/subject2109/
@@ -67,8 +70,8 @@ list_collections() {
 }
 
 download_images() {
-    mkdir -p downloads/$DEST
-    rm -r downloads/$DEST/sources.dat
+    mkdir -p downloads/$ROOTDEST
+    rm -r downloads/$ROOTDEST/dual_sources.dat
     if [[ "$MAX_IMAGES" -lt "$MAX_IMAGES_PER_COLLECTION" ]]; then
         MAX_IMAGES_PER_COLLECTION=$MAX_IMAGES
     fi
@@ -79,7 +82,7 @@ download_images() {
         # We force this to 2 as handling image pairs is the sole purpose of this script
         MAX_CONSTITUENTS=2
         . $DOWNLOAD_SCRIPT "$COLLECTION"
-        cat downloads/$COLLECTION/sources.dat >> downloads/$DEST/dual_sources.dat
+        cat downloads/$COLLECTION/sources.dat >> downloads/$ROOTDEST/dual_sources.dat
     done
     MAX_IMAGES=$OLD_MI
 }
@@ -88,31 +91,23 @@ handle_single_image() {
     local IMAGE="$1"
     local URL="$2"
     local EXTRA="$3"
-    
-    case "$SINGLE_IMAGE_ACTION" in
-        "discard")
-            echo "Discarding $URL"
-            ;;
-        "duplicate")
-            local LINE="${IMAGE}|${URL}§$EXTRA"
-            echo "Duplicating $LINE"
-            ;;
-        "blank")
-            echo "Blanking secondary"
-            local PRIMARY="${IMAGE}|${URL}§$EXTRA"
-            local SECONDARY="missing|${URL}§$EXTRA"
-            echo "$PRIMARY"
-            echo "$SECONDARY"
-            ;;
-    esac
+
+    echo " - Single $URL"
+
+    local LINE="${IMAGE}|${URL}§$EXTRA"
+    echo "$LINE" >> "downloads/$ROOTDEST/duplicate_primary_sources.dat"
+    echo "$LINE" >> "downloads/$ROOTDEST/duplicate_secondary_sources.dat"
+
+    echo "$LINE" >> "downloads/$ROOTDEST/blank_primary_sources.dat"
+    echo "missing|${URL}§$EXTRA" >> "downloads/$ROOTDEST/blank_secondary_sources.dat"
 }
 
 create_sources() {
     # Clean up
     for HANDLING in discard duplicate blank; do
         for PRIORITY in primary secondary; do
-            S="downloads/$DEST/${HANDLING}_${PRIORITY}_sources.dat"
-            if [[ -d "$S" ]]; then
+            S="downloads/$ROOTDEST/${HANDLING}_${PRIORITY}_sources.dat"
+            if [[ -s "$S" ]]; then
                 rm "$S"
             fi
         done
@@ -129,20 +124,27 @@ create_sources() {
         local EXTRA=$( sed 's/^[^§]*§//' <<< "$LINE" )
 
         if [[ "$URL" == "$LAST_URL" ]]; then # Dual-image
-            echo "Primary: $LAST_IMAGE secondary $IMAGE for $URL"
+            local PRIMARY="${LAST_IMAGE}|${LAST_URL}§${LAST_EXTRA}"
+            local SECONDARY="${IMAGE}|${URL}§${EXTRA}"
+            for HANDLING in discard duplicate blank; do
+                echo "$PRIMARY" >> "downloads/$ROOTDEST/${HANDLING}_primary_sources.dat"
+                echo "$SECONDARY" >> "downloads/$ROOTDEST/${HANDLING}_secondary_sources.dat"
+                echo " - Dual   $URL"
+            done
+            
             LAST_IMAGE=""
             LAST_URL=""
             LAST_LINE=""
             continue
         fi
         if [[ ".$LAST_IMAGE" != "." ]]; then # Single image
-            handle_single_image "$IMAGE" "$URL" "$EXTRA"
+            handle_single_image "$LAST_IMAGE" "$LAST_URL" "$LAST_EXTRA"
         fi          
         
         LAST_IMAGE="$IMAGE"
         LAST_URL="$URL"
         LAST_EXTRA="$EXTRA"
-    done < downloads/$DEST/dual_sources.dat
+    done < downloads/$ROOTDEST/dual_sources.dat
 
     if [[ ".$LAST_IMAGE" != "." ]]; then # Single image
         handle_single_image "$LAST_IMAGE" "$LAST_URL" "$LAST_EXTRA"
@@ -157,4 +159,7 @@ fi
 #download_images
 create_sources
 
-#. ./juxta.sh downloads/$DEST/dual_sources.dat $DEST
+mkdir -p "dual_$ROOTDEST"
+for PRIORITY in primary secondary; do
+    . ./juxta.sh downloads/$ROOTDEST/${SINGLE_IMAGE_ACTION}_${PRIORITY}_sources.dat "dual_${ROOTDEST}/${PRIORITY}"
+done
