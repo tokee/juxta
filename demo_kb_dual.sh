@@ -14,6 +14,7 @@ popd > /dev/null
 : ${RAW_MODE:=automax}
 : ${BACKGROUND:=000000}
 : ${TEMPLATE:=demo_kb.template.html}
+: ${DUAL_TEMPLATE:=demo_kb_dual.template.html}
 
 : ${MAX_IMAGES:="1000000000"} # 1b
 : ${MAX_IMAGES_PER_COLLECTION:="$MAX_IMAGES"}
@@ -31,12 +32,12 @@ popd > /dev/null
 
 usage() {
     echo "Usage:"
-    echo "./demo_kb_multi.sh list"
+    echo "./demo_kb_dual.sh list"
     echo "             Shows available collections"
-    echo "./demo_kb_multi.sh create collection*"
+    echo "./demo_kb_dual.sh create collection*"
     echo "             Creates a page for the given collection IDs"
     echo "Sample:"
-    echo "./demo_kb_multi.sh create subject3795"
+    echo "./demo_kb_dual.sh create subject3795"
 
     exit $1
 }
@@ -151,15 +152,36 @@ create_sources() {
     fi          
 }
 
+# http://stackoverflow.com/questions/14434549/how-to-expand-shell-variables-in-a-text-file
+# Input: template-file
+function ctemplate() {
+    if [[ ! -s "$1" ]]; then
+        >&2 echo "Error: Template '$1' could not be found"
+        exit 8
+    fi
+    local TMP=$(mktemp /tmp/juxta_XXXXXXXX)
+    echo 'cat <<END_OF_TEXT' >  "$TMP"
+    cat  "$1"                >> "$TMP"
+    echo 'END_OF_TEXT'       >> "$TMP"
+    . "$TMP"
+    rm "$TMP"
+}
+
+render() {
+    mkdir -p "dual_$ROOTDEST"
+    . ./juxta.sh downloads/$ROOTDEST/${SINGLE_IMAGE_ACTION}_primary_sources.dat "dual_${ROOTDEST}/primary"
+    TILE_SOURCES_PRIMARY=$(sed 's/Url: *"",/Url:      "primary\/",/' <<< "$TILE_SOURCES")
+    . ./juxta.sh downloads/$ROOTDEST/${SINGLE_IMAGE_ACTION}_secondary_sources.dat "dual_${ROOTDEST}/secondary"
+    TILE_SOURCES_SECONDARY=$(sed 's/Url: *"",/Url:      "secondary\/",/' <<< "$TILE_SOURCES")
+    COLLECTION="$ROOTDEST"
+    ctemplate "$DUAL_TEMPLATE" > "dual_${ROOTDEST}/index.html"
+}   
+
 if [ "list" == "$COMMAND" ]; then
     list_collections
     exit
 fi
-
-#download_images
+download_images
 create_sources
-
-mkdir -p "dual_$ROOTDEST"
-for PRIORITY in primary secondary; do
-    . ./juxta.sh downloads/$ROOTDEST/${SINGLE_IMAGE_ACTION}_${PRIORITY}_sources.dat "dual_${ROOTDEST}/${PRIORITY}"
-done
+render
+echo "Finished merging renders. Final result available in dual_${ROOTDEST}/index.html"
