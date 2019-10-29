@@ -19,6 +19,7 @@
 : ${RAW_MODE:=percentile90}
 : ${ALLOW_UPSCALE:=true}
 : ${MAKE_ZIP:=false} # If true, a ZIP with all the images for a given page is created
+: ${SORT:="alpha"} # Possible values: "alpha" (1.jpg, 10.jpg, 2.jpg) and "numeric" (1.jpg, 2.jpg ... 10.jpg)
 
 usage() {
     echo "Usage:"
@@ -93,8 +94,13 @@ process() {
 
     #¤¤¤ TODO: Make this a proper js-include structure
     echo "$SUBS" > .juxta/sub_image_folders.js
-    
-    echo "$IMAGES" > .juxta/glob_images.dat
+
+    if [[ "$SORT" == "numeric" ]]; then
+        echo "Sorting images numerically (best for 1.jpg, 2.jpg ... 10.jpg image collections)"
+        echo "$IMAGES" | sort -n > .juxta/glob_images.dat
+    else
+        echo "$IMAGES" > .juxta/glob_images.dat
+    fi
     if [[ "." != ".$IMAGES" ]]; then
         local DIFF=""
         if [[ "true" == "$MAKE_ZIP" ]]; then
