@@ -24,6 +24,10 @@
 : ${FIND_EQUAL_NAME:="false"} 
 : ${SKIP_DOWNLOAD:="false"} # Only used when debugging problematic targets
 : ${SKIP_XMLLINT:="false"}
+# The maximum number of constituents for each image database entry. For some postcards both the
+# front and the back are scanned as separate image bitmaps, but they are stores as a single
+# entry. Specifying 2 as MAX_CONSTITUENTS means that both the front and the back is fetched.
+: ${MAX_CONSTITUENTS:="1"}
 
 : ${COLLECTION:="$1"}
 
@@ -43,11 +47,78 @@ check_parameters() {
         >&2 echo "Error: A collection-ID must be provided"
         usage 2
     fi
+    if [[ "$MAX_CONSTITUENTS" -lt "1" ]]; then
+        >&2 echo "Error: MAX_CONSTITUENTS must be at least 1. It was $MAX_CONSTITUENTS"
+        usage 3
+    fi
 }
 
 ################################################################################
 # FUNCTIONS
 ################################################################################
+
+streaming_unique() {
+    local LAST=""
+    while read -r URL; do
+        if [[ "$URL" != "$LAST" ]]; then
+            echo "$URL"
+        fi
+        LAST="$URL"
+    done
+}
+download_image() {
+    local IMAGE_URL="$1"
+    
+    local IMAGE_SHORT=`basename "$IMAGE_URL" | sed 's/ /_/g'`
+    local IMAGE_DEST="${DOWNLOAD_FOLDER}/$COLLECTION/$IMAGE_SHORT"
+    # Tweak URL to be against the IIIF so that the full resolution is requested
+    # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010.jpg
+    # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010/full/full/0/native.jpg
+    local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' -e 's/\/full\/full\/0\/native\/full\/full\/0\/native.jpg/\/full\/full\/0\/native.jpg/' )
+    DOWNLOADED=$((DOWNLOADED+1))
+    
+    local ALREADY_DEBUGGED=false
+    # Can the image be located elsewhere in the download folder?
+    if [[ ! -s "${IMAGE_DEST}" && "$FIND_EQUAL_NAME" == "true" ]]; then
+        local ALTERNATIVE=$(find "${DOWNLOAD_FOLDER}" -name "$IMAGE_SHORT" | head -n 1)
+        if [[ "." != "$ALTERNATIVE" ]]; then
+            echo "    - Hardlinking image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST from $ALTERNATIVE"
+            ln "$ALTERNATIVE" "$IMAGE_DEST"
+            ALREADY_DEBUGGED=true
+        fi
+    fi
+
+    # Download the image if it is not existing
+    if [[ ! -s "${IMAGE_DEST}" ]]; then
+        if [[ "$SKIP_DOWNLOAD" == "true" ]]; then
+            echo "    - Skipping download of image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST as SKIP_DOWNLOAD=true"
+        else
+            echo "    - Downloading image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST"
+            # TODO: Fetch full image with
+            # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
+            # 
+            # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
+            # echo "Downloading $IMAGE_URL to ${IMAGE_DEST}"
+            curl -s -m 60 "$IMAGE_URL" > "${IMAGE_DEST}"
+            if [ ! -s "${IMAGE_DEST}" ]; then
+                >&2 echo "Error: Unable to download $IMAGE_URL to ${IMAGE_DEST}"
+                rm -f "${IMAGE_DEST}"
+                continue
+            fi
+        fi
+    else
+        if [[ "$ALREADY_DEBUGGED" == "false" ]]; then
+            echo "    - Skipping download of image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST as image is already present"
+        fi
+    fi
+
+    # Update mappings
+    if [ -s "${IMAGE_DEST}" ]; then
+        echo "${IMAGE_DEST}|${LINK}§${TITLE}§${DESCRIPTION}§${COPYRIGHT}" >> "${DOWNLOAD_FOLDER}/$COLLECTION/sources.dat"
+    else
+        echo "$IMAGE_URL" >> "${DOWNLOAD_FOLDER}/$COLLECTION/sources_unavailable.dat"
+    fi
+}
 
 download_collection() {
     echo "- Downloading a maximum of $MAX_IMAGES images from collection ${COLLECTION}"
@@ -101,57 +172,11 @@ download_collection() {
             # http://kb-images.kb.dk/DAMJP2/online_master_arkiv_3/non-archival/Images/BILLED/DH/DH014583/full/full/0/native.jpg
             # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/2009/aug/KBK2_2_15/KBK2_2_15_014.jpg
             # TODO: Sometimes (subject3756) there are multiple image-urls. Investigate what that is about
-            local IMAGE_URL=$( echo "$IMAGE_URL" | sed 's/\/full\/full\/0\/native//' | head -n 1 )
-            local IMAGE_SHORT=`basename "$IMAGE_URL" | sed 's/ /_/g'`
-            local IMAGE_DEST="${DOWNLOAD_FOLDER}/$COLLECTION/$IMAGE_SHORT"
-            # Tweak URL to be against the IIIF so that the full resolution is requested
-            # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010.jpg
-            # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010/full/full/0/native.jpg
-            local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' -e 's/\/full\/full\/0\/native\/full\/full\/0\/native.jpg/\/full\/full\/0\/native.jpg/' )
-            DOWNLOADED=$((DOWNLOADED+1))
-
-            local ALREADY_DEBUGGED=false
-            # Can the image be located elsewhere in the download folder?
-            if [[ ! -s "${IMAGE_DEST}" && "$FIND_EQUAL_NAME" == "true" ]]; then
-                local ALTERNATIVE=$(find "${DOWNLOAD_FOLDER}" -name "$IMAGE_SHORT" | head -n 1)
-                if [[ "." != "$ALTERNATIVE" ]]; then
-                    echo "    - Hardlinking image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST from $ALTERNATIVE"
-                    ln "$ALTERNATIVE" "$IMAGE_DEST"
-                    ALREADY_DEBUGGED=true
-                fi
-            fi
-
-            # Download the image if it is not existing
-            if [[ ! -s "${IMAGE_DEST}" ]]; then
-                if [[ "$SKIP_DOWNLOAD" == "true" ]]; then
-                    echo "    - Skipping download of image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST as SKIP_DOWNLOAD=true"
-                else
-                    echo "    - Downloading image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST"
-                    # TODO: Fetch full image with
-                    # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Images/BILLED/2008/Billede/dk_eksp_album_191/kbb_alb_2_191_friis_011/full/full/0/native.jpg
-                    # 
-                    # https://github.com/Det-Kongelige-Bibliotek/access-digital-objects/blob/master/image-delivery.md
-                    # echo "Downloading $IMAGE_URL to ${IMAGE_DEST}"
-                    curl -s -m 60 "$IMAGE_URL" > "${IMAGE_DEST}"
-                    if [ ! -s "${IMAGE_DEST}" ]; then
-                        >&2 echo "Error: Unable to download $IMAGE_URL to ${IMAGE_DEST}"
-                        rm -f "${IMAGE_DEST}"
-                        continue
-                    fi
-                fi
-            else
-                if [[ "$ALREADY_DEBUGGED" == "false" ]]; then
-                    echo "    - Skipping download of image #${DOWNLOADED}/${POSSIBLE}: $IMAGE_DEST as image is already present"
-                fi
-            fi
-
-            # Update mappings
-            if [ -s "${IMAGE_DEST}" ]; then
-                echo "${IMAGE_DEST}|${LINK}§${TITLE}§${DESCRIPTION}§${COPYRIGHT}" >> "${DOWNLOAD_FOLDER}/$COLLECTION/sources.dat"
-            else
-                echo "$IMAGE_URL" >> "${DOWNLOAD_FOLDER}/$COLLECTION/sources_unavailable.dat"
-            fi
-
+            local IMAGE_URLS=$( echo "$IMAGE_URL" | sed 's/\/full\/full\/0\/native//' | streaming_unique | head -n $MAX_CONSTITUENTS )
+            while read -r IMAGE_URL; do
+                download_image "$IMAGE_URL"
+            done <<< "$IMAGE_URLS"
+            
             if [ "$DOWNLOADED" -ge "$MAX_IMAGES" ]; then
                 break
             fi
