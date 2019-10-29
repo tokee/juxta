@@ -6,6 +6,7 @@
 : ${AGGRESSIVE_IMAGE_SKIP:=true}
 : ${RAW_MODE:=percentile90}
 : ${ALLOW_UPSCALE:=true}
+: ${QUALITY:=90}
 
 : ${MAX_IMAGES:="3980"}
 
@@ -13,7 +14,7 @@
 : ${DEST:="flora_danica"}
 : ${DOWNLOAD:="downloads/flora_danica"}
 : ${SORT_ORDER:="name"} # Possible valued: id, name
-: ${MAX_ZOOM_PIXEL_RATIO:="2.0"}
+: ${MAX_ZOOM_PIXEL_RATIO:="4.0"}
 
 MIN_ID=3981
 MAX_ID=7960
