@@ -7,8 +7,9 @@
 : ${RAW_MODE:=percentile90}
 : ${RAW_GRAVITY:="center"}
 : ${ALLOW_UPSCALE:=true}
-: ${QUALITY:=90}
+: ${QUALITY:=85}
 : ${CANVAS_ASPECT_W:="2"}
+: ${MARGIN_W:="10"}
 
 : ${MAX_IMAGES:="3980"}
 
