@@ -5,8 +5,10 @@
 : ${BACKGROUND:="eeeeee"}
 : ${AGGRESSIVE_IMAGE_SKIP:=true}
 : ${RAW_MODE:=percentile90}
+: ${RAW_GRAVITY:="center"}
 : ${ALLOW_UPSCALE:=true}
 : ${QUALITY:=90}
+: ${CANVAS_ASPECT_W:="2"}
 
 : ${MAX_IMAGES:="3980"}
 
@@ -68,9 +70,9 @@ download() {
 sort_images() {
     echo " - Sorting by $SORT_ORDER"
     if [[ "name" == "$SORT_ORDER" ]]; then
-        sed 's/\(.*\)§\(.*\)/\2§\1/' < flora_danica/imagelist.dat | sort | sed 's/\(.*\)§\(.*\)/\2§\1/' > flora_danica/imagelist_sorted.dat
+        sed 's/\(.*\)§\(.*\)/\2§\1/' < ${DEST}/imagelist.dat | sort | sed 's/\(.*\)§\(.*\)/\2§\1/' > ${DEST}/imagelist_sorted.dat
     else
-        cp flora_danica/imagelist.dat flora_danica/imagelist_sorted.dat
+        cp ${DEST}/imagelist.dat ${DEST}/imagelist_sorted.dat
     fi
 }
 
