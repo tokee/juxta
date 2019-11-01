@@ -11,7 +11,8 @@
 : ${CANVAS_ASPECT_W:="2"}
 : ${MARGIN_W:="10"}
 
-: ${MAX_IMAGES:="3980"}
+: ${MAX_IMAGES:="3980"} # No more images in the collection
+: ${IGNORE_MISSING:="true"} # Need to do this as some images are missing
 
 : ${DEST:="$1"}
 : ${DEST:="flora_danica"}
