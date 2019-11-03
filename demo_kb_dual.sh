@@ -19,7 +19,7 @@ popd > /dev/null
 : ${MAX_IMAGES:="1000000000"} # 1b
 : ${MAX_IMAGES_PER_COLLECTION:="$MAX_IMAGES"}
 
-# What to do is an etry only holds a single image. Possible values are
+# What to do if an entry only holds a single image. Possible values are
 # discard:   Discard the image completely
 # duplicate: Use the same image as primary and secondary
 # blank:     Use a bland (empty area) as secondary image
