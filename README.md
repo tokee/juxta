@@ -131,6 +131,13 @@ The script `demo_kb_dual.sh` fetches such image pairs and creates to collages th
 MAX_IMAGES=200 ./demo_kb_dual.sh create subject3795
 ```
 
+### Flora Danica
+[Statens Naturhistoriske Museum](http://www.daim.snm.ku.dk/flora-danica-dk) has a nicely scanned [Flora Danica](https://en.wikipedia.org/wiki/Flora_Danica) with 3,240 images of plants local to Denmark.
+The script `demo_flora.sh` fetches these images, sorts them by the latin name of the plants and creates a collage. Sample run of the script:
+```shell
+MAX_IMAGES=20 ./demo_flora.sh
+```
+
 ### Scaling
 
 Scale testing can be done with ./demo_scale.sh. See more in the "Performance & Scaling section in this document.  Sample runs:
