@@ -123,6 +123,13 @@ The script `demo_kb_kort.sh` provides overrides to use the Kort & Atlas (Maps & 
 MAX_IMAGES=20 ./demo_kb_kort.sh create subject208
 ```
 
+### Paired images at kb.dk
+
+Some of the images at [kb.dk](https://www.kb.dk/) comes in pairs, notably postcards where both the front and the back are scanned.
+The script `demo_kb_dual.sh` fetches such image pairs and creates to collages that are displayed using a loupe effect. Sample run of the script:
+```shell
+MAX_IMAGES=200 ./demo_kb_dual.sh create subject3795
+```
 
 ### Scaling
 

@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Image pairs from kb.dk - ${COLLECTION}</title>
+    <link rel="stylesheet" type="text/css" href="primary/resources/juxta.css" />
+    <script src="primary/resources/openseadragon.min.js"></script>
+    <script type="text/javascript" src="primary/resources/overlays_preload.js"></script>
+    <script type="text/javascript" src="primary/resources/overlays.js"></script>
+    <link rel="stylesheet" type="text/css" href="primary/resources/loupe.css" />
+    <!-- Contact person: toes@kb.dk -->
+</head>
+
+<body>
+    <div id="pageheader">
+        <h1>Pairs</h1>
+        <p>${TOTAL_IMAGES} image pairs (typically front and back) from <a href="http://www.kb.dk/images/billed/2010/okt/billeder/${COLLECTION}/da/?">$COLLECTION</a> at <a href="https://www.kb.dk/">kb.dk</a>.</p>
+    </div>
+    <div class="slidecontainer">
+        <input type="range" min="1" max="100" value="30" class="slider" id="loupeSizeRange"/>
+    </div>
+    
+    <div id="baseDisplay" class="openseadragon"></div>
+    <div id="header"></div><div id="infobox"></div><div id="footer"></div>
+
+    <div id="loupeDisplay" class="openseadragon"></div></div>
+
+<script type="text/javascript">
+  var myDragon_0 = OpenSeadragon({
+    id:            "baseDisplay",
+    maxZoomPixelRatio: ${MAX_ZOOM_PIXEL_RATIO},
+    zoomPerScroll: 2.0,
+    showNavigator:  false,
+    showNavigationControl: false,
+    wrapHorizontal: false,
+    prefixUrl: "primary/resources/images/",
+    ${TILE_SOURCES_PRIMARY}
+  });
+
+  var myDragon_1 = OpenSeadragon({
+    id:            "loupeDisplay",
+    maxZoomPixelRatio: ${MAX_ZOOM_PIXEL_RATIO},
+    zoomPerScroll: 2.0,
+    showNavigator:  false,
+    showNavigationControl: false,
+    wrapHorizontal: false,
+    prefixUrl: "secondary/resources/images/",
+    ${TILE_SOURCES_SECONDARY}
+  });
+
+  var baseDiv = document.getElementById('baseDisplay');
+  var loupeDiv = document.getElementById('loupeDisplay');
+  var baseView = myDragon_0.viewport;
+  var loupeView = myDragon_1.viewport;
+
+  // Synchronize loupe pan & zoom to the base image
+  var synchronize = function() {
+    var loupeRect_VE = new OpenSeadragon.Rect(loupeDiv.offsetLeft-baseDiv.offsetLeft, loupeDiv.offsetTop-baseDiv.offsetTop, loupeDiv.offsetWidth, loupeDiv.offsetHeight);
+    var baseRect_V = baseView.viewerElementToViewportRectangle(loupeRect_VE);
+    var baseRect_I = baseView.viewportToImageRectangle(baseRect_V);
+    var loupeRect_V = loupeView.imageToViewportRectangle(baseRect_I)
+    loupeView.fitBounds(loupeRect_V, true);
+  }
+
+  // Move the magnifying glass
+  var mouseTracker = new OpenSeadragon.MouseTracker({
+    element: "baseDisplay",
+    moveHandler: function (e) {
+      loupeDiv.style.left = (e.position.x + baseDiv.offsetLeft - loupeDiv.offsetWidth/2) + "px";
+      loupeDiv.style.top = (e.position.y + baseDiv.offsetTop - loupeDiv.offsetHeight/2) + "px";
+      synchronize()
+  },
+  enterHandler: function (e)  {
+  loupeDiv.style.visibility = "visible";
+  },
+  exitHandler: function (e)  {
+  loupeDiv.style.visibility = "hidden";
+  }
+  });
+  
+  // https://github.com/openseadragon/openseadragon/issues/1483
+  myDragon_0.addHandler('update-viewport', synchronize);
+
+  // Change loupe size
+  var slider = document.getElementById("loupeSizeRange");
+  var sliderChanged = function() {
+    loupeDiv.style.width = slider.value + '%';
+    loupeDiv.style.height = loupeDiv.offsetWidth + 'px';
+    loupeDiv.style.left = (baseDiv.offsetWidth/2 - loupeDiv.offsetWidth/2) + "px";
+    loupeDiv.style.top = (baseDiv.offsetHeight/2 + baseDiv.offsetTop - loupeDiv.offsetHeight/2) + "px";
+    loupeDiv.style.visibility = "visible";
+    synchronize()
+  }
+  slider.value = "30";
+  slider.oninput = sliderChanged;
+  sliderChanged(); // Initial sync of slider
+</script>
+
+</body>
+</html>

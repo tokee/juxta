@@ -1,0 +1,107 @@
+	body {
+	background: none #000000;
+        font-family: verdana, sans-serif;
+        padding: 0 0 0 0;
+        margin: 0 0 0 0;
+        overflow: hidden;
+        }
+        #zoom-display {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border: 0px solid black;
+        overflow: hidden;
+        }
+
+        #baseDisplay {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border: 0px solid black;
+        overflow: hidden;
+        z-index: 1;
+        }
+        #loupeDisplay {
+        position: absolute;
+        left: 40%;
+        top: 40%;
+        width: 500px;
+        height: 500px;
+        overflow: hidden;
+        border-radius: 50%;
+        z-index: 10;
+        sbox-shadow: 0 0 5px #ddd;
+        box-shadow: 0 0 10px 5px #4CAF50;
+        pointer-events: none;
+        }
+        
+        #infobox, #header, #footer {
+        z-index: 40;
+        }
+        
+        #pageheader {
+        position: absolute;
+        width: 100%;
+        height: 5.5em;
+        z-index: 20;
+        top: 0;
+        padding: 0.5em 1em 0em 1em;
+        background: #fff;
+        opacity: 0.9;
+        color: #000;
+        pointer-events: none;
+        overflow: auto;
+        }
+        #pageheader h1 {
+        width: 4em;
+        float: left;
+        margin-top: 0;
+        }
+        #pageheader p {
+        display: block;
+        padding-right: 2em;
+        }
+        #pageheader p a {
+        pointer-events: all ;
+        }
+
+        .slidecontainer {
+        position: absolute;
+        left: 0;
+        top: 5em;
+        width: 100%;
+        height: 55px;
+        z-index: 21;
+        }
+        .slider {
+        -webkit-appearance: none;
+        background: transparent;
+        outline: none;
+        opacity: 0.7;
+        -webkit-transition: .2s;
+        transition: opacity .2s;
+        z-index: 23;
+        width: 100%;
+        }
+        .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: #4CAF50;
+        cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: #4CAF50;
+        cursor: pointer;
+        }
+
