@@ -36,7 +36,7 @@ ny = 21
 #ny = 20
 
 #grid = rasterfairy.transformPointCloud2D(tsne)
-print("Calling rasterfairy on " + str(len(arr)) + " coordinates")
+#print("Calling rasterfairy on " + str(len(arr)) + " coordinates")
 gridAssignment = rasterfairy.transformPointCloud2D(tsne, target=(nx, ny))
 grid, gridShape = gridAssignment
 
