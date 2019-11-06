@@ -2,6 +2,9 @@
 #git clone git@github.com:ml4a/ml4a-ofx.git
 #cd mla-ofx
 
+#pip3 install pillow
+#pip3 install sklearn
+#pip3 install tensorflow
 #pip3 install keras
 #pip3 install numpy
 #pip3 install prime
