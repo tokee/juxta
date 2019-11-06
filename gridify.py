@@ -1,3 +1,20 @@
+# Prerequisites
+#git clone git@github.com:ml4a/ml4a-ofx.git
+#cd mla-ofx
+
+#pip3 install keras
+#pip3 install numpy
+#pip3 install prime
+# https://github.com/Quasimondo/RasterFairy
+#pip3 install rasterfairy
+
+# Run instructions
+# put 300+ images in the folder 'images'
+#python3 .scripts/tSNE-images.py --images_path images --output_path points.json
+#Run this script
+#Run juxta - remember to specify RAW_IMAGE_COLS=15
+# RAW_IMAGE_COLS=16 ~/projects/juxta/juxta.sh  img.dat t2
+
 import rasterfairy
 import json
 import numpy as np
