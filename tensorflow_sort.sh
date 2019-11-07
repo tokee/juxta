@@ -16,6 +16,7 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 : ${TENSOR_FOLDER:="$SCRIPT_HOME/tensorflow"}
 : ${VIRTUAL_FOLDER:="$TENSOR_FOLDER/virtualenv"}
 : ${ML_FOLDER:="$TENSOR_FOLDER/ml4a-ofx"}
+: ${CACHE_HOME:="$TENSOR_FOLDER/cache"}
 
 : ${ML_GIT:="https://github.com/ml4a/ml4a-ofx.git"}
 : ${PYTHON_REQUIREMENTS:="pillow sklearn tensorflow keras numpy prime rasterfairy"}
@@ -26,6 +27,9 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 
 : ${IN:="$1"}
 : ${OUT:="$2"}
+: ${CACHE_FOLDER:="$CACHE_HOME/$(basename "$OUT")"}
+
+: ${MIN_IMAGES:="300"}
 popd > /dev/null
 
 usage() {
@@ -43,8 +47,8 @@ check_parameters() {
         usage 11
     fi
     local IN_COUNT=$(wc -l < "$IN")
-    if [[ "$IN_COUNT" -lt 300 ]]; then
-        >&2 echo "Error: tensorflow_sort.sh requires at least 300 images. There were only $IN_COUNT"
+    if [[ "$IN_COUNT" -lt "$MIN_IMAGES" ]]; then
+        >&2 echo "Error: tensorflow_sort.sh requires at least $MIN_IMAGES images. There were only $IN_COUNT"
         exit 12
     fi
     if [[ -z "$OUT" ]]; then
@@ -74,6 +78,7 @@ check_parameters() {
         >&2 echo "Error: pip for Python 3 required but could only locate $PIP which is for Python version $PIP_PYTHON_VERSION"
         exit 5
     fi
+
 }
 
 ################################################################################
@@ -122,8 +127,21 @@ ensure_ml4a() {
     
 }
 
+link_images() {
+    echo "- Symlinking to images in cache folder $CACHE_FOLDER"
+    if [[ -d "$CACHE_FOLDER" ]]; then
+        rm -r "$CACHE_FOLDER"
+    fi
+    mkdir -p "$CACHE_FOLDER"
+    while read -r IMG; do
+        ln -s $(realpath "$IMG") "$CACHE_FOLDER/$(basename "$IMG")"
+        #cp $(realpath "$IMG") "$CACHE_FOLDER/$(basename "$IMG")"
+    done < "$IN"
+}
+
 tensorflow_and_tsne() {
     echo "- Running tensorflow and tSNE on images from $IM"
+    $PYTHON $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path points.json
 }
 
 ###############################################################################
@@ -133,3 +151,5 @@ tensorflow_and_tsne() {
 check_parameters "$@"
 ensure_environment
 ensure_ml4a
+link_images
+tensorflow_and_tsne
