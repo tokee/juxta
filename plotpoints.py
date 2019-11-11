@@ -82,8 +82,7 @@ def makegridimage(grid):
 
         idx_x, idx_y = grid_pos
         img_path = tuple[2]
-        print("x: " + str(idx_x) + ", y: " + str(idx_y) + ", img: " + img_path)
-        continue
+        #print("x: " + str(idx_x) + ", y: " + str(idx_y) + ", img: " + img_path)
         x, y = tile_width * idx_x, tile_height * idx_y
         tile = Image.open(img_path)
         tile_ar = float(tile.width) / tile.height  # center-crop the tile to match aspect_ratio
@@ -101,9 +100,14 @@ def makegridimage(grid):
     
 def makegrid():
     tsne = np.array(arr)
-    print(arr)
     gridAssignment = rasterfairy.transformPointCloud2D(tsne, target=(nx, ny))
     grid, gridShape = gridAssignment
+
+    for entry in grid:
+        gridX, gridY = entry
+        print("gx: " + str(gridX) + ", gy: " + str(gridY))
+    return
+
     out_grid = []
     for i, dat in enumerate(data):
         gridX, gridY = grid[i]

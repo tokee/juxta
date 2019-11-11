@@ -144,6 +144,13 @@ tensorflow_and_tsne() {
     $PYTHON $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path points.json
 }
 
+gridify() {
+    echo "- Creating preview image and gridifying"
+    $PYTHON plotpoints.py
+    mv gridified.dat "$OUT"
+    echo "- Stored grid sorted images to $OUT"
+}
+
 ###############################################################################
 # CODE
 ###############################################################################
@@ -153,3 +160,4 @@ ensure_environment
 ensure_ml4a
 link_images
 tensorflow_and_tsne
+gridify
