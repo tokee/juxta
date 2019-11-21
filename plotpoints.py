@@ -131,6 +131,6 @@ def makegrid():
 
 
     
-#makepreview()
+makepreview()
 grid = makegrid()
-#makegridimage(grid)
+makegridimage(grid)
