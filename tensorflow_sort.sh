@@ -130,6 +130,9 @@ ensure_ml4a() {
 link_images() {
     echo "- Symlinking to images in cache folder $CACHE_FOLDER"
     if [[ -d "$CACHE_FOLDER" ]]; then
+        echo "Cache folder $CACHE_FOLDER already exists. Skipping symlinking"
+        return
+
         rm -r "$CACHE_FOLDER"
     fi
     mkdir -p "$CACHE_FOLDER"
@@ -140,8 +143,13 @@ link_images() {
 }
 
 tensorflow_and_tsne() {
-    echo "- Running tensorflow and tSNE on images from $IM"
+    echo "- Running tensorflow and tSNE on images from $IN"
+    rm points.json
     $PYTHON $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path points.json
+    if [[ ! -s points.json ]]; then
+        >&2 echo "Error: RunningtSNE-imaes.py did not produce the expected file 'points.json'"
+        exit 5
+    fi
 }
 
 gridify() {
