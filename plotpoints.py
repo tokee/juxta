@@ -1,7 +1,8 @@
 # Quick hack to visualize non-gridified tSNE placed images
 
 # Adapted from https://github.com/ml4a/ml4a-guides/blob/master/notebooks/image-tsne.ipynb
-# pip3 install matplotlib
+# pip3 install matplotlib prime 
+# On Ubuntu 19.10 it seems we need this instead: sudo apt-get install python-matplotlib
 # pip3 install -U git+https://github.com/bmcfee/RasterFairy/ --user
 
 import json
@@ -12,6 +13,7 @@ import rasterfairy
 import numpy as np
 import math
 
+scalefactor=100000
 jsonfile = "points.json"
 previewimage = "preview.png"
 outimages = "gridified.dat"
@@ -29,7 +31,7 @@ arrall = []
 arrMimick = []
 for tup in data:
     point = tup['point']
-    arr.append([point[0], point[1]])
+    arr.append([int(point[0]*scalefactor), int(point[1]*scalefactor)])
     arrall.append([point[0], point[1], tup['path']])
     arrMimick.append([tup['path'], [point[0], point[1]] ])
 
@@ -41,7 +43,7 @@ if (ny == 0):
 nx = int(imagecount / ny)
 if (nx * ny < imagecount):
     nx += 1
-print("The " + str(imagecount) + " images will be represented as " + str(nx) + "×" + str(ny) + " grid")
+#print("The " + str(imagecount) + " images will be represented as " + str(nx) + "x" + str(ny) + " grid")
 
     
 def makepreview():    
@@ -82,7 +84,7 @@ def makegridimage(grid):
 
         idx_x, idx_y = grid_pos
         img_path = tuple[2]
-        #print("x: " + str(idx_x) + ", y: " + str(idx_y) + ", img: " + img_path)
+#        print("image-gen: x: " + str(idx_x) + ", y: " + str(idx_y) + ", img: " + img_path)
         x, y = tile_width * idx_x, tile_height * idx_y
         tile = Image.open(img_path)
         tile_ar = float(tile.width) / tile.height  # center-crop the tile to match aspect_ratio
@@ -92,29 +94,32 @@ def makegridimage(grid):
         else:
             margin = 0.5 * (tile.height - float(tile.width) / aspect_ratio)
             tile = tile.crop((0, margin, tile.width, margin + float(tile.width) / aspect_ratio))
-            tile = tile.resize((tile_width, tile_height), Image.ANTIALIAS)
-            grid_image.paste(tile, (int(x), int(y)))
+        tile = tile.resize((tile_width, tile_height), Image.ANTIALIAS)
+        grid_image.paste(tile, (int(x), int(y)))
 
     grid_image.save(gridimage);
     print("Finished generating gridified image. Result in " + gridimage)
     
 def makegrid():
     tsne = np.array(arr)
+    print ("Analyzing " + str(len(tsne)) + " coordinates to target " + str(nx) + "x" + str(ny))
+#    for x, y in tsne:
+#        print ("tSNE: " + str(x) + ", " + str(y))
+
     gridAssignment = rasterfairy.transformPointCloud2D(tsne, target=(nx, ny))
     grid, gridShape = gridAssignment
 
+#    print ("Got " + str(len(grid)) + " grid entries")
     for entry in grid:
         gridX, gridY = entry
-        print("gx: " + str(gridX) + ", gy: " + str(gridY))
-    return
+#        print("gx: " + str(gridX) + ", gy: " + str(gridY))
 
     out_grid = []
     for i, dat in enumerate(data):
         gridX, gridY = grid[i]
-        print("gx: " + str(gridX) + ", gy: " + str(gridY))
+#        print("grid_index: " + str(i) + ", gx: " + str(gridX) + ", gy: " + str(gridY))
         out_grid.append({'gx': int(gridX), 'gy': int(gridY), 'path': dat['path']})
-    #    print(dat['path'] + " gx:" + str(int(gridX)) + ", gy:" + str(int(gridY)))
-    return
+ #   print(dat['path'] + " gx:" + str(int(gridX)) + ", gy:" + str(int(gridY)))
 
     # We sort by secondary first - Python sort is stable; it does not change order on equal keys
     out_grid.sort(key = lambda obj: obj['gy'])
@@ -125,12 +130,13 @@ def makegrid():
         imgfile.write(element['path'] + "\n")
     #print(str(element['gx']) + " " + str(element['gy']) + " " + element['path'])
     imgfile.close()
-    print("Stored gridified image list as " + outimages)
+#    print("Stored gridified image list as " + outimages)
 
     return grid
-
-
     
-makepreview()
+#makepreview()
 grid = makegrid()
-makegridimage(grid)
+#makegridimage(grid)
+
+print("Data in " + outimages + " with a render-grid of " + str(nx) + "x" + str(ny))
+print("Renders in " + gridimage + " and " + previewimage + " (if enabled)")
