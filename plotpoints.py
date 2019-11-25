@@ -121,14 +121,14 @@ def makegrid():
         out_grid.append({'gx': int(gridX), 'gy': int(gridY), 'path': dat['path']})
  #   print(dat['path'] + " gx:" + str(int(gridX)) + ", gy:" + str(int(gridY)))
 
-    # We sort by secondary first - Python sort is stable; it does not change order on equal keys
-    out_grid.sort(key = lambda obj: obj['gy'])
+    # Column is secondary, row is primary - Python sort is stable; it does not change order on equal keys
     out_grid.sort(key = lambda obj: obj['gx'])
+    out_grid.sort(key = lambda obj: obj['gy'])
 
     imgfile = open(outimages, "w")
     for element in out_grid:
         imgfile.write(element['path'] + "\n")
-    #print(str(element['gx']) + " " + str(element['gy']) + " " + element['path'])
+        # print(str(element['gx']) + " " + str(element['gy']) + " " + element['path'])
     imgfile.close()
 #    print("Stored gridified image list as " + outimages)
 
