@@ -55,7 +55,9 @@ check_parameters() {
         >&2 echo "Error: No out_imagelist.dat specified"
         usage 12
     fi
-            
+
+    # Note: Resolving PYTHON & PIP is only for verifying that the system has them.
+    # When the virtual environment is activated, it provides "new" python & pip commands.
     if [[ -z "$PYTHON" ]]; then
         >&2 echo "Error: Unable to locate python3 or python"
         exit 2
@@ -78,7 +80,7 @@ check_parameters() {
         >&2 echo "Error: pip for Python 3 required but could only locate $PIP which is for Python version $PIP_PYTHON_VERSION"
         exit 5
     fi
-
+    echo "- Using Python '$PYTHON' and pip '$PIP'"
 }
 
 ################################################################################
@@ -106,6 +108,10 @@ activate_environment() {
 
     echo "- Activating Python virtualenv in $VIRTUAL_FOLDER"
     source "$VIRTUAL_FOLDER/bin/activate"
+    if [[ "." == ".$(grep "$(pwd)" <<< "$(pip -V)" )" ]]; then
+        >&2 echo "Error: Virtual envionment not activated: 'pip -V' does not include current folder: $(pip -V)"
+        exit 12
+    fi
 }
 
 ensure_environment() {
@@ -130,7 +136,7 @@ ensure_ml4a() {
 link_images() {
     echo "- Symlinking to images in cache folder $CACHE_FOLDER"
     if [[ -d "$CACHE_FOLDER" ]]; then
-        echo "Cache folder $CACHE_FOLDER already exists. Skipping symlinking"
+        echo "  Cache folder $CACHE_FOLDER already exists. Skipping symlinking"
         return
 
         rm -r "$CACHE_FOLDER"
@@ -144,8 +150,10 @@ link_images() {
 
 tensorflow_and_tsne() {
     echo "- Running tensorflow and tSNE on images from $IN"
-    rm points.json
-    $PYTHON $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path points.json
+    if [[ -s points.jso ]]; then
+            rm points.json
+    fi
+    python3 $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path points.json
     if [[ ! -s points.json ]]; then
         >&2 echo "Error: RunningtSNE-imaes.py did not produce the expected file 'points.json'"
         exit 5
@@ -154,7 +162,7 @@ tensorflow_and_tsne() {
 
 gridify() {
     echo "- Creating preview image and gridifying"
-    $PYTHON plotpoints.py
+    python3 plotpoints.py
     mv gridified.dat "$OUT"
     echo "- Stored grid sorted images to $OUT"
 }
