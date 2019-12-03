@@ -6,6 +6,8 @@
 #
 # This requires Python 3 and performs a GitHub checkout. Dirty dirty.
 #
+# Note: Only works when all images have unique file names across folders
+#
 
 ###############################################################################
 # CONFIG
@@ -81,6 +83,9 @@ check_parameters() {
         exit 5
     fi
     echo "- Using Python '$PYTHON' and pip '$PIP'"
+
+    OUT_FN="${OUT%.*}"
+    OUT_EXT="${OUT##*.}"
 }
 
 ################################################################################
@@ -160,12 +165,49 @@ tensorflow_and_tsne() {
     fi
 }
 
+# Output: GX GY OUT_FINAL
 gridify() {
     echo "- Creating preview image and gridifying"
-    python3 plotpoints.py
-    mv gridified.dat "$OUT"
-    echo "- Stored grid sorted images to $OUT"
+    GRID=$(python3 plotpoints.py | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+    GX=$(cut -dx -f1 <<< "$GRID")
+    GY=$(cut -dx -f2 <<< "$GRID")
+    OUT_FINAL="${OUT_FN}_${GX}x${GY}.${OUT_EXT}"
+    mv gridified.dat "$OUT_FINAL"
+    echo "- Stored grid sorted images to $OUT_FINAL"
 }
+
+fix_paths() {
+    pushd $CACHE_FOLDER > /dev/null
+    # https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern#2705678
+    local CFULL=$(sed 's/[]\/$*.^[]/\\&/g' <<< "$(pwd)/" )
+    popd > /dev/null
+    sed -i "s/$CFULL//" "$OUT_FINAL"
+    # OUT_FINAL now holds filenames only in wanted order
+
+    T1=$(mktemp)
+    local COUNTER=0
+    while read -r IMG; do
+        echo "$IMG"$'\t'"$COUNTER" >> "$T1"
+        COUNTER=$(( COUNTER + 1 ))
+    done <"$OUT_FINAL"
+
+    T1B=$(mktemp)
+    LC_ALL=c sort < "$T1" > "$T1B"
+    
+    T2=$(mktemp)
+    sed 's%^\(.*\)/\([^/]*\)$%\2\t\1%' < "$IN" | LC_ALL=c sort > "$T2"
+
+    paste /tmp/tmp.4SXKuzVe6A /tmp/tmp.TKbzqzbzDP | sed 's/\(.*\)\t\(.*\)\t\(.*\)\t\(.*\)/\2\t\4\/\3/' | sort -n | sed 's/^[^\t]*\t//' > "$T1"
+    mv "$T1" "$OUT_FINAL"
+    rm "$T1B" "$T2"
+    echo "- Fixed paths for $OUT_FINAL"
+    echo "- Sample juxta call:"
+
+    local RENDER=$(basename "${OUT_FINAL%.*}")
+
+    echo "RAW_IMAGE_COLS=$GX RAW_IMAGE_ROWS=$GY ./juxta.sh \"$OUT_FINAL\" \"$RENDER\""
+}
+
 
 ###############################################################################
 # CODE
@@ -174,6 +216,7 @@ gridify() {
 check_parameters "$@"
 ensure_environment
 ensure_ml4a
-link_images
-tensorflow_and_tsne
+#link_images
+#tensorflow_and_tsne
 gridify
+fix_paths
