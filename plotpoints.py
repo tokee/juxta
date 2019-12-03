@@ -1,6 +1,12 @@
 # Quick hack to visualize non-gridified tSNE placed images
 
 # Adapted from https://github.com/ml4a/ml4a-guides/blob/master/notebooks/image-tsne.ipynb
+#
+############################################################################################
+#
+# Important: This script is under the GPL-2.0 licence
+#
+############################################################################################
 # pip3 install matplotlib prime 
 # On Ubuntu 19.10 it seems we need this instead: sudo apt-get install python-matplotlib
 # pip3 install -U git+https://github.com/bmcfee/RasterFairy/ --user
