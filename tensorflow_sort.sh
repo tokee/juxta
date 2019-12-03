@@ -20,6 +20,9 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 : ${ML_FOLDER:="$TENSOR_FOLDER/ml4a-ofx"}
 : ${CACHE_HOME:="$TENSOR_FOLDER/cache"}
 
+: ${PERFORM_LINK:="auto"} #true false auto
+: ${PERFORM_TSNE:="auto"} #true false auto
+
 : ${ML_GIT:="https://github.com/ml4a/ml4a-ofx.git"}
 : ${PYTHON_REQUIREMENTS:="pillow sklearn tensorflow keras numpy prime rasterfairy"}
 : ${PYTHON:=$(which python3)}
@@ -86,6 +89,9 @@ check_parameters() {
 
     OUT_FN="${OUT%.*}"
     OUT_EXT="${OUT##*.}"
+
+    POINTS_FILE="${OUT_FN}.points.json"
+    SORTED_WORK_FILE="${OUT_FN}.tmp"
 }
 
 ################################################################################
@@ -139,13 +145,19 @@ ensure_ml4a() {
 }
 
 link_images() {
-    echo "- Symlinking to images in cache folder $CACHE_FOLDER"
-    if [[ -d "$CACHE_FOLDER" ]]; then
-        echo "  Cache folder $CACHE_FOLDER already exists. Skipping symlinking"
-        return
-
-        rm -r "$CACHE_FOLDER"
+    if [[ "false" == "$PERFORM_LINK" ]]; then
+        echo "-  Skipping linking as PERFORM_LINK==$PERFORM_LINK"
     fi
+    if [[ -d "$CACHE_FOLDER" ]]; then
+        if [[ "auto" == "$PERFORM_LINK" ]]; then
+            echo "- Cache folder $CACHE_FOLDER already exists and PERFORM_LINK==auto. Skipping symlinking"
+            return
+        else
+            echo "- Cache folder $CACHE_FOLDER already exists but PERFORM_LINK==true. Deleting previous symlinks"
+            rm -r "$CACHE_FOLDER"
+        fi
+    fi
+    echo "- Symlinking to images in cache folder $CACHE_FOLDER"
     mkdir -p "$CACHE_FOLDER"
     while read -r IMG; do
         ln -s $(realpath "$IMG") "$CACHE_FOLDER/$(basename "$IMG")"
@@ -154,28 +166,40 @@ link_images() {
 }
 
 tensorflow_and_tsne() {
-    echo "- Running tensorflow and tSNE on images from $IN"
-    if [[ -s points.jso ]]; then
-            rm points.json
+    if [[ "false" == "$PERFORM_TSNE" ]]; then
+        echo "- Skipping tensorflow and tSNE as PERFORM_TSNE==$PERFORM_TSNE"
+        return
     fi
-    python3 $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path points.json
-    if [[ ! -s points.json ]]; then
-        >&2 echo "Error: RunningtSNE-imaes.py did not produce the expected file 'points.json'"
+    if [[ -s ${POINTS_FILE} ]]; then
+        if [[ "auto" == "$PERFORM_TSNE" ]]; then
+            echo "- tSNE file ${POINTS_FILE} exists and PERFORM_TSNE==auto. Skipping tensorflor and tSNE"
+            return
+        else
+            echo "- tSNE ${POINTS_FILE} file already exists but PERFORM_TSNE==true. Deleting previous ${POINTS_FILE}"
+            rm "${POINTS_FILE}"
+        fi
+    fi
+    echo "- Running tensorflow and tSNE on images from $IN"
+    python3 $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path ${POINTS_FILE}
+    if [[ ! -s ${POINTS_FILE} ]]; then
+        >&2 echo "Error: Running tSNE-images.py did not produce the expected file '${POINTS_FILE}'"
         exit 5
     fi
 }
 
 # Output: GX GY OUT_FINAL
 gridify() {
-    echo "- Creating preview image and gridifying"
-    GRID=$(python3 plotpoints.py | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+    echo "- Gridifying ${POINTS_FILE}"
+    GRID=$(python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
     GX=$(cut -dx -f1 <<< "$GRID")
     GY=$(cut -dx -f2 <<< "$GRID")
     OUT_FINAL="${OUT_FN}_${GX}x${GY}.${OUT_EXT}"
-    mv gridified.dat "$OUT_FINAL"
+    mv ${SORTED_WORK_FILE}.dat "$OUT_FINAL"
     echo "- Stored grid sorted images to $OUT_FINAL"
 }
 
+# The OUT_FINAL contains the images in the correct order, but with wrong paths
+# This methods assigns the paths from IN to OUT_FINAL, preserving the order
 fix_paths() {
     pushd $CACHE_FOLDER > /dev/null
     # https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern#2705678
@@ -197,11 +221,11 @@ fix_paths() {
     T2=$(mktemp)
     sed 's%^\(.*\)/\([^/]*\)$%\2\t\1%' < "$IN" | LC_ALL=c sort > "$T2"
 
-    paste /tmp/tmp.4SXKuzVe6A /tmp/tmp.TKbzqzbzDP | sed 's/\(.*\)\t\(.*\)\t\(.*\)\t\(.*\)/\2\t\4\/\3/' | sort -n | sed 's/^[^\t]*\t//' > "$T1"
+    paste "$T1B" "$T2" | sed 's/\(.*\)\t\(.*\)\t\(.*\)\t\(.*\)/\2\t\4\/\3/' | sort -n | sed 's/^[^\t]*\t//' > "$T1"
     mv "$T1" "$OUT_FINAL"
     rm "$T1B" "$T2"
     echo "- Fixed paths for $OUT_FINAL"
-    echo "- Sample juxta call:"
+    echo "Finihed sorting. Sample juxta call:"
 
     local RENDER=$(basename "${OUT_FINAL%.*}")
 
@@ -216,7 +240,7 @@ fix_paths() {
 check_parameters "$@"
 ensure_environment
 ensure_ml4a
-#link_images
-#tensorflow_and_tsne
+link_images
+tensorflow_and_tsne
 gridify
 fix_paths
