@@ -160,7 +160,8 @@ link_images() {
     echo "- Symlinking to images in cache folder $CACHE_FOLDER"
     mkdir -p "$CACHE_FOLDER"
     while read -r IMG; do
-        ln -s $(realpath "$IMG" | cut -d\| -f1) "$CACHE_FOLDER/$(basename "$IMG" | cut -d\| -f1)"
+        local ONLY_IMG=$( cut -d\| -f1 <<< "$IMG" )
+        ln -s $(realpath "$ONLY_IMG") "$CACHE_FOLDER/$(basename "$ONLY_IMG")"
         #cp $(realpath "$IMG") "$CACHE_FOLDER/$(basename "$IMG")"
     done < "$IN"
 }
