@@ -147,6 +147,7 @@ ensure_ml4a() {
 link_images() {
     if [[ "false" == "$PERFORM_LINK" ]]; then
         echo "-  Skipping linking as PERFORM_LINK==$PERFORM_LINK"
+        return
     fi
     if [[ -d "$CACHE_FOLDER" ]]; then
         if [[ "auto" == "$PERFORM_LINK" ]]; then
