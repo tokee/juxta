@@ -160,7 +160,7 @@ link_images() {
     echo "- Symlinking to images in cache folder $CACHE_FOLDER"
     mkdir -p "$CACHE_FOLDER"
     while read -r IMG; do
-        ln -s $(realpath "$IMG") "$CACHE_FOLDER/$(basename "$IMG")"
+        ln -s $(realpath "$IMG" | cut -d\| -f1) "$CACHE_FOLDER/$(basename "$IMG" | cut -d\| -f1)"
         #cp $(realpath "$IMG") "$CACHE_FOLDER/$(basename "$IMG")"
     done < "$IN"
 }
@@ -206,7 +206,7 @@ fix_paths() {
     local CFULL=$(sed 's/[]\/$*.^[]/\\&/g' <<< "$(pwd)/" )
     popd > /dev/null
     sed -i "s/$CFULL//" "$OUT_FINAL"
-    # OUT_FINAL now holds filenames only in wanted order
+    # OUT_FINAL now holds filenames only in tsne order
 
     T1=$(mktemp)
     local COUNTER=0
@@ -214,9 +214,11 @@ fix_paths() {
         echo "$IMG"$'\t'"$COUNTER" >> "$T1"
         COUNTER=$(( COUNTER + 1 ))
     done <"$OUT_FINAL"
-
+    # T1 now holds filenames counter in tsne order
+    
     T1B=$(mktemp)
     LC_ALL=c sort < "$T1" > "$T1B"
+    # T1 now holds filenames counter in finames order
     
     T2=$(mktemp)
     sed 's%^\(.*\)/\([^/]*\)$%\2\t\1%' < "$IN" | LC_ALL=c sort > "$T2"
