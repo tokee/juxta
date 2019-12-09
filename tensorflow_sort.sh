@@ -220,12 +220,15 @@ fix_paths() {
     
     T1B=$(mktemp)
     LC_ALL=c sort < "$T1" > "$T1B"
-    # T1 now holds filenames counter in finames order
+    # T1 now holds filenames counter in filenames order
     
     T2=$(mktemp)
-    sed 's%^\(.*\)/\([^/]*\)$%\2\t\1%' < "$IN" | LC_ALL=c sort > "$T2"
-
-    paste "$T1B" "$T2" | sed 's/\(.*\)\t\(.*\)\t\(.*\)\t\(.*\)/\2\t\4\/\3/' | sort -n | sed 's/^[^\t]*\t//' > "$T1"
+    sed 's%^\([^|]*\)/\([^/]*\)\([|].*\)\?$%\2\t\1\t\3%' < "$IN" | LC_ALL=c sort > "$T2"
+    # T2 now holds filename path meta in filenames order
+    
+    paste "$T1B" "$T2" | sed 's/\(.*\)\t\(.*\)\t\(.*\)\t\(.*\)\t\(.*\)/\2\t\4\/\3\5/' | sort -n | sed 's/^[^\t]*\t//' > "$T1"
+    # T1 held counter path/filename/meta in tsne (aka counter) order, and had the counter-part removed
+    
     mv "$T1" "$OUT_FINAL"
     rm "$T1B" "$T2"
     echo "- Fixed paths for $OUT_FINAL"
