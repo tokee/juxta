@@ -11,7 +11,7 @@ Use by including the script on the HTML page:
 and activating it after the OpenSeadragon has been created:
 
   <script>
-  setupDemoMode(myDragon, 5000, 50000, 45);
+  setupDemoMode(myDragon, 180000, 50000, 45);
   </script>
 
 */
@@ -37,7 +37,7 @@ function setupDemoMode(dragon, timeout = iTimeout, animateInterval = iAnimateInt
   let doSteps = new Date().getTime() + iTimeout;
   let interval;
   let intervalSet = false;
-  console.log("Activating slideScript", myDragon.viewport);
+  console.log("Activating demo mode (inactivity timeout = " + iTimeout + " ms)", myDragon.viewport);
 
   // Calling this function will move us to the next transition animation in our
   // list of transitions.
