@@ -106,6 +106,12 @@ popd > /dev/null
 # Note: This is not guaranteed to be exact
 : ${CANVAS_ASPECT_W:=1}
 : ${CANVAS_ASPECT_H:=1}
+# Valid values are 'none', 'intensity', 'rainbow' and 'similarity'
+# Note that similarity uses tensorflow_sort.sh, is quite heavy and requires python3
+: ${IMAGE_SORT:="none"}
+# If true, image sort is skipped if a matching sorted dat-file already exists
+: ${SKIP_IMAGE_SORT:=false}
+
 # If true, structures are provided for resolving the source image belonging to the
 # tiles that are hovered. This can be used to provide download-links to the source
 # images or to infer external links, depending on the images
@@ -680,6 +686,42 @@ resolve_dimensions() {
     export RAW_IMAGE_ROWS;
 }
 
+# If IMAGE_SORT is defined, re-ordering of the image list is activated
+# Valid values are 'none', 'intensity', 'rainbow' and 'similarity'
+sort_if_needed() {
+    if [[ "none" == "$IMAGE_SORT" ]]; then
+        return
+    fi
+    echo " - Sorting images by $IMAGE_SORT"
+    local SORT_DAT="$DEST/imagelist_sorted_${IMAGE_SORT}.dat"
+    if [[ -s "$SORT_DAT" ]]; then
+        if [[ "true" == "$SKIP_IMAGE_SORT" ]]; then
+            if [[ $(wc -l < "$DEST/image_list.dat") -eq $(wc -l "$SORT_DAT") ]]; then
+                echo "   - Reusing old sort file $SORT_DAT as SKIP_IMAGE_SORT==true"
+                cp "$SORT_DAT" "$DEST/imagelist.dat"
+                return
+            else
+                echo "   - Overwriting old sort file $SORT_DAT as its image count $(wc -l < "$SORT_DAT") did not match SKIP_IMAGE_SORT==false"
+                rm "$SORT_DAT"
+            fi
+        else
+            echo "   - Overwriting old sort file $SORT_DAT as SKIP_IMAGE_SORT==false"
+            rm "$SORT_DAT"
+        fi
+    fi
+    if [[ "intensity" == "$IMAGE_SORT" ]]; then
+        ${JUXTA_HOME}/intensity_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
+    elif [[ "rainbow" == "$IMAGE_SORT" ]]; then
+        ${JUXTA_HOME}/rainbow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
+    elif [[ "similarity" == "$IMAGE_SORT" ]]; then
+        RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS ${JUXTA_HOME}/tensorflow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
+    else
+        >&2 echo "Error: Unknown IMAGE_SORT '$IMAGE_SORT'"
+        usage 21
+    fi
+    cp "$SORT_DAT" "$DEST/imagelist.dat"
+}
+
 usage() {
     echo "Usage: ./juxta.sh imagelist [destination]"
     echo "imagelist: A file with images represented as file paths"
@@ -883,7 +925,7 @@ prepare_batch() {
             COL=0
             ROW=$(( ROW+1 ))
         fi
-    done < "$DEST/imagelist_onlyimages.dat"
+    done <<< $(cut -d\| -f1 < "$DEST/imagelist.dat")
 
     if [[ ! $COL -eq 0 ]]; then
         RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
@@ -899,6 +941,7 @@ START_TIME=$(date +%Y%m%d-%H%M)
 save_state # Should be first
 sanitize_input "$@"
 resolve_dimensions
+sort_if_needed
 set_converter
 
 if [[ "true" == "$AGGRESSIVE_IMAGE_SKIP" && -d "$DEST/$MAX_ZOOM" ]]; then
