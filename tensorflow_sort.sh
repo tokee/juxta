@@ -14,13 +14,19 @@
 ###############################################################################
 
 pushd ${BASH_SOURCE%/*} > /dev/null
+
+: ${IN:="$1"}
+: ${OUT:="$2"}
+: ${RAW_IMAGE_COLS:="0"}
+: ${RAW_IMAGE_ROWS:="0"}
+
 : ${SCRIPT_HOME:=$(pwd)}
 : ${TENSOR_FOLDER:="$SCRIPT_HOME/tensorflow"}
 : ${VIRTUAL_FOLDER:="$TENSOR_FOLDER/virtualenv"}
 : ${ML_FOLDER:="$TENSOR_FOLDER/ml4a-ofx"}
 : ${CACHE_HOME:="$TENSOR_FOLDER/cache"}
 
-: ${PERFORM_LINK:="auto"} #true false auto
+: ${PERFORM_LINK:="true"} #true false auto, true is the safest as it works with reruns with changed image sets
 : ${PERFORM_TSNE:="auto"} #true false auto
 
 : ${ML_GIT:="https://github.com/ml4a/ml4a-ofx.git"}
@@ -30,8 +36,6 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 : ${PIP:=$(which pip3)}
 : ${USE_VIRTUALENV:="true"}
 
-: ${IN:="$1"}
-: ${OUT:="$2"}
 : ${CACHE_FOLDER:="$CACHE_HOME/$(basename "$OUT")"}
 
 : ${MIN_IMAGES:="300"}
@@ -192,7 +196,7 @@ tensorflow_and_tsne() {
 # Output: GX GY OUT_FINAL
 gridify() {
     echo "- Gridifying ${POINTS_FILE}"
-    GRID=$(python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+    GRID=$(python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
     GX=$(cut -dx -f1 <<< "$GRID")
     GY=$(cut -dx -f2 <<< "$GRID")
     OUT_FINAL="${OUT_FN}_${GX}x${GY}.${OUT_EXT}"
