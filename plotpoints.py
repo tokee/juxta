@@ -27,6 +27,8 @@ def process_arguments(args):
     parser.add_argument('--out_prefix', action='store', required=True, help='prefix for output files')
     parser.add_argument('--raw_image', action='store', default='', help='if defined, create preview image with raw data from in')
     parser.add_argument('--grid_image', action='store', default='', help='if defined, create preview image with gridified images')
+    parser.add_argument('--grid_width', action='store', default=0, help='grid width measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
+    parser.add_argument('--grid_height', action='store', default=0, help='grid height measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
     parser.add_argument('--image_width', action='store', default=4000, help='image width for raw- and grid-image')
     parser.add_argument('--image_height', action='store', default=3000, help='image height for raw- and grid-image')
     parser.add_argument('--tile_width', action='store', default=72, help='tile width for raw- and grid-image')
@@ -35,7 +37,7 @@ def process_arguments(args):
     params = vars(parser.parse_args(args))
     return params
     
-def load_points():
+def load_points(grid_width, grid_height):
     with open(json_file) as json_bytes:
         data = json.load(json_bytes)
 
@@ -47,16 +49,32 @@ def load_points():
         arr_all.append([point[0], point[1], tup['path']])
 
     image_count = len(arr_points)
-    
-    ny = int(math.sqrt(image_count/2))
-    if (ny == 0):
-        ny = 1
-    nx = int(image_count / ny)
-    if (nx * ny < image_count):
-        nx += 1
-    #print("The " + str(image_count) + " images will be represented as " + str(nx) + "x" + str(ny) + " grid")
 
-    return (data, arr_points, arr_all, image_count, nx, ny)
+    if (grid_width == 0 and grid_height == 0):
+        grid_height = int(math.sqrt(image_count/2))
+        if (grid_height == 0):
+            grid_height = 1
+        grid_width = int(image_count / grid_height)
+        if (grid_width * grid_height < image_count):
+            grid_width += 1
+    elif( grid_width != 0 and grid_height != 0):
+        if (grid_width * grid_height < image_count):
+            sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " does not hold image_count==" + str(image_count))
+        if (grid_width * (grid_height-1) >= image_count):
+            sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " is too large for image_count==" + str(image_count) + " images (rows can be skipped and rasterfair hangs on mismatched grid capacity)")
+        if ((grid_width-1) * grid_height >= image_count):
+            sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " is too large for image_count==" + str(image_count) + " images (columns can be skipped and rasterfair hangs on mismatched grid capacity)")
+    elif (grid_width != 0):
+        grid_height = int(image_count/grid_width)
+        if (grid_height*grid_width < image_count):
+            grid_height += 1
+    else: # grid_height != 0
+        grid_width = int(image_count/grid_height)
+        if (grid_width*grid_height < image_count):
+            grid_width += 1
+    #print("The " + str(image_count) + " images will be represented as " + str(grid_width) + "x" + str(grid_height) + " grid")
+
+    return (data, arr_points, arr_all, image_count, grid_width, grid_height)
     
 def create_raw_image():
     if ( raw_image == ''):
@@ -84,8 +102,8 @@ def create_grid_image(grid):
         return
     print("Generating gridified image " + grid_image)
 
-    full_width = tile_width * nx
-    full_height = tile_height * ny
+    full_width = tile_width * grid_width
+    full_height = tile_height * grid_height
     aspect_ratio = float(tile_width) / tile_height
 
     grid_bitmap = Image.new('RGB', (full_width, full_height))
@@ -117,11 +135,10 @@ def create_grid_image(grid):
     
 def make_grid():
     tsne = np.array(arr_points)
-    print ("Analyzing " + str(len(tsne)) + " coordinates to target " + str(nx) + "x" + str(ny))
+    print ("Analyzing " + str(len(tsne)) + " coordinates to target " + str(grid_width) + "x" + str(grid_height))
 #    for x, y in tsne:
 #        print ("tSNE: " + str(x) + ", " + str(y))
-
-    gridAssignment = rasterfairy.transformPointCloud2D(tsne, target=(nx, ny))
+    gridAssignment = rasterfairy.transformPointCloud2D(tsne, target=(grid_width, grid_height))
     grid, gridShape = gridAssignment
 
 #    print ("Got " + str(len(grid)) + " grid entries")
@@ -156,6 +173,11 @@ if __name__ == '__main__':
     out_prefix = params['out_prefix']
     raw_image = params['raw_image']
     grid_image = params['grid_image']
+    
+    grid_width = params['grid_width']
+    grid_width = int(grid_width)
+    grid_height = params['grid_height']
+    grid_height = int(grid_height)
     image_width = params['image_width']
     image_height = params['image_height']
     tile_width = params['tile_width']
@@ -166,10 +188,10 @@ if __name__ == '__main__':
     if ( raw_image != '' and os.path.splitext(raw_image)[1] == ".jpg" ):
         sys.exit("Error: raw_image was '" + raw_image + "' but must be png or a similar format that supports transparency")
     
-    data, arr_points, arr_all, image_count, nx, ny = load_points()
+    data, arr_points, arr_all, image_count, grid_width, grid_height = load_points(grid_width, grid_height)
 
     create_raw_image()
     grid = make_grid()
     create_grid_image(grid)
 
-    print("Data in " + out_image_list + " with a render-grid of " + str(nx) + "x" + str(ny))
+    print("Data in " + out_image_list + " with a render-grid of " + str(grid_width) + "x" + str(grid_height))
