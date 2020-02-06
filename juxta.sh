@@ -714,8 +714,6 @@ sort_if_needed() {
     elif [[ "rainbow" == "$IMAGE_SORT" ]]; then
         ${JUXTA_HOME}/rainbow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
     elif [[ "similarity" == "$IMAGE_SORT" ]]; then
-        # TODO: Remove debug below
-        echo "****** Calling RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS ${JUXTA_HOME}/tensorflow_sort.sh \"$DEST/imagelist.dat\" \"$SORT_DAT\""
         RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS ${JUXTA_HOME}/tensorflow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
     else
         >&2 echo "Error: Unknown IMAGE_SORT '$IMAGE_SORT'"
