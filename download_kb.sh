@@ -11,7 +11,7 @@
 ###############################################################################
 
 : ${MAX_IMAGES:=100000}
-: ${BROWSE_URL:="http://www.kb.dk/images/billed/2010/okt/billeder"}
+: ${BROWSE_URL:="http://www5.kb.dk/images/billed/2010/okt/billeder"}
 : ${PAGE_SIZE:=40}
 : ${KB_LANGUAGE:=da}
 # http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/subject2109/en/?itemsPerPage=5
@@ -194,6 +194,12 @@ download_collection() {
         fi
         PAGE=$(( PAGE+1 ))
     done
+    # Why do we get duplicates?
+    echo " - Ensuring that "${DOWNLOAD_FOLDER}/$COLLECTION/sources.dat" only contains unique entries"
+    local TUNIQ=$(mktemp)
+    LC_ALL=C sort "${DOWNLOAD_FOLDER}/$COLLECTION/sources.dat" | LC_ALL=C uniq > "$TUNIQ"
+    mv "$TUNIQ" "${DOWNLOAD_FOLDER}/$COLLECTION/sources.dat"
+
 }
 
 ###############################################################################

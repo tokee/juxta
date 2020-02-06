@@ -75,7 +75,7 @@ MAX_IMAGES=$MAX_IMAGES_PER_COLLECTION
 for COLLECTION in $COLLECTIONS; do
     echo "Downloading collection $COLLECTION"
     . $DOWNLOAD_SCRIPT "$COLLECTION"
-    cat downloads/$COLLECTION/sources.dat >> downloads/$DEST/sources.dat
+    #cat downloads/$COLLECTION/sources.dat >> downloads/$DEST/sources.dat
 done
 MAX_IMAGES=$OLD_MI
 
