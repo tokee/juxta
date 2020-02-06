@@ -51,6 +51,7 @@ def load_points(grid_width, grid_height):
     image_count = len(arr_points)
 
     if (grid_width == 0 and grid_height == 0):
+        print("   - Neither grid_width nor grid_height is specified. Calculating with intended aspect ration 2:1")
         grid_height = int(math.sqrt(image_count/2))
         if (grid_height == 0):
             grid_height = 1
@@ -64,14 +65,17 @@ def load_points(grid_width, grid_height):
             sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " is too large for image_count==" + str(image_count) + " images (rows can be skipped and rasterfair hangs on mismatched grid capacity)")
         if ((grid_width-1) * grid_height >= image_count):
             sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " is too large for image_count==" + str(image_count) + " images (columns can be skipped and rasterfair hangs on mismatched grid capacity)")
+        print("   - grid_height==" + str(grid_height) + ", grid_width==" + str(grid_width))
     elif (grid_width != 0):
         grid_height = int(image_count/grid_width)
         if (grid_height*grid_width < image_count):
             grid_height += 1
+        print("   - grid_width==" + str(grid_width) + ", calculated grid_height==" + str(grid_height))
     else: # grid_height != 0
         grid_width = int(image_count/grid_height)
         if (grid_width*grid_height < image_count):
             grid_width += 1
+        print("   - grid_height==" + str(grid_height) + ", calculated grid_width==" + str(grid_width))
     #print("The " + str(image_count) + " images will be represented as " + str(grid_width) + "x" + str(grid_height) + " grid")
 
     return (data, arr_points, arr_all, image_count, grid_width, grid_height)
@@ -194,4 +198,4 @@ if __name__ == '__main__':
     grid = make_grid()
     create_grid_image(grid)
 
-    print("Data in " + out_image_list + " with a render-grid of " + str(grid_width) + "x" + str(grid_height))
+    print("Finished gridifying with RasterFaiy. Data in " + out_image_list + " with a render-grid of " + str(grid_width) + "x" + str(grid_height))
