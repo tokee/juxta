@@ -15,7 +15,7 @@
 : ${PAGE_SIZE:=40}
 : ${KB_LANGUAGE:=da}
 # http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/subject2109/en/?itemsPerPage=5
-: ${SEARCH_URL_PREFIX:="http://www.kb.dk/cop/syndication/images/billed/2010/okt/billeder/"}
+: ${SEARCH_URL_PREFIX:="http://www5.kb.dk/cop/syndication/images/billed/2010/okt/billeder/"}
 : ${SEARCH_URL_INFIX:="/${KB_LANGUAGE}/?itemsPerPage=$PAGE_SIZE&orderBy=notBefore&"}
 : ${DOWNLOAD_FOLDER:="downloads"}
 # If true and an image is to be downloaded, the full download folder is searched for images with
