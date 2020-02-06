@@ -60,9 +60,14 @@ check_parameters() {
         >&2 echo "Error: tensorflow_sort.sh requires at least $MIN_IMAGES images. There were only $IN_COUNT"
         exit 12
     fi
+    if [[ "$IN_COUNT" -ne $(sed 's%.*/%%' < "$IN" | LC_ALL=C sort | LC_ALL=c uniq | wc -l) ]]; then
+        >&2 echo "Error: The input $IN contained duplicate file names: $(sed 's%.*/%%' < random310.dat | LC_ALL=C sort | LC_ALL=c uniq -c | grep -v " 1 " | sed 's/ *[0-9]\+ //' | tr '\n' ' ')"
+        exit 13
+
+    fi
     if [[ -z "$OUT" ]]; then
         >&2 echo "Error: No out_imagelist.dat specified"
-        usage 12
+        usage 14
     fi
 
     # Note: Resolving PYTHON & PIP is only for verifying that the system has them.
@@ -186,7 +191,7 @@ tensorflow_and_tsne() {
         fi
     fi
     echo "- Running tensorflow and tSNE on images from $IN"
-    python3 $ML_FOLDER/scripts/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path ${POINTS_FILE}
+    python3 ${SCRIPT_HOME}/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path ${POINTS_FILE}
     if [[ ! -s ${POINTS_FILE} ]]; then
         >&2 echo "Error: Running tSNE-images.py did not produce the expected file '${POINTS_FILE}'"
         exit 5
@@ -195,8 +200,22 @@ tensorflow_and_tsne() {
 
 # Output: GX GY OUT_FINAL
 gridify() {
-    echo "- Gridifying ${POINTS_FILE}"
-    GRID=$(python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+    echo "- Gridifying ${POINTS_FILE} with --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS}"
+    if [[ -s ${SORTED_WORK_FILE}.dat ]]; then
+        rm ${SORTED_WORK_FILE}.dat
+    fi
+    echo "- NOTE: RasterFairy hangs on some grid layouts (the cause is not known). If nothing happens after this line, try re-running with RAW_IMAGE_COLS=$((RAW_IMAGE_COLS-1)) or $((RAW_IMAGE_COLS+1))"
+#    GRID=$(python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+
+    local T_GRID=$(mktemp)
+    python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | tee "$T_GRID"
+    GRID=$(grep "Data in .* with a render-grid.*" "$T_GRID" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+    rm "$T_GRID"
+
+    if [[ ! -s ${SORTED_WORK_FILE}.dat ]]; then
+        >&2 echo "Error: ${SORTED_WORK_FILE}.dat not produced. Did RasterFairy fail? Try re-running with  RAW_IMAGE_COLS=$((RAW_IMAGE_COLS-1)) or $((RAW_IMAGE_COLS+1))"
+        exit 35
+    fi
     GX=$(cut -dx -f1 <<< "$GRID")
     GY=$(cut -dx -f2 <<< "$GRID")
     OUT_FINAL="${OUT_FN}_${GX}x${GY}.${OUT_EXT}"
@@ -235,7 +254,9 @@ fix_paths() {
     
     mv "$T1" "$OUT_FINAL"
     rm "$T1B" "$T2"
-    echo "- Fixed paths for $OUT_FINAL"
+    cp "$OUT_FINAL" "$OUT"
+    echo "- Fixed paths for $OUT_FINAL and copied to $OUT"
+
     echo "Finihed sorting. Sample juxta call:"
 
     local RENDER=$(basename "${OUT_FINAL%.*}")
