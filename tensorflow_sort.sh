@@ -128,10 +128,10 @@ activate_environment() {
 
     echo "- Activating Python virtualenv in $VIRTUAL_FOLDER"
     source "$VIRTUAL_FOLDER/bin/activate"
-    if [[ "." == ".$(grep "$(pwd)" <<< "$(pip -V)" )" ]]; then
-        >&2 echo "Error: Virtual envionment not activated: 'pip -V' does not include current folder: $(pip -V)"
-        exit 12
-    fi
+#    if [[ "." == ".$(grep "$(pwd)" <<< "$(pip -V)" )" ]]; then
+#        >&2 echo "Error: Virtual envionment not activated: 'pip -V' does not include current folder: $(pip -V)"
+#        exit 12
+#    fi
 }
 
 ensure_environment() {
@@ -205,10 +205,10 @@ gridify() {
         rm ${SORTED_WORK_FILE}.dat
     fi
     echo "- NOTE: RasterFairy hangs on some grid layouts (the cause is not known). If nothing happens after this line, try re-running with RAW_IMAGE_COLS=$((RAW_IMAGE_COLS-1)) or $((RAW_IMAGE_COLS+1))"
-#    GRID=$(python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+#    GRID=$(python3 ${SCRIPT_HOME}/plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
 
     local T_GRID=$(mktemp)
-    python3 plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | tee "$T_GRID"
+    python3 ${SCRIPT_HOME}/plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | tee "$T_GRID"
     GRID=$(grep "Data in .* with a render-grid.*" "$T_GRID" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
     rm "$T_GRID"
 
