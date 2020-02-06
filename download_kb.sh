@@ -55,6 +55,10 @@ check_parameters() {
         >&2 echo "Error: MAX_CONSTITUENTS must be at least 1. It was $MAX_CONSTITUENTS"
         usage 3
     fi
+    if [[ -z "$(which xmllint)" ]]; then
+        >&2 echo "Error: 'xmllint' not available. Install with 'sudo apt  install libxml2-utils' or similar"
+        exit 4
+    fi
 }
 
 ################################################################################
