@@ -99,7 +99,7 @@ def create_raw_image():
         full_image.paste(tile, (int((image_width-max_dim)*x), int((image_height-max_dim)*y)), mask=tile.convert('RGBA'))
 
     full_image.save(raw_image);
-    print("Finished generating raw preview image. Result in " + raw_image)
+    print("- Finished generating raw preview image. Result in " + raw_image)
 
 def create_grid_image(grid):
     if ( grid_image == ''):
@@ -135,7 +135,7 @@ def create_grid_image(grid):
         grid_bitmap.paste(tile, (int(x), int(y)))
 
     grid_bitmap.save(grid_image);
-    print("Finished generating gridified image. Result in " + grid_image)
+    print("- Finished generating gridified image. Result in " + grid_image)
     
 def make_grid():
     tsne = np.array(arr_points)
@@ -198,4 +198,4 @@ if __name__ == '__main__':
     grid = make_grid()
     create_grid_image(grid)
 
-    print("Finished gridifying with RasterFaiy. Data in " + out_image_list + " with a render-grid of " + str(grid_width) + "x" + str(grid_height))
+    print("- Finished gridifying with RasterFairy. Data in " + out_image_list + " with a render-grid of " + str(grid_width) + "x" + str(grid_height))
