@@ -719,6 +719,7 @@ sort_if_needed() {
         >&2 echo "Error: Unknown IMAGE_SORT '$IMAGE_SORT'"
         usage 21
     fi
+    echo "   - Overwriting $DEST/imagelist.dat with $IMAGE_SORT sorted $SORT_DAT"
     cp "$SORT_DAT" "$DEST/imagelist.dat"
 }
 
