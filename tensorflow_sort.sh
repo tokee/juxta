@@ -60,8 +60,12 @@ check_parameters() {
         >&2 echo "Error: tensorflow_sort.sh requires at least $MIN_IMAGES images. There were only $IN_COUNT"
         exit 12
     fi
-    if [[ "$IN_COUNT" -ne $(sed 's%.*/%%' < "$IN" | LC_ALL=C sort | LC_ALL=c uniq | wc -l) ]]; then
-        >&2 echo "Error: The input $IN contained duplicate file names: $(sed 's%.*/%%' < random310.dat | LC_ALL=C sort | LC_ALL=c uniq -c | grep -v " 1 " | sed 's/ *[0-9]\+ //' | tr '\n' ' ')"
+
+    # downloads/subject3795/516937.jpg|http://www.kb.dk/images/billed/2010/okt/billeder/object171949/da/§Holbæk. Parti fra Havnen§§CC BY-NC-ND
+
+    local UNIQUE_COUNT=$(sed -e 's%|.*%%' -e 's%.*/%%' < "$IN" | LC_ALL=C sort | LC_ALL=c uniq | wc -l)
+    if [[ "$IN_COUNT" -ne "$UNIQUE_COUNT" ]]; then
+        >&2 echo "Error: The input $IN ($IN_COUNT images) contained duplicate (de-duplicate $UNIQUE_COUNT images) file names: [$(sed 's%.*/%%' < random310.dat | LC_ALL=C sort | LC_ALL=c uniq -c | grep -v " 1 " | sed 's/ *[0-9]\+ //' | tr '\n' ' ')]"
         exit 13
 
     fi
