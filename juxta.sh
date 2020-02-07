@@ -930,7 +930,7 @@ prepare_batch() {
             COL=0
             ROW=$(( ROW+1 ))
         fi
-    done <<< $(cut -d\| -f1 < "$DEST/imagelist.dat")
+    done <<< "$(cut -d\| -f1 < "$DEST/imagelist.dat")"
 
     if [[ ! $COL -eq 0 ]]; then
         RAW_IMAGE_MAX_COL=$((RAW_IMAGE_COLS-1))
