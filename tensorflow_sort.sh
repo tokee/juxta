@@ -65,7 +65,7 @@ check_parameters() {
 
     local UNIQUE_COUNT=$(sed -e 's%|.*%%' -e 's%.*/%%' < "$IN" | LC_ALL=C sort | LC_ALL=c uniq | wc -l)
     if [[ "$IN_COUNT" -ne "$UNIQUE_COUNT" ]]; then
-        >&2 echo "Error: The input $IN ($IN_COUNT images) contained duplicate (de-duplicate $UNIQUE_COUNT images) file names: [$(sed 's%.*/%%' < random310.dat | LC_ALL=C sort | LC_ALL=c uniq -c | grep -v " 1 " | sed 's/ *[0-9]\+ //' | tr '\n' ' ')]"
+        >&2 echo "Error: The input $IN ($IN_COUNT images) contained duplicate (de-duplicate $UNIQUE_COUNT images) file names: [$(sed -e 's%|.*%%' -e 's%.*/%%' < "$IN" | LC_ALL=C sort | LC_ALL=c uniq -c | grep -v " 1 " | sed 's/ *[0-9]\+ //' | tr '\n' ' ')]"
         exit 13
 
     fi
