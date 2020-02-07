@@ -966,7 +966,7 @@ fi
 
 # We only change stored options if we are not recreating
 dump_options > "$DEST/previous_options.conf"
-echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
+echo "  - Montaging ${IMAGE_COUNT} images of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixels (${RAW_W}x${RAW_H} tiles) in a ${RAW_IMAGE_COLS}x${RAW_IMAGE_ROWS} grid for a virtual canvas of ${CANVAS_PIXEL_W}x${CANVAS_PIXEL_H} pixels with max zoom $MAX_ZOOM to folder '$DEST' using $THREADS threads"
 
 export RAW_W
 export RAW_H
@@ -998,10 +998,12 @@ if [[ "$SPEND_S" -eq "0" ]]; then
     SPEND_S=1
 fi
 ICOUNT=$IMAGE_LIST_SIZE # (cat "$DEST/imagelist_onlyimages.dat" | wc -l | tr -d ' ')
+CALC_RAW_W=$RAW_W
+CALC_RAW_H=$RAW_H
 restore_state # Should be last
 
 echo " - Process started $START_TIME and ended $(date +%Y%m%d-%H%M)"
-echo " - juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((RAW_W*TILE_SIDE))x$((RAW_H*TILE_SIDE)) pixel images"
+echo " - juxta used $SPEND_S seconds to generate a $ICOUNT image collage of $((CALC_RAW_W*TILE_SIDE))x$((CALC_RAW_H*TILE_SIDE)) pixel images"
 echo " - Average speed was $((SPEND_S/ICOUNT)) seconds/image or $((ICOUNT/SPEND_S)) images/second"
 echo " - HTML-page available at $HTML"
 
