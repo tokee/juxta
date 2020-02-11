@@ -194,6 +194,7 @@ tensorflow_and_tsne() {
             rm "${POINTS_FILE}"
         fi
     fi
+    link_images
     echo "- Running tensorflow and tSNE on images from $IN"
     python3 ${SCRIPT_HOME}/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path ${POINTS_FILE}
     if [[ ! -s ${POINTS_FILE} ]]; then
@@ -276,7 +277,6 @@ fix_paths() {
 check_parameters "$@"
 ensure_environment
 ensure_ml4a
-link_images
 tensorflow_and_tsne
 gridify
 fix_paths
