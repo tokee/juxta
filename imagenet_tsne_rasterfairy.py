@@ -8,13 +8,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import argparse
 import sys
 
-import numpy
+import numpy as np
 
 import keras
 from keras.models import Model
 from keras.applications.imagenet_utils import decode_predictions, preprocess_input
 from keras.preprocessing import image
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
 
 #
 # Requirements: keras tensorflow sklearn "numpy<1.17" (to avoid warnings fron tensorflow)
@@ -33,11 +35,11 @@ def process_arguments(args):
 def load_image(path, input_shape):
     img = image.load_img(path, target_size=input_shape)
     x = image.img_to_array(img)
-    x = numpy.expand_dims(x, axis=0)
+    x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
     return x
 
-#https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
+# https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
 def analyze(image_paths, perplexity, learning_rate, pca_components):
     # TODO: Try other models
     model = keras.applications.VGG16(weights='imagenet', include_top=True)
@@ -52,24 +54,26 @@ def analyze(image_paths, perplexity, learning_rate, pca_components):
     for index, path in enumerate(image_paths):
         img = load_image(path, input_shape);
         if img is not None:
-            print(" - Analyzing %s %d/%d" % (path, (index+1),len(image_paths)))
+            print(" - Analyzing %d/%d: %s " % ((index+1),len(image_paths), path))
             features = feat_extractor.predict(img)
-            fc2_features.append(features[0]) # 4096 dimensional
-            prediction_features.append(features[1]) # 1000 dimensional
+            fc2_features.append(features[0][0]) # 4096 dimensional
+            prediction_features.append(features[1][0]) # 1000 dimensional
             acceptable_image_paths.append(path)
-            # print("Decoded: " + str(decode_predictions(acts, top=10)))
+#            print("Decoded: " + str(decode_predictions(features[1], top=10)))
         else:
-            print(" - Image not available %s %d/%d" % (path, (index+1),len(image_paths)))
+            print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
 
     # t-SNE is too costly to run on 4096-dimensional space, so we reduce with PCA first
     num_images = len(acceptable_image_paths)
-    # Why do we need this? Shouldn't components relate to fc2-dimensions?
+    # TODO: Shouldn't we just skip the PCA-step if there are less images than pca_components?
     components = min(pca_components, num_images)
     print("Running PCA on %d images with %d components..." % (num_images, components))
-    features = numpy.array(fc2_features)
+    features = np.array(fc2_features)
     pca = PCA(n_components=components)
     pca_result = pca.fit_transform(features)
 
+    tsne = TSNE(n_components=2, verbose=1, perplexity=perplexity, learning_rate=learning_rate, n_iter=300)
+    tsne_results = tsne.fit_transform(np.array(pca_result))
 
             
 if __name__ == '__main__':
