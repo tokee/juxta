@@ -1,0 +1,4 @@
+keras
+tensorflow
+sklearn
+numpy==1.17
