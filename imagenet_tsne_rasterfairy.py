@@ -65,7 +65,6 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
     acceptable_image_paths = []
     fc2_features = []
     prediction_features = []
-    first = True
     for index, path in enumerate(image_paths):
         img = load_image(path, input_shape);
         if img is not None:
@@ -78,10 +77,6 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
             predictions = decode_predictions(features[1], top=10)[0]
 #            print("****".join(('\n{"designation":"' + str(c[1]) + '", "internalID":"' + str(c[0]) + '", "probability":' + str(c[2]) + '}') for c in predictions))
 
-            if first == True:
-                first = False
-            else:
-                out.write(",")
             out.write('\n{ "path":"' + path + '", ')
             # TODO: Remember to make this a variable when the script is extended to custom networks
             out.write('"network": "imagenet", ')
