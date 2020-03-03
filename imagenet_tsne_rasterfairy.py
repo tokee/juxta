@@ -7,6 +7,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 import argparse
 import sys
+import glob
+import os.path
 
 import numpy as np
 
@@ -20,7 +22,16 @@ from sklearn.manifold import TSNE
 
 #
 # Requirements: keras tensorflow sklearn "numpy<1.17" (to avoid warnings fron tensorflow)
+# pip3 install -r Requirements.txt
 #
+# Or:
+#
+# python3 -m venv tsne
+# source tsne/bin/activat
+# pip install --upgrade pip
+# pip install -r Requirements.txt
+#
+
 
 def process_arguments(args):
     parser = argparse.ArgumentParser(description='ML network analysis of images')
@@ -105,6 +116,10 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
 if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
     image_paths = params['images']
+    # If the images-argument is a string instead of an existing file, try globbing it
+    if len(image_paths) == 1 and not os.path.isfile(image_paths[0]):
+        print("Globbing '" + image_paths[0] + "'")
+        image_paths = glob.glob(os.path.expanduser(image_paths[0]))
     perplexity = int(params['perplexity'])
     learning_rate = int(params['learning_rate'])
     pca_components = int(params['components'])
