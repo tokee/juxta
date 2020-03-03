@@ -82,17 +82,17 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
                 first = False
             else:
                 out.write(",")
-            out.write('\n{ "path":"' + path + '",')
+            out.write('\n{ "path":"' + path + '", ')
             # TODO: Remember to make this a variable when the script is extended to custom networks
-            out.write('\n  "network": "imagenet",')
+            out.write('"network": "imagenet", ')
 
-            out.write('\n  "predictions": [')
-            out.write(','.join(('\n    {"designation":"' + str(c[1])  + '", "probability":' + str(c[2]) + ', "internalID":"' + str(c[0])+ '"}') for c in predictions))
-            out.write("\n  ],")
+            out.write('"predictions": [')
+            out.write(','.join((' {"designation":"' + str(c[1])  + '", "probability":' + str(c[2]) + ', "internalID":"' + str(c[0])+ '"}') for c in predictions))
+            out.write("], ")
            
             # TODO: Remember to make this a variable when the script is extended to custom networks
-            out.write('\n  "vector_layer":"fc2",')
-            out.write('\n  "vector": [' + ','.join(str(f) for f in features[0][0]) + "]")
+            out.write('"vector_layer":"fc2", ')
+            out.write('"vector": [' + ','.join(str(f) for f in features[0][0]) + "]")
             out.write("}")
         else:
             print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
