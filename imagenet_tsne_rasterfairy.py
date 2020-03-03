@@ -24,10 +24,11 @@ from sklearn.manifold import TSNE
 
 def process_arguments(args):
     parser = argparse.ArgumentParser(description='ML network analysis of images')
-    parser.add_argument('--images', nargs='+', action='store', help='images to analyze')
+    parser.add_argument('--images', nargs='+', action='store', required=True, help='images to analyze')
     parser.add_argument('--perplexity', action='store', default=30, help='perplexity of t-SNE (default 30)')
     parser.add_argument('--learning_rate', action='store', default=150, help='learning rate of t-SNE (default 150)')
     parser.add_argument('--components', action='store', default=300, help='components for PCA fit (default 300)')
+    parser.add_argument('--output', action='store', default='ml_out.json', help='output file for vectors and classifications (default ml_out.json)')
     params = vars(parser.parse_args(args))
     return params
 
@@ -40,7 +41,9 @@ def load_image(path, input_shape):
     return x
 
 # https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
-def analyze(image_paths, perplexity, learning_rate, pca_components):
+def analyze(image_paths, perplexity, learning_rate, pca_components, output):
+    out = open(output, "w")
+    out.write("[")
     # TODO: Try other models
     model = keras.applications.VGG16(weights='imagenet', include_top=True)
     fc2 = model.get_layer("fc2").output
@@ -51,6 +54,7 @@ def analyze(image_paths, perplexity, learning_rate, pca_components):
     acceptable_image_paths = []
     fc2_features = []
     prediction_features = []
+    first = True
     for index, path in enumerate(image_paths):
         img = load_image(path, input_shape);
         if img is not None:
@@ -60,9 +64,28 @@ def analyze(image_paths, perplexity, learning_rate, pca_components):
             prediction_features.append(features[1][0]) # 1000 dimensional
             acceptable_image_paths.append(path)
 #            print("Decoded: " + str(decode_predictions(features[1], top=10)))
+            predictions = decode_predictions(features[1], top=10)[0]
+#            print("****".join(('\n{"designation":"' + str(c[1]) + '", "internalID":"' + str(c[0]) + '", "probability":' + str(c[2]) + '}') for c in predictions))
+
+            if first == True:
+                first = False
+            else:
+                out.write(",")
+            out.write('\n{ "path":"' + path + '",')
+            # TODO: Remember to make this a variable when the script is extended to custom networks
+            out.write('\n  "network": "imagenet",')
+
+            out.write('\n  "predictions": [')
+            out.write(','.join(('\n    {"designation":"' + str(c[1])  + '", "probability":' + str(c[2]) + ', "internalID":"' + str(c[0])+ '"}') for c in predictions))
+            out.write("\n  ],")
+           
+            # TODO: Remember to make this a variable when the script is extended to custom networks
+            out.write('\n  "vector_layer":"fc2",')
+            out.write('\n  "vector": [' + ','.join(str(f) for f in features[0][0]) + "]")
+            out.write("}")
         else:
             print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
-
+            
     # t-SNE is too costly to run on 4096-dimensional space, so we reduce with PCA first
     num_images = len(acceptable_image_paths)
     # TODO: Shouldn't we just skip the PCA-step if there are less images than pca_components?
@@ -75,6 +98,9 @@ def analyze(image_paths, perplexity, learning_rate, pca_components):
     tsne = TSNE(n_components=2, verbose=1, perplexity=perplexity, learning_rate=learning_rate, n_iter=300)
     tsne_results = tsne.fit_transform(np.array(pca_result))
 
+    out.write("\n]")
+    out.close()
+    print("Stored output to '" + output + "'")
             
 if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
@@ -82,6 +108,7 @@ if __name__ == '__main__':
     perplexity = int(params['perplexity'])
     learning_rate = int(params['learning_rate'])
     pca_components = int(params['components'])
+    output = params['output']
 
-    analyze(image_paths, perplexity, learning_rate, pca_components)
+    analyze(image_paths, perplexity, learning_rate, pca_components, output)
 
