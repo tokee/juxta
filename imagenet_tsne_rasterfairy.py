@@ -115,6 +115,10 @@ if __name__ == '__main__':
     if len(image_paths) == 1 and not os.path.isfile(image_paths[0]):
         print("Globbing '" + image_paths[0] + "'")
         image_paths = glob.glob(os.path.expanduser(image_paths[0]))
+    if len(image_paths) == 0:
+        print("Error: 0 images resolved")
+        sys.exit()
+
     perplexity = int(params['perplexity'])
     learning_rate = int(params['learning_rate'])
     pca_components = int(params['components'])
