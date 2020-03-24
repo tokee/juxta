@@ -32,6 +32,10 @@ from sklearn.manifold import TSNE
 # pip install -r Requirements.txt
 #
 
+# TODO:
+# - Skip analysis if it has already been done (load previously generated data)
+# - Optionally render a collage with the images after tSNE
+# - Run rasterfairy
 
 def process_arguments(args):
     parser = argparse.ArgumentParser(description='ML network analysis of images')
@@ -54,7 +58,6 @@ def load_image(path, input_shape):
 # https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
 def analyze(image_paths, perplexity, learning_rate, pca_components, output):
     out = open(output, "w")
-    out.write("[")
     # TODO: Try other models
     model = keras.applications.VGG16(weights='imagenet', include_top=True)
     fc2 = model.get_layer("fc2").output
@@ -92,6 +95,11 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
         else:
             print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
             
+    out.write("\n")
+    out.close()
+
+    # Reduce dimensions
+    
     # t-SNE is too costly to run on 4096-dimensional space, so we reduce with PCA first
     num_images = len(acceptable_image_paths)
     # TODO: Shouldn't we just skip the PCA-step if there are less images than pca_components?
@@ -104,8 +112,17 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
     tsne = TSNE(n_components=2, verbose=1, perplexity=perplexity, learning_rate=learning_rate, n_iter=300)
     tsne_results = tsne.fit_transform(np.array(pca_result))
 
-    out.write("\n]")
-    out.close()
+    # TODO: Write dimensional data and generate preview image
+    
+    data = []
+    for i,f in enumerate(images):
+        # TODO: Can we skip the normalising? Will rasterfairy work with negative numbers and/or large numbers?
+        point = [float((tsne[i,k] - np.min(tsne[:,k]))/(np.max(tsne[:,k]) - np.min(tsne[:,k]))) for k in range(tsne_dimensions) ]
+
+    # TODO: Run rasterfairy
+
+    # TODO: Store final output
+        
     print("Stored output to '" + output + "'")
             
 if __name__ == '__main__':
