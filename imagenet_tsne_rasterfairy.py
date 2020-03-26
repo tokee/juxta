@@ -44,6 +44,9 @@ def process_arguments(args):
     parser.add_argument('--learning_rate', action='store', default=150, help='learning rate of t-SNE (default 150)')
     parser.add_argument('--components', action='store', default=300, help='components for PCA fit (default 300)')
     parser.add_argument('--output', action='store', default='ml_out.json', help='output file for vectors and classifications (default ml_out.json)')
+    parser.add_argument('--grid_width', action='store', default=0, help='grid width measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
+    parser.add_argument('--grid_height', action='store', default=0, help='grid height measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
+    parser.add_argument('--scale_factor', action='store', default=100000, help='coordinates are multiplied with this before RasterFairy processing (do not change this unless you know what you are doing')
     params = vars(parser.parse_args(args))
     return params
 
@@ -110,14 +113,33 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output, penu
     pca_result = pca.fit_transform(features)
 
     tsne = TSNE(n_components=2, verbose=1, perplexity=perplexity, learning_rate=learning_rate, n_iter=300)
-    tsne_results = tsne.fit_transform(np.array(pca_result))
+    tsne_raws = tsne.fit_transform(np.array(pca_result))
 
+    #print(tsne_raws)
+#    [[ -6.464286 -77.81506 ]
+#     [-11.039936  35.283787]
+#     [-78.37078  -20.521582]
+#     [ 73.822014  50.5032  ]
+#     [ 74.64323  -41.658306]]
+
+    tsne_min = [ np.min(tsne_raws[:,d]) for d in range(2) ]
+    tsne_span = [ np.max(tsne_raws[:,d]) - tsne_min[d] for d in range(2) ]
+
+    tsne_norm = []
+    for raw_point in tsne_raws:
+        norm = [float((raw_point[d] - tsne_min[d])/tsne_span[d]) for d in range(2) ]
+        tsne_norm.append(norm)
+#        print(norm)
+        # TODO: Can we skip the normalising? Will rasterfairy work with negative numbers and/or large numbers?
+#        point = [float((tsne[i,k] - np.min(tsne[:,k]))/(np.max(tsne[:,k]) - np.min(tsne[:,k]))) for k in range(tsne_dimensions) ]
+    
     # TODO: Write dimensional data and generate preview image
     
-    data = []
-    for i,f in enumerate(images):
+#    data = []
+#    for i,f in enumerate(images):
+        
         # TODO: Can we skip the normalising? Will rasterfairy work with negative numbers and/or large numbers?
-        point = [float((tsne[i,k] - np.min(tsne[:,k]))/(np.max(tsne[:,k]) - np.min(tsne[:,k]))) for k in range(tsne_dimensions) ]
+#        point = [float((tsne[i,k] - np.min(tsne[:,k]))/(np.max(tsne[:,k]) - np.min(tsne[:,k]))) for k in range(tsne_dimensions) ]
 
     # TODO: Run rasterfairy
 
@@ -140,8 +162,14 @@ if __name__ == '__main__':
     learning_rate = int(params['learning_rate'])
     pca_components = int(params['components'])
     output = params['output']
-
     penultimate_layer = "fc2"
+
+    # RasterFairy arguments
+    grid_width = params['grid_width']
+    grid_width = int(grid_width)
+    grid_height = params['grid_height']
+    grid_height = int(grid_height)
+    scale_factor = params['scale_factor']
     
     analyze(image_paths, perplexity, learning_rate, pca_components, output, penultimate_layer)
 
