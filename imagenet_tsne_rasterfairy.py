@@ -44,9 +44,11 @@ def process_arguments(args):
     parser.add_argument('--learning_rate', action='store', default=150, help='learning rate of t-SNE (default 150)')
     parser.add_argument('--components', action='store', default=300, help='components for PCA fit (default 300)')
     parser.add_argument('--output', action='store', default='ml_out.json', help='output file for vectors and classifications (default ml_out.json)')
+
     parser.add_argument('--grid_width', action='store', default=0, help='grid width measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
     parser.add_argument('--grid_height', action='store', default=0, help='grid height measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
     parser.add_argument('--scale_factor', action='store', default=100000, help='coordinates are multiplied with this before RasterFairy processing (do not change this unless you know what you are doing')
+    
     params = vars(parser.parse_args(args))
     return params
 
@@ -59,7 +61,7 @@ def load_image(path, input_shape):
     return x
 
 # https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
-def analyze(image_paths, perplexity, learning_rate, pca_components, output, penultimate_layer):
+def analyze(image_paths, output, penultimate_layer):
     out = open(output, "w")
     # TODO: Try other models
     model = keras.applications.VGG16(weights='imagenet', include_top=True)
@@ -100,11 +102,16 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output, penu
             
     out.write("\n")
     out.close()
+    # TODO: Not final output - decide how to store the different stages
+    print("Stored output to '" + output + "'")
 
+    return acceptable_image_paths, penultimate_features, prediction_features
+
+def reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor):
     # Reduce dimensions
     
     # t-SNE is too costly to run on 4096-dimensional space, so we reduce with PCA first
-    num_images = len(acceptable_image_paths)
+    num_images = len(penultimate_features)
     # TODO: Shouldn't we just skip the PCA-step if there are less images than pca_components?
     components = min(pca_components, num_images)
     print("Running PCA on %d images with %d components..." % (num_images, components))
@@ -126,26 +133,28 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output, penu
     tsne_span = [ np.max(tsne_raws[:,d]) - tsne_min[d] for d in range(2) ]
 
     tsne_norm = []
+    tsne_norm_int = []
     for raw_point in tsne_raws:
         norm = [float((raw_point[d] - tsne_min[d])/tsne_span[d]) for d in range(2) ]
         tsne_norm.append(norm)
-#        print(norm)
-        # TODO: Can we skip the normalising? Will rasterfairy work with negative numbers and/or large numbers?
-#        point = [float((tsne[i,k] - np.min(tsne[:,k]))/(np.max(tsne[:,k]) - np.min(tsne[:,k]))) for k in range(tsne_dimensions) ]
-    
+        norm_int = [int(norm[d] * scale_factor) for d in range(2) ]
+        tsne_norm_int.append(norm_int)
+        
+    return tsne_norm_int                    
+#    print(tsne_norm)
+#    [[0.0, 0.653312623500824], [1.0, 0.6879940629005432], [0.8441661596298218, 0.0], [0.2861328721046448, 0.05677563697099686], [0.49837830662727356, 1.0]]
+#    print(tsne_norm_int)
+#    [[100000, 82555], [46658, 100000], [75441, 17987], [23183, 0], [0, 65852]]
+
     # TODO: Write dimensional data and generate preview image
     
-#    data = []
-#    for i,f in enumerate(images):
-        
-        # TODO: Can we skip the normalising? Will rasterfairy work with negative numbers and/or large numbers?
-#        point = [float((tsne[i,k] - np.min(tsne[:,k]))/(np.max(tsne[:,k]) - np.min(tsne[:,k]))) for k in range(tsne_dimensions) ]
-
     # TODO: Run rasterfairy
 
     # TODO: Store final output
         
-    print("Stored output to '" + output + "'")
+
+#def gridify(tsne_no):
+
             
 if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
@@ -171,5 +180,6 @@ if __name__ == '__main__':
     grid_height = int(grid_height)
     scale_factor = params['scale_factor']
     
-    analyze(image_paths, perplexity, learning_rate, pca_components, output, penultimate_layer)
+    acceptable_image_paths, penultimate_features, prediction_features = analyze(image_paths, output, penultimate_layer)
+    tsne_norm_int = reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor)
 
