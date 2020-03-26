@@ -56,24 +56,24 @@ def load_image(path, input_shape):
     return x
 
 # https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
-def analyze(image_paths, perplexity, learning_rate, pca_components, output):
+def analyze(image_paths, perplexity, learning_rate, pca_components, output, penultimate_layer):
     out = open(output, "w")
     # TODO: Try other models
     model = keras.applications.VGG16(weights='imagenet', include_top=True)
-    fc2 = model.get_layer("fc2").output
+    penultimate = model.get_layer(penultimate_layer).output
     predictions = model.get_layer("predictions").output
-    feat_extractor = Model(inputs=model.input, outputs=[fc2, predictions])
+    feat_extractor = Model(inputs=model.input, outputs=[penultimate, predictions])
     input_shape = model.input_shape[1:3] # 224, 224?
 
     acceptable_image_paths = []
-    fc2_features = []
+    penultimate_features = []
     prediction_features = []
     for index, path in enumerate(image_paths):
         img = load_image(path, input_shape);
         if img is not None:
             print(" - Analyzing %d/%d: %s " % ((index+1),len(image_paths), path))
             features = feat_extractor.predict(img)
-            fc2_features.append(features[0][0]) # 4096 dimensional
+            penultimate_features.append(features[0][0]) # 4096 dimensional
             prediction_features.append(features[1][0]) # 1000 dimensional
             acceptable_image_paths.append(path)
 #            print("Decoded: " + str(decode_predictions(features[1], top=10)))
@@ -89,7 +89,7 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
             out.write("], ")
            
             # TODO: Remember to make this a variable when the script is extended to custom networks
-            out.write('"vector_layer":"fc2", ')
+            out.write('"vector_layer":penultimate_layer, ')
             out.write('"vector": [' + ','.join(str(f) for f in features[0][0]) + "]")
             out.write("}")
         else:
@@ -105,7 +105,7 @@ def analyze(image_paths, perplexity, learning_rate, pca_components, output):
     # TODO: Shouldn't we just skip the PCA-step if there are less images than pca_components?
     components = min(pca_components, num_images)
     print("Running PCA on %d images with %d components..." % (num_images, components))
-    features = np.array(fc2_features)
+    features = np.array(penultimate_features)
     pca = PCA(n_components=components)
     pca_result = pca.fit_transform(features)
 
@@ -141,5 +141,7 @@ if __name__ == '__main__':
     pca_components = int(params['components'])
     output = params['output']
 
-    analyze(image_paths, perplexity, learning_rate, pca_components, output)
+    penultimate_layer = "fc2"
+    
+    analyze(image_paths, perplexity, learning_rate, pca_components, output, penultimate_layer)
 
