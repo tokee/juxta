@@ -9,6 +9,8 @@ import argparse
 import sys
 import glob
 import os.path
+import math
+import rasterfairy
 
 import numpy as np
 
@@ -111,10 +113,10 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
     # Reduce dimensions
     
     # t-SNE is too costly to run on 4096-dimensional space, so we reduce with PCA first
-    num_images = len(penultimate_features)
+    image_count = len(penultimate_features)
     # TODO: Shouldn't we just skip the PCA-step if there are less images than pca_components?
-    components = min(pca_components, num_images)
-    print("Running PCA on %d images with %d components..." % (num_images, components))
+    components = min(pca_components, image_count)
+    print("Running PCA on %d images with %d components..." % (image_count, components))
     features = np.array(penultimate_features)
     pca = PCA(n_components=components)
     pca_result = pca.fit_transform(features)
@@ -140,7 +142,7 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
         norm_int = [int(norm[d] * scale_factor) for d in range(2) ]
         tsne_norm_int.append(norm_int)
         
-    return tsne_norm_int                    
+    return tsne_norm, tsne_norm_int
 #    print(tsne_norm)
 #    [[0.0, 0.653312623500824], [1.0, 0.6879940629005432], [0.8441661596298218, 0.0], [0.2861328721046448, 0.05677563697099686], [0.49837830662727356, 1.0]]
 #    print(tsne_norm_int)
@@ -152,10 +154,67 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
 
     # TODO: Store final output
         
+def calculate_grid(image_count, grid_width, grid_height):
+    if (grid_width == 0 and grid_height == 0):
+        print(" - Neither grid_width nor grid_height is specified. Calculating with intended aspect ration 2:1")
+        grid_height = int(math.sqrt(image_count/2))
+        if (grid_height == 0):
+            grid_height = 1
+        grid_width = int(image_count / grid_height)
+        if (grid_width * grid_height < image_count):
+            grid_width += 1
+    elif( grid_width != 0 and grid_height != 0):
+        if (grid_width * grid_height < image_count):
+            sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " does not hold image_count==" + str(image_count))
+        if (grid_width * (grid_height-1) >= image_count):
+            sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " is too large for image_count==" + str(image_count) + " images (rows can be skipped and rasterfair hangs on mismatched grid capacity)")
+        if ((grid_width-1) * grid_height >= image_count):
+            sys.exit("Error: grid_width==" + str(grid_width) + " * grid_height==" + str(grid_height) + " == " + str(grid_width*grid_height) + " is too large for image_count==" + str(image_count) + " images (columns can be skipped and rasterfair hangs on mismatched grid capacity)")
+        print(" - grid_height==" + str(grid_height) + ", grid_width==" + str(grid_width))
+    elif (grid_width != 0):
+        grid_height = int(image_count/grid_width)
+        if (grid_height*grid_width < image_count):
+            grid_height += 1
+        print(" - grid_width==" + str(grid_width) + ", calculated grid_height==" + str(grid_height))
+    else: # grid_height != 0
+        grid_width = int(image_count/grid_height)
+        if (grid_width*grid_height < image_count):
+            grid_width += 1
+        print(" - grid_height==" + str(grid_height) + ", calculated grid_width==" + str(grid_width))
+    print(" - The " + str(image_count) + " images will be represented on a " + str(grid_width) + "x" + str(grid_height) + " grid")
 
-#def gridify(tsne_no):
+    return grid_width, grid_height
 
-            
+    
+def gridify(tsne_norm_int, grid_width, grid_height):
+    tsne = np.array(tsne_norm_int)
+    grid, gridShape = rasterfairy.transformPointCloud2D(tsne, target=(grid_width, grid_height))
+    return grid
+    
+    out_grid = []
+    for i, dat in enumerate(data):
+        gridX, gridY = grid[i]
+#        print("grid_index: " + str(i) + ", gx: " + str(gridX) + ", gy: " + str(gridY))
+        out_grid.append({'gx': int(gridX), 'gy': int(gridY), 'path': dat['path']})
+ #   print(dat['path'] + " gx:" + str(int(gridX)) + ", gy:" + str(int(gridY)))
+
+    # Column is secondary, row is primary - Python sort is stable; it does not change order on equal keys
+    out_grid.sort(key = lambda obj: obj['gx'])
+    out_grid.sort(key = lambda obj: obj['gy'])
+
+    imgfile = open(out_image_list, "w")
+    for element in out_grid:
+        imgfile.write(element['path'] + "\n")
+        # print(str(element['gx']) + " " + str(element['gy']) + " " + element['path'])
+    imgfile.close()
+#    print("Stored gridified image list as " + out_image_list)
+
+    return grid
+
+# Merges & sorts all structures according to the grid layout
+def merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features):
+    print("To be implemented")
+
 if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
     image_paths = params['images']
@@ -181,5 +240,7 @@ if __name__ == '__main__':
     scale_factor = params['scale_factor']
     
     acceptable_image_paths, penultimate_features, prediction_features = analyze(image_paths, output, penultimate_layer)
-    tsne_norm_int = reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor)
-
+    tsne_norm, tsne_norm_int = reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor)
+    grid_width, grid_height = calculate_grid(len(tsne_norm_int), grid_width, grid_height)
+    grid = gridify(tsne_norm_int, grid_width, grid_height)
+    merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features)
