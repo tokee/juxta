@@ -35,9 +35,9 @@ from sklearn.manifold import TSNE
 #
 
 # TODO:
+# - Add support for other models
 # - Skip analysis if it has already been done (load previously generated data)
 # - Optionally render a collage with the images after tSNE
-# - Run rasterfairy
 
 def process_arguments(args):
     parser = argparse.ArgumentParser(description='ML network analysis of images')
@@ -64,8 +64,6 @@ def load_image(path, input_shape):
 
 # https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
 def analyze(image_paths, output, penultimate_layer):
-    out = open(output, "w")
-    # TODO: Try other models
     model = keras.applications.VGG16(weights='imagenet', include_top=True)
     penultimate = model.get_layer(penultimate_layer).output
     predictions = model.get_layer("predictions").output
@@ -84,30 +82,10 @@ def analyze(image_paths, output, penultimate_layer):
             penultimate_features.append(features[0][0]) # 4096 dimensional
             prediction_features.append(features[1][0]) # 1000 dimensional
             acceptable_image_paths.append(path)
-#            print("Decoded: " + str(decode_predictions(features[1], top=10)))
             predictions = decode_predictions(features[1], top=10)[0]
             predictionss.append(predictions)
-#            print("****".join(('\n{"designation":"' + str(c[1]) + '", "internalID":"' + str(c[0]) + '", "probability":' + str(c[2]) + '}') for c in predictions))
-
-            out.write('\n{ "path":"' + path + '", ')
-            # TODO: Remember to make this a variable when the script is extended to custom networks
-            out.write('"network": "imagenet", ')
-
-            out.write('"predictions": [')
-            out.write(','.join((' {"designation":"' + str(c[1])  + '", "probability":' + str(c[2]) + ', "internalID":"' + str(c[0])+ '"}') for c in predictions))
-            out.write("], ")
-           
-            # TODO: Remember to make this a variable when the script is extended to custom networks
-            out.write('"vector_layer":penultimate_layer, ')
-            out.write('"vector": [' + ','.join(str(f) for f in features[0][0]) + "]")
-            out.write("}")
         else:
             print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
-            
-    out.write("\n")
-    out.close()
-    # TODO: Not final output - decide how to store the different stages
-    print("Stored output to '" + output + "'")
 
     return acceptable_image_paths, penultimate_features, prediction_features, predictionss
 
@@ -145,12 +123,6 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
         tsne_norm_int.append(norm_int)
         
     return tsne_norm, tsne_norm_int
-
-    # TODO: Write dimensional data and generate preview image
-    
-    # TODO: Run rasterfairy
-
-    # TODO: Store final output
         
 def calculate_grid(image_count, grid_width, grid_height):
     if (grid_width == 0 and grid_height == 0):
@@ -243,7 +215,6 @@ def store(merged, penultimate_layer, grid_width, grid_height, output):
         out.write('"grid_x": ' + str(int(element['position_grid'][0])) + ', ')
         out.write('"grid_y": ' + str(int(element['position_grid'][1])) + ', ')
 
-        # TODO: Consider out
         predictions = element['predictions']
         out.write('"predictions": [')
         out.write(','.join((' {"designation":"' + str(c[1])  + '", "probability":' + str(c[2]) + ', "internalID":"' + str(c[0])+ '"}') for c in predictions))
