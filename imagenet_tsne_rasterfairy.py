@@ -75,6 +75,7 @@ def analyze(image_paths, output, penultimate_layer):
     acceptable_image_paths = []
     penultimate_features = []
     prediction_features = []
+    predictionss = []
     for index, path in enumerate(image_paths):
         img = load_image(path, input_shape);
         if img is not None:
@@ -85,6 +86,7 @@ def analyze(image_paths, output, penultimate_layer):
             acceptable_image_paths.append(path)
 #            print("Decoded: " + str(decode_predictions(features[1], top=10)))
             predictions = decode_predictions(features[1], top=10)[0]
+            predictionss.append(predictions)
 #            print("****".join(('\n{"designation":"' + str(c[1]) + '", "internalID":"' + str(c[0]) + '", "probability":' + str(c[2]) + '}') for c in predictions))
 
             out.write('\n{ "path":"' + path + '", ')
@@ -107,7 +109,7 @@ def analyze(image_paths, output, penultimate_layer):
     # TODO: Not final output - decide how to store the different stages
     print("Stored output to '" + output + "'")
 
-    return acceptable_image_paths, penultimate_features, prediction_features
+    return acceptable_image_paths, penultimate_features, prediction_features, predictionss
 
 def reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor):
     # Reduce dimensions
@@ -143,10 +145,6 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
         tsne_norm_int.append(norm_int)
         
     return tsne_norm, tsne_norm_int
-#    print(tsne_norm)
-#    [[0.0, 0.653312623500824], [1.0, 0.6879940629005432], [0.8441661596298218, 0.0], [0.2861328721046448, 0.05677563697099686], [0.49837830662727356, 1.0]]
-#    print(tsne_norm_int)
-#    [[100000, 82555], [46658, 100000], [75441, 17987], [23183, 0], [0, 65852]]
 
     # TODO: Write dimensional data and generate preview image
     
@@ -212,8 +210,58 @@ def gridify(tsne_norm_int, grid_width, grid_height):
     return grid
 
 # Merges & sorts all structures according to the grid layout
-def merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features):
-    print("To be implemented")
+def merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features, predictions):
+    merged = []
+    for i, path in enumerate(acceptable_image_paths):
+        merged.append({
+            'path': path,
+            'position_norm': tsne_norm[i],
+            'position_grid': grid[i],
+            'penultimate': penultimate_features[i],
+            'prediction_features': prediction_features[i],
+            'predictions': predictions[i]
+            })
+
+    # Column is secondary, row is primary - Python sort is stable; it does not change order on equal keys
+    merged.sort(key = lambda obj: obj['position_grid'][0])
+    merged.sort(key = lambda obj: obj['position_grid'][1])
+
+    return merged
+
+def store(merged, penultimate_layer, grid_width, grid_height, output):
+    out = open(output, "w")
+    for i, element in enumerate(merged):
+        if (i != 0):
+            out.write('\n')
+        out.write('{ "path":"' + element['path'] + '", ')
+        # TODO: Remember to make this a variable when the script is extended to custom networks
+        out.write('"network": "imagenet", ')
+
+        out.write('"norm_x": ' + str(element['position_norm'][0]) + ', ')
+        out.write('"norm_y": ' + str(element['position_norm'][1]) + ', ')
+        
+        out.write('"grid_x": ' + str(int(element['position_grid'][0])) + ', ')
+        out.write('"grid_y": ' + str(int(element['position_grid'][1])) + ', ')
+
+        # TODO: Consider out
+        predictions = element['predictions']
+        out.write('"predictions": [')
+        out.write(','.join((' {"designation":"' + str(c[1])  + '", "probability":' + str(c[2]) + ', "internalID":"' + str(c[0])+ '"}') for c in predictions))
+        out.write("], ")
+
+        prediction_features = element['prediction_features']
+        out.write('"prediction_vector": [' + ','.join(str(f) for f in prediction_features) + "], ")
+
+        penultimate = element['penultimate']
+        out.write('"penultimate_vector_layer": "' + penultimate_layer + '", ')
+        out.write('"penultimate_vector": [' + ','.join(str(f) for f in penultimate) + "]")
+
+        out.write("}")
+
+    out.write("\n")
+    out.close()
+
+    print("Stored result in '" + output + "', generate collage with grid dimensions " + str(grid_width) + "x" + str(grid_height))
 
 if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
@@ -239,8 +287,9 @@ if __name__ == '__main__':
     grid_height = int(grid_height)
     scale_factor = params['scale_factor']
     
-    acceptable_image_paths, penultimate_features, prediction_features = analyze(image_paths, output, penultimate_layer)
+    acceptable_image_paths, penultimate_features, prediction_features, predictions = analyze(image_paths, output, penultimate_layer)
     tsne_norm, tsne_norm_int = reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor)
     grid_width, grid_height = calculate_grid(len(tsne_norm_int), grid_width, grid_height)
     grid = gridify(tsne_norm_int, grid_width, grid_height)
-    merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features)
+    merged = merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features, predictions)
+    store(merged, penultimate_layer, grid_width, grid_height, output)
