@@ -3,3 +3,4 @@ tensorflow
 sklearn
 numpy<1.17
 pillow
+rasterfairy
