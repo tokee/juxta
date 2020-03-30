@@ -41,7 +41,7 @@ from sklearn.manifold import TSNE
 
 def process_arguments(args):
     parser = argparse.ArgumentParser(description='ML network analysis of images')
-    parser.add_argument('--images', nargs='+', action='store', required=True, help='images to analyze')
+    parser.add_argument('--images', nargs='+', action='store', required=True, help='images to analyze (image paths, file with list of images or glob')
     parser.add_argument('--perplexity', action='store', default=30, help='perplexity of t-SNE (default 30)')
     parser.add_argument('--learning_rate', action='store', default=150, help='learning rate of t-SNE (default 150)')
     parser.add_argument('--components', action='store', default=300, help='components for PCA fit (default 300)')
@@ -238,9 +238,15 @@ if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
     image_paths = params['images']
     # If the images-argument is a string instead of an existing file, try globbing it
-    if len(image_paths) == 1 and not os.path.isfile(image_paths[0]):
-        print("Globbing '" + image_paths[0] + "'")
-        image_paths = glob.glob(os.path.expanduser(image_paths[0]))
+    if len(image_paths) == 1:
+        if os.path.isfile(image_paths[0]):
+            print("Using images listed in " + image_paths[0] + " as input")
+            file = open(image_paths[0], 'r')
+            image_paths = [line.strip() for line in file.readlines()]
+        else:
+            print("Globbing '" + image_paths[0] + "'")
+            image_paths = glob.glob(os.path.expanduser(image_paths[0]))
+    
     if len(image_paths) == 0:
         print("Error: 0 images resolved")
         sys.exit()
