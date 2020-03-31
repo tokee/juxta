@@ -111,6 +111,10 @@ popd > /dev/null
 : ${IMAGE_SORT:="none"}
 # If true, image sort is skipped if a matching sorted dat-file already exists
 : ${SKIP_IMAGE_SORT:=false}
+# If true and IMAGE_SORT==similarity, a mini collage of the image positioned by normalised
+# t-SNE coordinates is created. Mostly used to check how well RasterFairy positioned the
+# images on the main collage.
+: ${GENERATE_TSNE_PREVIEW_IMAGE:="false"}
 
 # If true, structures are provided for resolving the source image belonging to the
 # tiles that are hovered. This can be used to provide download-links to the source
@@ -714,7 +718,7 @@ sort_if_needed() {
     elif [[ "rainbow" == "$IMAGE_SORT" ]]; then
         ${JUXTA_HOME}/rainbow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
     elif [[ "similarity" == "$IMAGE_SORT" ]]; then
-        RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS ${JUXTA_HOME}/tensorflow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
+        GENERATE_TSNE_PREVIEW_IMAGE=${GENERATE_TSNE_PREVIEW_IMAGE} RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS ${JUXTA_HOME}/tensorflow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
     else
         >&2 echo "Error: Unknown IMAGE_SORT '$IMAGE_SORT'"
         usage 21

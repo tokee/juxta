@@ -26,6 +26,9 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 
 # If true, full processing is always done. If false, processing is skipped if the output file already exists
 : ${FORCE_PROCESSING:="false"} #true false
+# If true, a mini collage of the image positioned by normalised t-SNE coordinates is created. Mostly used
+# to check how well RasterFairy positioned the images on the main collage.
+: ${GENERATE_TSNE_PREVIEW_IMAGE:="false"}
 
 : ${PYTHON:=$(which python3)}
 : ${PYTHON:=$(which python)}
@@ -170,7 +173,12 @@ perform_analysis() {
     T_ONLY_PATHS=$(mktemp)
     cut -d'|' -f1 < "$IN" > "$T_ONLY_PATHS"
     T_GRID=$(mktemp)
-    python3 ${SCRIPT_HOME}/imagenet_tsne_rasterfairy.py --images ${T_ONLY_PATHS} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} --output=${OUT_FULL} | tee "$T_GRID"
+    if [[ "true" == "$GENERATE_TSNE_PREVIEW_IMAGE" ]]; then
+        local PREVIEW="$(dirname $OUT)/tsne_collage.png"
+    else
+        local PREVIEW=""
+    fi
+    python3 ${SCRIPT_HOME}/imagenet_tsne_rasterfairy.py --render_tsne="$PREVIEW" --images ${T_ONLY_PATHS} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} --output=${OUT_FULL} | tee "$T_GRID"
     GRID=$(grep "Stored result" "$T_GRID" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
     rm "$T_GRID" "$T_ONLY_PATHS"
 
