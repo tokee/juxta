@@ -21,7 +21,7 @@ from keras.preprocessing import image
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from PIL import Image as PILImage
-
+from multiprocessing import Pool, Lock
 
 #
 # Requirements: keras tensorflow sklearn "numpy<1.17" (to avoid warnings fron tensorflow)
@@ -93,6 +93,57 @@ def analyze(image_paths, output, penultimate_layer):
             predictionss.append(predictions)
         else:
             print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
+
+    return acceptable_image_paths, penultimate_features, prediction_features, predictionss
+
+# Defined inside analyze_parallel to inherits all shared structures
+def analyze_single(path):
+    img = load_image(path, input_shape);
+    if img is not None:
+        #print(" - Analyzing %d/%d: %s " % ((index+1),len(image_paths), path))
+        print(" - Analyzing %s " % (path))
+        image_lock.acquire()
+        try:
+            print("Inside")
+ #       features = feat_extractor.predict(img)
+#        predictions = decode_predictions(features[1], top=10)[0]
+   #         penultimate_features.append(features[0][0]) # 4096 dimensional
+    #        prediction_features.append(features[1][0]) # 1000 dimensional
+     #       acceptable_image_paths.append(path)
+      #      predictionss.append(predictions)
+        finally:
+            image_lock.release()
+    else:
+        print(" - Image not available: %s" % (path))
+        #print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
+
+# https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
+def analyze_parallel(image_paths, output, penultimate_layer):
+
+    # Real ugly to globalize all these, but how to neatly pack them to the analyze_single call?
+    global feat_extractor
+    global input_shape
+    global acceptable_image_paths
+    global penultimate_features
+    global prediction_features
+    global predictionss
+    global image_lock
+
+    model = keras.applications.VGG16(weights='imagenet', include_top=True)
+    penultimate = model.get_layer(penultimate_layer).output
+    predictions = model.get_layer("predictions").output
+    feat_extractor = Model(inputs=model.input, outputs=[penultimate, predictions])
+    input_shape = model.input_shape[1:3] # 224, 224?
+
+    acceptable_image_paths = []
+    penultimate_features = []
+    prediction_features = []
+    predictionss = []
+
+    # TODO: Thread count should be an option
+    image_lock = Lock()
+    with Pool(6) as pool:
+        pool.map(analyze_single, image_paths)
 
     return acceptable_image_paths, penultimate_features, prediction_features, predictionss
 
@@ -259,6 +310,82 @@ def render(merged, render_tsne, render_width, render_height, render_part_width, 
 
     tsne_image.save(render_tsne);
     print(" - Collage generated from raw t-SNE coordinates and stored as " + render_tsne)
+
+def render_single(element):
+    path = element['path']
+    norm = element['position_norm']
+        
+    print("   - " + path)
+    img = PILImage.open(path)
+    divisor = max(img.width/render_part_width, img.height/render_part_height, 1)
+    img = img.resize( (int(img.width/divisor), int(img.height/divisor)), PILImage.LANCZOS)
+    image_lock.acquire()
+    try:
+        tsne_image.paste(img, (int(norm[0]*(render_width-render_part_width)), int(norm[1]*(render_height-render_part_height))), mask=img.convert('RGBA'))
+    finally:
+        image_lock.release()
+
+def render_parallel(merged, render_tsne, render_width, render_height, render_part_width, render_part_height):
+    if (render_tsne == ''):
+        return
+
+    # Ugly hack but how to get it inside render_single?
+    global tsne_image
+    global image_lock
+
+    print(" - Generating collage from raw t-SNE coordinates to " + render_tsne)
+    tsne_image = PILImage.new('RGBA', (render_width, render_height))
+    
+    image_lock = Lock()
+    # TODO: Make #threads configurable
+    with Pool(6) as pool:
+        pool.map(render_single, merged)
+
+    tsne_image.save(render_tsne);
+    print(" - Collage generated from raw t-SNE coordinates and stored as " + render_tsne)
+
+def test_render_single(path):
+        
+    print("   - " + path)
+    img = PILImage.open(path)
+    img = img.resize((200, 200), PILImage.LANCZOS)
+    image_lock.acquire()
+    try:
+        tsne_image.paste(img, (500, 500), mask=img.convert('RGBA'))
+   finally:
+       image_lock.release()
+
+def test_render_parallel(paths):
+
+    global tsne_image
+    global image_lock
+    tsne_image = PILImage.new('RGBA', (1000, 1000))
+    image_lock = Lock()
+
+    for path in paths:
+        image_lock.acquire()
+        try:
+            test_render_single(path)
+        finally:
+            image_lock.release()
+            # TODO: Make #threads configurable
+#    with Pool(1) as pool:
+#        pool.map(test_render_single, paths)
+
+    tsne_image.save(render_tsne);
+    print(" - Collage generated from raw t-SNE coordinates and stored as " + render_tsne)
+
+def test_render(paths):
+    tsne_image = PILImage.new('RGBA', (1000, 1000))
+    image_lock = Lock()
+    for path in paths:
+        img = PILImage.open(path)
+        img = img.resize((200, 200), PILImage.LANCZOS)
+        tsne_image.paste(img, (500, 500), mask=img.convert('RGBA'))
+
+    tsne_image.save(render_tsne);
+    print(" - Collage generated from raw t-SNE coordinates and stored as " + render_tsne)
+
     
 if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
@@ -295,11 +422,16 @@ if __name__ == '__main__':
     render_height = int(params['render_height'])
     render_part_width = int(params['render_part_width'])
     render_part_height = int(params['render_part_height'])
+
+#    test_render(image_paths)
+    test_render_parallel(image_paths)
     
-    acceptable_image_paths, penultimate_features, prediction_features, predictions = analyze(image_paths, output, penultimate_layer)
-    tsne_norm, tsne_norm_int = reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor)
-    grid_width, grid_height = calculate_grid(len(tsne_norm_int), grid_width, grid_height)
-    grid = gridify(tsne_norm_int, grid_width, grid_height)
-    merged = merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features, predictions)
-    render(merged, render_tsne, render_width, render_height, render_part_width, render_part_height)
-    store(merged, penultimate_layer, grid_width, grid_height, output)
+#    acceptable_image_paths, penultimate_features, prediction_features, predictions = analyze(image_paths, output, penultimate_layer)
+ #   tsne_norm, tsne_norm_int = reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor)
+  #  grid_width, grid_height = calculate_grid(len(tsne_norm_int), grid_width, grid_height)
+   # grid = gridify(tsne_norm_int, grid_width, grid_height)
+#    merged = merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features, predictions)
+ #   render_parallel(merged, render_tsne, render_width, render_height, render_part_width, render_part_height)
+  #  store(merged, penultimate_layer, grid_width, grid_height, output)
+#3:43
+#2:15 (6 threads, tsne_preview)
