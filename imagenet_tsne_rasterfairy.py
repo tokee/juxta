@@ -20,6 +20,7 @@ from keras.applications.imagenet_utils import decode_predictions, preprocess_inp
 from keras.preprocessing import image
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from PIL import Image as PILImage
 
 
 #
@@ -50,6 +51,12 @@ def process_arguments(args):
     parser.add_argument('--grid_width', action='store', default=0, help='grid width measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
     parser.add_argument('--grid_height', action='store', default=0, help='grid height measured in images. If not defined, it will be calculated towards having a 2:1 aspect ratio')
     parser.add_argument('--scale_factor', action='store', default=100000, help='coordinates are multiplied with this before RasterFairy processing (do not change this unless you know what you are doing')
+
+    parser.add_argument('--render_tsne', action='store', default='', help='if defined, a colleage of the images positioned by their t-SNE calculated coordinates is rendered to the given file')
+    parser.add_argument('--render_width', action='store', default=5000, help='the width of the t-SNE render')
+    parser.add_argument('--render_height', action='store', default=5000, help='the height of the t-SNE render')
+    parser.add_argument('--render_part_width', action='store', default=100, help='the width of a single image on the full t-SNE render')
+    parser.add_argument('--render_part_height', action='store', default=100, help='the height of a single image on the full t-SNE render')
     
     params = vars(parser.parse_args(args))
     return params
@@ -234,6 +241,25 @@ def store(merged, penultimate_layer, grid_width, grid_height, output):
 
     print("Stored result in '" + output + "', generate collage with grid dimensions " + str(grid_width) + "x" + str(grid_height))
 
+def render(merged, render_tsne, render_width, render_height, render_part_width, render_part_height):
+    if (render_tsne == ''):
+        return
+
+    print(" - Generating collage from raw t-SNE coordinates to " + render_tsne)
+    tsne_image = PILImage.new('RGBA', (render_width, render_height))
+    for element in merged:
+        path = element['path']
+        norm = element['position_norm']
+        
+        print("   - " + path)
+        img = PILImage.open(path)
+        divisor = max(img.width/render_part_width, img.height/render_part_height)
+        img = img.resize( (int(img.width/divisor), int(img.height/divisor)), PILImage.LANCZOS)
+        tsne_image.paste(img, (int(norm[0]*(render_width-render_part_width)), int(norm[1]*(render_height-render_part_height))), mask=img.convert('RGBA'))
+
+    tsne_image.save(render_tsne);
+    print(" - Collage generated from raw t-SNE coordinates and stored as " + render_tsne)
+    
 if __name__ == '__main__':
     params = process_arguments(sys.argv[1:])
     image_paths = params['images']
@@ -263,10 +289,17 @@ if __name__ == '__main__':
     grid_height = params['grid_height']
     grid_height = int(grid_height)
     scale_factor = params['scale_factor']
+
+    render_tsne = params['render_tsne']
+    render_width = int(params['render_width'])
+    render_height = int(params['render_height'])
+    render_part_width = int(params['render_part_width'])
+    render_part_height = int(params['render_part_height'])
     
     acceptable_image_paths, penultimate_features, prediction_features, predictions = analyze(image_paths, output, penultimate_layer)
     tsne_norm, tsne_norm_int = reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor)
     grid_width, grid_height = calculate_grid(len(tsne_norm_int), grid_width, grid_height)
     grid = gridify(tsne_norm_int, grid_width, grid_height)
     merged = merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features, predictions)
+    render(merged, render_tsne, render_width, render_height, render_part_width, render_part_height)
     store(merged, penultimate_layer, grid_width, grid_height, output)
