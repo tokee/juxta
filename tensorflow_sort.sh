@@ -4,9 +4,7 @@
 # Fairly convoluted setup of tensorflow + tSNE + rasterfairy for sorting
 # images to a 2D grid (aka juxta collage) by visual similarity.
 #
-# This requires Python 3 and performs a GitHub checkout. Dirty dirty.
-#
-# Note: Only works when all images have unique file names across folders
+# This requires Python 3
 #
 
 ###############################################################################
@@ -17,28 +15,27 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 
 : ${IN:="$1"}
 : ${OUT:="$2"}
+: ${OUT_FULL:="${OUT}.full.json"}
 : ${RAW_IMAGE_COLS:="0"}
 : ${RAW_IMAGE_ROWS:="0"}
 
 : ${SCRIPT_HOME:=$(pwd)}
 : ${TENSOR_FOLDER:="$SCRIPT_HOME/tensorflow"}
 : ${VIRTUAL_FOLDER:="$TENSOR_FOLDER/virtualenv"}
-: ${ML_FOLDER:="$TENSOR_FOLDER/ml4a-ofx"}
 : ${CACHE_HOME:="$TENSOR_FOLDER/cache"}
 
-: ${PERFORM_LINK:="true"} #true false auto, true is the safest as it works with reruns with changed image sets
-: ${PERFORM_TSNE:="auto"} #true false auto
+# If true, full processing is always done. If false, processing is skipped if the output file already exists
+: ${FORCE_PROCESSING:="false"} #true false
 
-: ${ML_GIT:="https://github.com/ml4a/ml4a-ofx.git"}
-: ${PYTHON_REQUIREMENTS:="pillow sklearn tensorflow keras numpy prime rasterfairy"}
 : ${PYTHON:=$(which python3)}
 : ${PYTHON:=$(which python)}
 : ${PIP:=$(which pip3)}
 : ${USE_VIRTUALENV:="true"}
 
-: ${CACHE_FOLDER:="$CACHE_HOME/$(basename "$OUT")"}
+: ${MIN_IMAGES:="2"}
 
-: ${MIN_IMAGES:="300"}
+REQUIREMENTS="jq"
+
 popd > /dev/null
 
 usage() {
@@ -46,7 +43,17 @@ usage() {
     exit $1
 }
 
+check_requirements() {
+    for REQ in $REQUIREMENTS; do
+        if [[ -z $(which $REQ) ]]; then
+            >&2 echo "Error: '$REQ' not available, please install it"
+            exit 11
+        fi
+    done
+}
+
 check_parameters() {
+    check_requirements
     if [[ -z "$IN" ]]; then
         >&2 echo "Error: No in_imagelist.dat specified"
         usage 10
@@ -99,12 +106,6 @@ check_parameters() {
         exit 5
     fi
     echo "- Using Python '$PYTHON' and pip '$PIP'"
-
-    OUT_FN="${OUT%.*}"
-    OUT_EXT="${OUT##*.}"
-
-    POINTS_FILE="${OUT_FN}.points.json"
-    SORTED_WORK_FILE="${OUT_FN}.tmp"
 }
 
 ################################################################################
@@ -119,9 +120,7 @@ setup_environment() {
     echo "- Setting up Python virtualenv in $VIRTUAL_FOLDER"
     $PYTHON -m venv "$VIRTUAL_FOLDER"
     source "$VIRTUAL_FOLDER/bin/activate"
-    for REQ in $PYTHON_REQUIREMENTS; do
-        pip3 install $REQ
-    done
+    pip install -r ${SCRIPT_HOME}/Requirements.txt
     VIRTUAL_ENV_ACTIVATED=true
 }
 
@@ -147,85 +146,37 @@ ensure_environment() {
     activate_environment
 }
 
-ensure_ml4a() {
-    if [[ -d "$ML_FOLDER" ]]; then
-        echo "- Skipping git clone of ml4a-ofx as $ML_FOLDER already exists"
-        return
-    fi
-    echo "- git cloning ml4a-ofx from $ML_GIT"
-    git clone "$ML_GIT" "$ML_FOLDER"
-    
-}
-
-link_images() {
-    if [[ "false" == "$PERFORM_LINK" ]]; then
-        echo "-  Skipping linking as PERFORM_LINK==$PERFORM_LINK"
-        return
-    fi
-    if [[ -d "$CACHE_FOLDER" ]]; then
-        if [[ "auto" == "$PERFORM_LINK" ]]; then
-            echo "- Cache folder $CACHE_FOLDER already exists and PERFORM_LINK==auto. Skipping symlinking"
-            return
+perform_analysis() {
+    if [[ -s ${OUT} ]]; then
+        if [[ $(wc -l < "$IN") -ne $( wc -l < "$OUT") ]]; then
+            echo "- Deleting existing output '$OUT' as it has a different number of lines than input '$IN'"
+            rm "$OUT"
         else
-            echo "- Cache folder $CACHE_FOLDER already exists but PERFORM_LINK==true. Deleting previous symlinks"
-            rm -r "$CACHE_FOLDER"
+            if [[ "false" == "$FORCE_PROCESSING" ]]; then
+                echo "- Reusing existing similarity sort '$OUT'"
+                return
+            else
+                echo "- Deleting existing output '$OUT' as FORCE_PROCESSING==${FORCE_PROCESSING}"
+                rm "${OUT}"
+            fi
         fi
     fi
-    echo "- Symlinking to images in cache folder $CACHE_FOLDER"
-    mkdir -p "$CACHE_FOLDER"
-    while read -r IMG; do
-        local ONLY_IMG=$( cut -d\| -f1 <<< "$IMG" )
-        ln -s $(realpath "$ONLY_IMG") "$CACHE_FOLDER/$(basename "$ONLY_IMG")"
-        #cp $(realpath "$IMG") "$CACHE_FOLDER/$(basename "$IMG")"
-    done < "$IN"
-}
 
-tensorflow_and_tsne() {
-    if [[ "false" == "$PERFORM_TSNE" ]]; then
-        echo "- Skipping tensorflow and tSNE as PERFORM_TSNE==$PERFORM_TSNE"
-        return
-    fi
-    if [[ -s ${POINTS_FILE} ]]; then
-        if [[ "auto" == "$PERFORM_TSNE" ]]; then
-            echo "- tSNE file ${POINTS_FILE} exists and PERFORM_TSNE==auto. Skipping tensorflor and tSNE"
-            return
-        else
-            echo "- tSNE ${POINTS_FILE} file already exists but PERFORM_TSNE==true. Deleting previous ${POINTS_FILE}"
-            rm "${POINTS_FILE}"
-        fi
-    fi
-    link_images
-    echo "- Running tensorflow and tSNE on images from $IN"
-    python3 ${SCRIPT_HOME}/tSNE-images.py --images_path "$CACHE_FOLDER" --output_path ${POINTS_FILE}
-    if [[ ! -s ${POINTS_FILE} ]]; then
-        >&2 echo "Error: Running tSNE-images.py did not produce the expected file '${POINTS_FILE}'"
-        exit 5
-    fi
-}
-
-# Output: GX GY OUT_FINAL
-gridify() {
-    echo "- Gridifying ${POINTS_FILE} with --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS}"
-    if [[ -s ${SORTED_WORK_FILE}.dat ]]; then
-        rm ${SORTED_WORK_FILE}.dat
-    fi
+    echo "- Similarity sorting and gridifying ${IN} with --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS}"
     echo "- NOTE: RasterFairy hangs on some grid layouts (the cause is not known). If nothing happens after this line, try re-running with RAW_IMAGE_COLS=$((RAW_IMAGE_COLS-1)) or $((RAW_IMAGE_COLS+1))"
-#    GRID=$(python3 ${SCRIPT_HOME}/plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
 
-    local T_GRID=$(mktemp)
-    python3 ${SCRIPT_HOME}/plotpoints.py --in ${POINTS_FILE} --out_prefix=${SORTED_WORK_FILE} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} | grep "Data in .* with a render-grid.*" | tee "$T_GRID"
-    GRID=$(grep "Data in .* with a render-grid.*" "$T_GRID" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
+    T_GRID=$(mktemp)
+    python3 ${SCRIPT_HOME}/imagenet_tsne_rasterfairy.py --images ${IN} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} --output=${OUT_FULL} | grep "Stored result in .* grid dimensions.*" | tee "$T_GRID"
+    GRID=$(grep "Stored result" "$T_GRID" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
     rm "$T_GRID"
 
-    if [[ ! -s ${SORTED_WORK_FILE}.dat ]]; then
-        >&2 echo "Error: ${SORTED_WORK_FILE}.dat not produced. Did RasterFairy fail? Try re-running with  RAW_IMAGE_COLS=$((RAW_IMAGE_COLS-1)) or $((RAW_IMAGE_COLS+1))"
-        exit 35
-    fi
     GX=$(cut -dx -f1 <<< "$GRID")
     GY=$(cut -dx -f2 <<< "$GRID")
-    OUT_FINAL="${OUT_FN}_${GX}x${GY}.${OUT_EXT}"
-    mv ${SORTED_WORK_FILE}.dat "$OUT_FINAL"
-    echo "- Stored grid sorted images to $OUT_FINAL"
+}
+
+convert_to_list() {
+    jq -r .path < "$OUT_FULL" > "$OUT"
+    echo "RAW_IMAGE_COLS=$GX RAW_IMAGE_ROWS=$GY ./juxta.sh \"$OUT\" \"$RENDER\""
 }
 
 # The OUT_FINAL contains the images in the correct order, but with wrong paths
@@ -276,7 +227,6 @@ fix_paths() {
 
 check_parameters "$@"
 ensure_environment
-ensure_ml4a
-tensorflow_and_tsne
-gridify
-fix_paths
+perform_analysis
+convert_to_list
+#fix_paths
