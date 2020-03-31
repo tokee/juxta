@@ -107,7 +107,7 @@ popd > /dev/null
 : ${CANVAS_ASPECT_W:=1}
 : ${CANVAS_ASPECT_H:=1}
 # Valid values are 'none', 'intensity', 'rainbow' and 'similarity'
-# Note that similarity uses tensorflow_sort.sh, is quite heavy and requires python3
+# Note that similarity uses image_tsne_rasterfairy.sh, is quite heavy and requires python3
 : ${IMAGE_SORT:="none"}
 # If true, image sort is skipped if a matching sorted dat-file already exists
 : ${SKIP_IMAGE_SORT:=false}
