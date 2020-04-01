@@ -28,6 +28,10 @@
 # front and the back are scanned as separate image bitmaps, but they are stores as a single
 # entry. Specifying 2 as MAX_CONSTITUENTS means that both the front and the back is fetched.
 : ${MAX_CONSTITUENTS:="1"}
+# https://iiif.io/api/image/2.1/#size
+# Sample 1: full
+# Sample 2: !1024,1024
+: ${IIIF_SIZE:="full"}
 
 : ${COLLECTION:="$1"}
 
@@ -74,7 +78,7 @@ download_image() {
     # Tweak URL to be against the IIIF so that the full resolution is requested
     # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010.jpg
     # http://kb-images.kb.dk/online_master_arkiv_6/non-archival/Maps/KORTSA/ATLAS_MAJOR/Kbk2_2_57/Kbk2_2_57_010/full/full/0/native.jpg
-    local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' -e 's/\/full\/full\/0\/native\/full\/full\/0\/native.jpg/\/full\/full\/0\/native.jpg/' )
+    local IMAGE_URL=$( echo "$IMAGE_URL" | sed -e 's/www.kb.dk\/imageService/kb-images.kb.dk/' -e 's/.jpg$/\/full\/full\/0\/native.jpg/' -e 's/\/full\/full\/0\/native\/full\/full\/0\/native.jpg/\/full\/full\/0\/native.jpg/' -e "s%/full/full%/full/${IIIF_SIZE}%")
     DOWNLOADED=$((DOWNLOADED+1))
     
     local ALREADY_DEBUGGED=false
