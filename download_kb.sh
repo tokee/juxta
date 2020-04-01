@@ -24,6 +24,11 @@
 : ${FIND_EQUAL_NAME:="false"} 
 : ${SKIP_DOWNLOAD:="false"} # Only used when debugging problematic targets
 : ${SKIP_XMLLINT:="false"}
+
+
+# The minimum number of constituents for each image database entry, in order to activate download.
+: ${MIN_CONSTITUENTS:="1"}
+
 # The maximum number of constituents for each image database entry. For some postcards both the
 # front and the back are scanned as separate image bitmaps, but they are stores as a single
 # entry. Specifying 2 as MAX_CONSTITUENTS means that both the front and the back is fetched.
@@ -177,9 +182,13 @@ download_collection() {
             # http://www.kb.dk/imageService/online_master_arkiv_6/non-archival/Maps/KORTSA/2009/aug/KBK2_2_15/KBK2_2_15_014.jpg
             # TODO: Sometimes (subject3756) there are multiple image-urls. Investigate what that is about
             local IMAGE_URLS=$( echo "$IMAGE_URL" | sed 's/\/full\/full\/0\/native//' | streaming_unique | head -n $MAX_CONSTITUENTS )
-            while read -r IMAGE_URL; do
-                download_image "$IMAGE_URL"
-            done <<< "$IMAGE_URLS"
+            if [[ $(wc -l <<< "$IMAGE_URLS") -lt "$MIN_CONSTITUENTS" ]]; then
+                echo "    - Skipping download of $(wc -l <<< "$IMAGE_URLS") images as MIN_CONSTITUENTS==${MIN_CONSTITUENTS}: $LINK"
+            else
+                while read -r IMAGE_URL; do
+                    download_image "$IMAGE_URL"
+                done <<< "$IMAGE_URLS"
+            fi
             
             if [ "$DOWNLOADED" -ge "$MAX_IMAGES" ]; then
                 break
