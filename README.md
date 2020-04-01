@@ -4,7 +4,7 @@ Each source image can have associated meta-data, which is displayed on mouse-ove
 
  * http://labs.statsbiblioteket.dk/juxta/subject3795/ (1,000 * 1 MPixel historical postcards - 1 GigaPixel)
  * http://labs.statsbiblioteket.dk/juxta/subject208/ (5,000 * 28 MPixel historical maps - 136 GigaPixel)
- * http://ruebot.net/visualizations/womensmarch/ (6,104,790 * 0.5 MPixel twitter images - 3 TeraPixel)
+ * https://ruebot.net/visualizations/wm/ (6,104,790 * 0.5 MPixel twitter images - 3 TeraPixel)
  * https://ruebot.net/45-images/ (17,525,913 * 0.25 MPixel twitter images - 4 TeraPixel)
 
 ## Technical notes
