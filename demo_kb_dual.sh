@@ -78,10 +78,15 @@ download_images() {
     fi
     OLD_MI=$MAX_IMAGES
     MAX_IMAGES=$MAX_IMAGES_PER_COLLECTION
+
+    # We force this to 2 as handling image pairs is the sole purpose of this script
+    MAX_CONSTITUENTS=2
+    if [[ "$SINGLE_IMAGE_ACTION" == "discard" ]]; then
+        # Only download is there are 2 images
+        MIN_CONSTITUENTS=2
+    fi
     for COLLECTION in $COLLECTIONS; do
         echo "Downloading collection $COLLECTION"
-        # We force this to 2 as handling image pairs is the sole purpose of this script
-        MAX_CONSTITUENTS=2
         . $DOWNLOAD_SCRIPT "$COLLECTION"
         cat downloads/$COLLECTION/sources.dat >> downloads/$ROOTDEST/dual_sources.dat
     done
