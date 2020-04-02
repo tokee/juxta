@@ -12,12 +12,24 @@
     <script type="text/javascript" src="primary/resources/overlays.js"></script>
     <link rel="stylesheet" type="text/css" href="primary/resources/loupe.css" />
     <!-- Contact person: toes@kb.dk -->
+    <script type="text/javascript">
+        function switch_collage(event) {
+        if (event.target.checked) {
+            myDragon_0.viewport.viewer.open(myDragon_1.tileSources)
+            myDragon_1.viewport.viewer.open(myDragon_0.tileSources)
+        } else {
+            myDragon_0.viewport.viewer.open(myDragon_0.tileSources)
+            myDragon_1.viewport.viewer.open(myDragon_1.tileSources)
+        }
+        }
+    </script>
 </head>
 
 <body>
     <div id="pageheader">
         <h1>Pairs</h1>
         <p>${TOTAL_IMAGES} image pairs (typically front and back) from <a href="http://www.kb.dk/images/billed/2010/okt/billeder/${COLLECTION}/da/?">$COLLECTION</a> at <a href="https://www.kb.dk/">kb.dk</a>.</p>
+       <input type="checkbox" id="switch_box" onClick="switch_collage(event);" style="pointer-events: all;"><span onClick="document.getElementById('switch_box').click();" style="pointer-events: all;">Switch foreground and background</span></input></p>
     </div>
     <div class="slidecontainer">
         <input type="range" min="1" max="100" value="30" class="slider" id="loupeSizeRange"/>
