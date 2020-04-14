@@ -81,8 +81,12 @@ why the images are similar. Using it with 10.000+ images works very well, but is
 on CPU & menory during processing.
 
 The argument `IMAGE_SORT=similarity` activates image similarity sorting, which uses the
-Python3 script `imagenet_tsne_rasterfairy.py` under the hood. The script has a bunch of
-requiements, which should be installed beforehand with `pip3 install -r Requirements.txt`.
+Python3 script `imagenet_tsne_rasterfairy.py` under the hood.
+
+The script has a bunch of requirements, which can either be installed beforehand with 
+`pip3 install -r Requirements.txt` or automatically handled using virtualenv. If the former
+option is used, `USE_VIRTUALEV=false` should be added as option, if the latter option is
+used nothing special has to be done, but first run will be heavy as a lot has to be fetched.
 
 Specifying `GENERATE_TSNE_PREVIEW_IMAGE=true` makes juxta generate an extra image with
 all the input images plotted with overlap, using the raw coordinates from the similarity sorting.
