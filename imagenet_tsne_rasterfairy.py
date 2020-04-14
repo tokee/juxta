@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
 
+#
+# Requirements: keras tensorflow sklearn "numpy<1.17" (to avoid warnings fron tensorflow)
+# pip3 install -r Requirements.txt
+#
+# Or:
+#
+# python3 -m venv tsne
+# source tsne/bin/activat
+# pip install --upgrade pip
+# pip install -r Requirements.txt
+#
+
+# TODO:
+# - Add support for other models
+
+
 # Disable tensorflow warning about missing GPU support
 # https://stackoverflow.com/questions/47068709/your-cpu-supports-instructions-that-this-tensorflow-binary-was-not-compiled-to-u
 import os
@@ -22,23 +38,6 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from PIL import Image as PILImage
 
-
-#
-# Requirements: keras tensorflow sklearn "numpy<1.17" (to avoid warnings fron tensorflow)
-# pip3 install -r Requirements.txt
-#
-# Or:
-#
-# python3 -m venv tsne
-# source tsne/bin/activat
-# pip install --upgrade pip
-# pip install -r Requirements.txt
-#
-
-# TODO:
-# - Add support for other models
-# - Skip analysis if it has already been done (load previously generated data)
-# - Optionally render a collage with the images after tSNE
 
 def process_arguments(args):
     parser = argparse.ArgumentParser(description='ML network analysis of images')
