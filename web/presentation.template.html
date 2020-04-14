@@ -4,34 +4,59 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Juxta</title>
+    <title>juxta ${COLLECTION} ${TOTAL_IMAGES} images</title>
     <link rel="stylesheet" type="text/css" href="resources/juxta.css" />
-    <!--<script src="collage_setup.js"></script>-->
-    <script src="resources/openseadragon.min.js"></script>
+    <!-- Enable the bookmark_support include for bookmarking of zoom & pan position
+        <script src="resources/bookmark_support.js"></script>-->
+    <script type="text/javascript" src="resources/openseadragon.min.js"></script>
     <script type="text/javascript" src="resources/overlays_preload.js"></script>
     <script type="text/javascript" src="resources/overlays.js"></script>
 </head>
 
 <body>
-<h1>Juxta</h1>
-<p>Sample page with ${TOTAL_IMAGES} images for a total of ${MEGAPIXELS} MPixels. See <a href="https://github.com/tokee/juxta">the Juxta GitHub page</a> for details.</p>
+<div class="page">
 
-<div id="zoom-display" class="openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
+    <div class="page-header">
+        <h1>${DESIGNATION} juxta: ${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels), `date +"%Y-%m-%d %H:%M"`, see <a href="https://github.com/tokee/juxta">the juxta GitHub page</a> for details</h1>
+    </div>
+    
+    <div id="zoom-display" class="page-content openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
+    
+    <script type="text/javascript">
+        var myDragon = OpenSeadragon({
+            id:            "zoom-display",
+            
+            maxZoomPixelRatio: ${MAX_ZOOM_PIXEL_RATIO},
+            zoomPerScroll: 2.0,    
+            showNavigator:  false,
+            wrapHorizontal: false,
+            prefixUrl: "resources/images/",
+            ${TILE_SOURCES}
+        });
+        ${SETUP_OVERLAY}
+    </script>
+    
+</div><!-- page -->
+
 
 <script type="text/javascript">
-  var myDragon = OpenSeadragon({
-    id:            "zoom-display",
+    
+    overlays.createHeader = function(x, y, image, meta) {
+        // Extract the last part of the input path for display
+        imageId = image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
+        return '<a href="' + image + '">' + imageId + '</a>';
+    }
 
-    maxZoomPixelRatio: ${MAX_ZOOM_PIXEL_RATIO},
-    zoomPerScroll: 2.0,
-    showNavigator:  false,
-    wrapHorizontal: false,
-    prefixUrl: "resources/images/",
-    ${TILE_SOURCES}
-  });
-  ${SETUP_OVERLAY}
+    overlays.showFooter = function(x, y, image, meta) {
+        return meta != '';
+    }
+    overlays.createFooter = function(x, y, image, meta) {
+        // The input format for juxta is
+        // image|meta
+        // where the |meta part can be empty
+        return meta;
+    }
 </script>
 
-<p>Generated `date +"%Y-%m-%d %H:%M"`</p>
 </body>
 </html>
