@@ -2,14 +2,14 @@
 
 #
 # Requirements: keras tensorflow sklearn "numpy<1.17" (to avoid warnings fron tensorflow)
-# pip3 install -r Requirements.txt
+# pip3 install --prefer-binary -r Requirements.txt
 #
 # Or:
 #
 # python3 -m venv tsne
 # source tsne/bin/activat
 # pip install --upgrade pip
-# pip install -r Requirements.txt
+# pip install --prefer-binary -r Requirements.txt
 #
 
 # TODO:

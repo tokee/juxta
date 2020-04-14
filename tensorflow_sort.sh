@@ -124,7 +124,7 @@ setup_environment() {
     echo "- Setting up Python virtualenv in $VIRTUAL_FOLDER"
     $PYTHON -m venv "$VIRTUAL_FOLDER"
     source "$VIRTUAL_FOLDER/bin/activate"
-    pip install -r ${SCRIPT_HOME}/Requirements.txt
+    pip install --prefer-binary -r ${SCRIPT_HOME}/Requirements.txt
     VIRTUAL_ENV_ACTIVATED=true
 }
 
@@ -135,6 +135,8 @@ activate_environment() {
 
     echo "- Activating Python virtualenv in $VIRTUAL_FOLDER"
     source "$VIRTUAL_FOLDER/bin/activate"
+
+#    $PIP show tensorflow
 #    if [[ "." == ".$(grep "$(pwd)" <<< "$(pip -V)" )" ]]; then
 #        >&2 echo "Error: Virtual envionment not activated: 'pip -V' does not include current folder: $(pip -V)"
 #        exit 12
