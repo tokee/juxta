@@ -182,6 +182,11 @@ perform_analysis() {
     GRID=$(grep "Stored result" "$T_GRID" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
     rm "$T_GRID" "$T_ONLY_PATHS"
 
+    if [[ "." == ".$GRID" ]]; then
+        >&2 echo "Error: Cannot proceed as no GRID was returned from call"
+        >&2 echo "python3 ${SCRIPT_HOME}/imagenet_tsne_rasterfairy.py --render_tsne=\"$PREVIEW\" --images ${T_ONLY_PATHS} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} --output=${OUT_FULL}"
+        exit 21
+    fi
     GX=$(cut -dx -f1 <<< "$GRID")
     GY=$(cut -dx -f2 <<< "$GRID")
 }
