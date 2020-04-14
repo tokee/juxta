@@ -204,15 +204,22 @@ def calculate_grid(image_count, grid_width, grid_height, aspect_ratio):
     return grid_width, grid_height
 
 #
-# 
+# Takes the normalised image 2D coordinates and lays them on a grid, using RasterFairy.
+# The positon of the images is returned as grid-coordinates.
+#
+# gridifying is needed for juxta as it operates in a grid-oriented world.
 #
 def gridify(tsne_norm_int, grid_width, grid_height):
     print(" - Calling RasterFairy for " + str(len(tsne_norm_int)) + " images to a " + str(grid_width) + "x" + str(grid_height) + " grid")
     tsne = np.array(tsne_norm_int)
     grid, gridShape = rasterfairy.transformPointCloud2D(tsne, target=(grid_width, grid_height))
     return grid
-        
-# Merges & sorts all structures according to the grid layout
+
+#
+# Merges & sorts all structures according to the given grid layout.
+# The resulting list of image-structures is ordered left->right, top->down, ready for use
+# with juxta or similar tool that expects the images to be ordered.
+#
 def merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features, predictions):
     merged = []
     for i, path in enumerate(acceptable_image_paths):
@@ -231,6 +238,12 @@ def merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, predict
 
     return merged
 
+#
+# Store the full structure (image path, penultimate layer, predictions, raw 2D position, grid position)
+# as JSON structures, one image/line.
+#
+# This can be used for further processing in external tools, such as juxta.
+#
 def store(merged, penultimate_layer, grid_width, grid_height, output):
     out = open(output, "w")
     for i, element in enumerate(merged):
@@ -271,6 +284,12 @@ def store(merged, penultimate_layer, grid_width, grid_height, output):
 
     print("Stored result in '" + output + "', generate collage with grid dimensions " + str(grid_width) + "x" + str(grid_height))
 
+#
+# Generate a collage with the given images at the raw 2D positions produced by the reduce method.
+#
+# This is useful for inspecting relative image similarity, a quantity that is severely hobbled
+# when deing a juxta grid based rendering.
+# 
 def render(merged, render_tsne, render_width, render_height, render_part_width, render_part_height):
     if (render_tsne == ''):
         return
@@ -290,7 +309,11 @@ def render(merged, render_tsne, render_width, render_height, render_part_width, 
     tsne_image.save(render_tsne);
     print(" - Collage generated from raw t-SNE coordinates and stored as " + render_tsne)
 
-    # image_path;coordinate[,coordinate]*
+#
+# Takes externally calculated penultimage vectors, reduced to 2D and lays it on a grid.
+#
+# The input format is one image/line, where each line contains
+# image_path;coordinate[,coordinate]*
 def process_external(path_vectors, grid_width, grid_height, aspect_ratio, perplexity, learning_rate, pca_components, scale_factor):
     print(" - Parsing " + str(len(path_vectors)) + " entries")
     image_paths = []
