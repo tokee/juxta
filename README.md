@@ -69,6 +69,33 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 
 There are a lot of secondary options, which are all documented in the `juxta.sh`-script.
 
+## Image similarity sort
+juxta supports image similarity sort using Python3 with keras and imagenet. This is a rather heavy
+process and not entirely hardened yet, so no promises.
+
+See [9951 map images](http://labs.statsbiblioteket.dk/juxta/subject208/) for an example of image 
+similarity sort.
+
+Image similarity sorting works best for 300+ images: Less than this and it gets hard to see
+why the images are similar. Using it with 10.000+ images works very well, but is fairly heavy
+on CPU & menory during processing.
+
+The argument `IMAGE_SORT=similarity` activates image similarity sorting, which uses the
+Python3 script `imagenet_tsne_rasterfairy.py` under the hood. The script has a bunch of
+requiements, which should be installed beforehand with `pip3 install -r Requirements.txt`.
+
+Specifying `GENERATE_TSNE_PREVIEW_IMAGE=true` makes juxta generate an extra image with
+all the input images plotted with overlap, using the raw coordinates from the similarity sorting.
+This preview is usable for checking the distance between the image clusters - something which is
+not possible with the fixed grid layout of a juxta collage.
+
+Sample call:
+```shell
+find myimagefolder -iname "*.jpg" > someimages.dat
+IMAGE_SORT=similarity GENERATE_TSNE_PREVIEW_IMAGE=true ./juxta.sh someimages similarity
+```
+
+
 ## Keyboard shortcuts
 
 - Arrow keys pans
