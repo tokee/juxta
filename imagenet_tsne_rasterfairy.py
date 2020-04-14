@@ -62,6 +62,9 @@ def process_arguments(args):
     params = vars(parser.parse_args(args))
     return params
 
+#
+# Load an image and prepare it for use with keras.
+#
 # https://stackoverflow.com/questions/47555829/preprocess-input-method-in-keras
 def load_image(path, input_shape):
     img = image.load_img(path, target_size=input_shape)
@@ -70,6 +73,16 @@ def load_image(path, input_shape):
     x = preprocess_input(x)
     return x
 
+#
+# Perform keras ML-analysis of the given images and return both the penultimate layer and the
+# predictions.
+
+# The penultimate layer can be used for finding distances between images as well as generating
+# a visual representation of all images relative to each other, if the dimensionality is reduced
+# (this is what happens in the reduce method).
+#
+# The predictions can be used directly for labelling images.
+#
 # https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
 def analyze(image_paths, output, penultimate_layer):
     model = keras.applications.VGG16(weights='imagenet', include_top=True)
@@ -97,6 +110,15 @@ def analyze(image_paths, output, penultimate_layer):
 
     return acceptable_image_paths, penultimate_features, prediction_features, predictionss
 
+#
+# Takes an array of t-SNE derived 2D coordinates and performs a lineary normalisation to the unit space,
+# meaning all coordinates will be in the space defined by (0, 0), (1, 1) in floating point numbers.
+# The method also produces an array with the coordinates lineary normalised to the space defined by
+# (0, 0), (100000, 100000) in integer numbers.
+#
+# Normalised coordinates are used render presentations of the images relative to each other. The integer
+# version is needed by RasterFairy to produce a grid of non-overlapping images.
+#
 def normalise_tsne(tsne_raws):
     tsne_min = [ np.min(tsne_raws[:,d]) for d in range(2) ]
     tsne_span = [ np.max(tsne_raws[:,d]) - tsne_min[d] for d in range(2) ]
@@ -111,6 +133,14 @@ def normalise_tsne(tsne_raws):
         
     return tsne_norm, tsne_norm_int
     
+#
+# Reduces the dimensionality of the given penultimate vectors to 2. This is a multi-step
+# process with the first step being PCA (Principal Component Analysis), which is fast with
+# fair quality, and the second step being t-SNE, which is slow with high quality.
+#
+# Reducing to 2 dimensions is used for visualisations where similar images are close to
+# each other.
+#
 def reduce(penultimate_features, perplexity, learning_rate, pca_components, scale_factor):
     # Reduce dimensions
     
@@ -135,7 +165,13 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
 #     [ 73.822014  50.5032  ]
 #     [ 74.64323  -41.658306]]
 
-        
+#
+# Given a number of images, the width and height of a grid, capable of holding all the images,
+# is returned. It is possible to affect the layout of the grid by specifying either width, height
+# or aspect ratio.
+#
+# A grid layout is needed by RasterFairy to produce a grid of non-overlapping images.
+#
 def calculate_grid(image_count, grid_width, grid_height, aspect_ratio):
     if (grid_width == 0 and grid_height == 0):
         print(" - Neither grid_width nor grid_height is specified. Calculating with intended aspect ratio " + str(aspect_ratio) + ":1")
@@ -167,7 +203,9 @@ def calculate_grid(image_count, grid_width, grid_height, aspect_ratio):
 
     return grid_width, grid_height
 
-    
+#
+# 
+#
 def gridify(tsne_norm_int, grid_width, grid_height):
     print(" - Calling RasterFairy for " + str(len(tsne_norm_int)) + " images to a " + str(grid_width) + "x" + str(grid_height) + " grid")
     tsne = np.array(tsne_norm_int)
