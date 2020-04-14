@@ -211,26 +211,6 @@ def gridify(tsne_norm_int, grid_width, grid_height):
     tsne = np.array(tsne_norm_int)
     grid, gridShape = rasterfairy.transformPointCloud2D(tsne, target=(grid_width, grid_height))
     return grid
-    
-    out_grid = []
-    for i, dat in enumerate(data):
-        gridX, gridY = grid[i]
-#        print("grid_index: " + str(i) + ", gx: " + str(gridX) + ", gy: " + str(gridY))
-        out_grid.append({'gx': int(gridX), 'gy': int(gridY), 'path': dat['path']})
- #   print(dat['path'] + " gx:" + str(int(gridX)) + ", gy:" + str(int(gridY)))
-
-    # Column is secondary, row is primary - Python sort is stable; it does not change order on equal keys
-    out_grid.sort(key = lambda obj: obj['gx'])
-    out_grid.sort(key = lambda obj: obj['gy'])
-
-    imgfile = open(out_image_list, "w")
-    for element in out_grid:
-        imgfile.write(element['path'] + "\n")
-        # print(str(element['gx']) + " " + str(element['gy']) + " " + element['path'])
-    imgfile.close()
-#    print("Stored gridified image list as " + out_image_list)
-
-    return grid
         
 # Merges & sorts all structures according to the grid layout
 def merge(grid, tsne_norm, acceptable_image_paths, penultimate_features, prediction_features, predictions):
