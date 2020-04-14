@@ -266,15 +266,19 @@ def store(merged, penultimate_layer, grid_width, grid_height, output):
         out.write('"grid_x": ' + str(int(element['position_grid'][0])) + ', ')
         out.write('"grid_y": ' + str(int(element['position_grid'][1])) + ', ')
 
-        if (element.get('predictions') != None):
+        try:
             predictions = element['predictions']
             out.write('"predictions": [')
             out.write(','.join((' {"designation":"' + str(c[1])  + '", "probability":' + str(c[2]) + ', "internalID":"' + str(c[0])+ '"}') for c in predictions))
             out.write("], ")
+        except ValueError:
+            print(" - No predictions")
 
-        if (element.get('prediction_features') != None):
+        try:
             prediction_features = element['prediction_features']
             out.write('"prediction_vector": [' + ','.join(str(f) for f in prediction_features) + "], ")
+        except ValueError:
+            print(" - No prediction vector")
 
         penultimate = element['penultimate']
         out.write('"penultimate_vector_layer": "' + penultimate_layer + '", ')
