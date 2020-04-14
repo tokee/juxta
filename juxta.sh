@@ -43,7 +43,7 @@ popd > /dev/null
 # Don't change this unless you know what you are doing
 : ${TILE_SIDE:=256}
 # Hex RGB for background, when the aspect ratio for an image does not fit
-: ${BACKGROUND:=000000}
+: ${BACKGROUND:=cccccc}
 # Template for the HTML document that is generated. If multiple pages are to be generated
 # with the same look'n'feel, it might be worth it to create abd usa a custom template.
 # If the collage is unique, it is probably easier to use the default template and tweak
@@ -167,6 +167,8 @@ popd > /dev/null
 : ${OSD_VERSION:=2.4.1}
 : ${OSD_ZIP:="openseadragon-bin-${OSD_VERSION}.zip"}
 : ${OSD_URL:="http://github.com/openseadragon/openseadragon/releases/download/v${OSD_VERSION}/$OSD_ZIP"}
+
+REQUIREMENTS="wget jq"
 
 dump_options() {
     for VAL in $( cat "${BASH_SOURCE}" | grep -o ': ${[A-Z_]*:=' | grep -o '[A-Z_]*'); do
@@ -798,16 +800,25 @@ sanitize_input() {
         usage
     fi
 
+    for REQ in $REQUIREMENTS; do
+        if [[ -z "$(which $REQ)" ]]; then
+            >&2 echo "Error: Requirement '$REQ' not satisfied. Try running"
+            >&2 echo "apt-get install $REQ"
+            >&2 echo "Complete list of requirements: $REQUIREMENTS"
+            usage 63
+        fi
+    done
+    
     IMAGE_LIST="$1"
     echo " - Starting processing of $IMAGE_LIST into $DEST"
     if [[ "-r" == "$IMAGE_LIST" ]]; then
         echo " - Attempting to re-create HTML and support files without touching files for project '$DEST'"
         if [[ ! -d "$DEST" ]]; then
-            >&2 "The folder '$DEST' does not exists. Unable to re-create non-tile files"
+            >&2 echo "The folder '$DEST' does not exists. Unable to re-create non-tile files"
             usage 50
         fi
         if [[ ! -s "$DEST/imagelist.dat" ]]; then
-            >&2 "The image list '$DEST/imagelist.dat' does not exist. Unable to re-create non-tile files"
+            >&2 echo "The image list '$DEST/imagelist.dat' does not exist. Unable to re-create non-tile files"
             usage 51
         fi
         if [[ -s "$DEST/previous_options.conf" ]]; then
