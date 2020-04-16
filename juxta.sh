@@ -43,7 +43,7 @@ popd > /dev/null
 # Don't change this unless you know what you are doing
 : ${TILE_SIDE:=256}
 # Hex RGB for background, when the aspect ratio for an image does not fit
-: ${BACKGROUND:=cccccc}
+: ${BACKGROUND:=000000}
 # Template for the HTML document that is generated. If multiple pages are to be generated
 # with the same look'n'feel, it might be worth it to create abd usa a custom template.
 # If the collage is unique, it is probably easier to use the default template and tweak
