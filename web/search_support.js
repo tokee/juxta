@@ -58,7 +58,7 @@ function clearSVGOverlay() {
 console.log("HomeBounds: " + JSON.stringify(myDragon.viewport.getHomeBounds()));
 
 var jprops = overlays.jprops;
-console.log(JSON.stringify(jprops));
+console.log("jprops: " + JSON.stringify(jprops));
 function updateSVGOverlay(svgXML) {
 
     svgString += svgXML;
@@ -70,8 +70,17 @@ function updateSVGOverlay(svgXML) {
     diffusor.style.opacity = 0.8;
 }
 
+function addBoxes(boxIDs) {
+    var svgBoxes = '';
+    for (var i = 0 ; i < boxIDs.length; i++) {
+        svgBoxes += getBox(boxIDs[i]);
+    }
+    updateSVGOverlay(svgBoxes);
+}
 function addBox(boxID) {
-   
+    updateSVGOverlay(getBox(boxID));
+}
+function getBox(boxID) {
     x = boxID % jprops.colCount;
     y = Math.floor(boxID / jprops.colCount);
     boxW = 1 / jprops.colCount;
@@ -88,13 +97,13 @@ function addBox(boxID) {
     y = y / jprops.rowCount * 0.923;
     boxH *= 0.923;
     
-    updateSVGOverlay('<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:transparent;stroke-width:{4};stroke:{5}" />\n'.format(x, y, boxW, boxH, lineWidth, "#8888ff"));
+    return'<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:transparent;stroke-width:{4};stroke:{5}" />\n'.format(x, y, boxW, boxH, lineWidth, "#8888ff");
 }
+
 for (var i = 0 ; i < 15 ; i++) {
-    addBox(i*14);
-    addBox(i*14+3);
-    addBox(i*14+6);
-    addBox(i*14+9);
+    for (var j = 0 ; j < 15 ; j++) {
+     //   addBox(i*14+(j*3));
+    }
 }
 
 //updateSVGOverlay('<rect x="-2.125" y="0" width="4" height="4" style="fill:transparent;stroke-width:0.1;stroke:#ffffff" />\n')
@@ -102,6 +111,15 @@ for (var i = 0 ; i < 15 ; i++) {
     
 function clearSearch() {
     console.log("Clearing previous search result")
+    clearSVGOverlay();
+}
+
+// Returns { matchCount: int, matches: [index*] }
+function searchAndDisplay(query, searchImage = searchConfig.defaultSearchImage, searchPath = searchConfig.defaultSearchPath, searchMeta = searchConfig.defaultSearchMeta, searchMode = searchConfig.defaultSearchMode, caseSensitive = searchConfig.defaultCaseSensitive) {
+    clearSearch();
+    var result = simpleSearch(query, searchImage, searchPath, searchMeta, searchMode, caseSensitive);
+    addBoxes(result.matches);
+    return result;
 }
 
 // Returns { matchCount: int, matches: [index*] }
@@ -164,7 +182,7 @@ function enableSearch() {
             if (this.value == 'clear') {
                 clearSearch();
             } else {
-                simpleSearch(this.value);
+                searchAndDisplay(this.value);
             }
         }
     } else {
