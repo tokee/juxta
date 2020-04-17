@@ -18,6 +18,15 @@
 
     <div class="page-header">
         <h1>${DESIGNATION} juxta: ${TOTAL_IMAGES} images (${MEGAPIXELS} MPixels), `date +"%Y-%m-%d %H:%M"`, see <a href="https://github.com/tokee/juxta">the juxta GitHub page</a> for details</h1>
+        <!-- Extend the fixed search select-element with extra options to provide predefined searches.
+             Fixed searches ignore minQueryLength -->
+        <select id="fixed_search">
+            <option value="clear">Choose filter</option>
+            <option value="k">Fixed search 'k'</option>
+            <option value="b">Fixed search 'b'</option>
+        </select>
+        <input type="text" placeholder="Search query" id="free_search" title="Type search phrase" />
+        <span id="search_matches">? hits</span>
     </div>
     
     <div id="zoom-display" class="page-content openseadragon"><div id="header"></div><div id="infobox"></div><div id="footer"></div></div>
@@ -56,6 +65,12 @@
         // where the |meta part can be empty
         return meta;
     }
+</script>
+<!-- Must be included after creation of OpenSeadragon viewer -->
+<script src="resources/search_support.js"></script>
+<script>
+    // See resources/search_support.js for all options
+    searchConfig.minQueryLength = 2;
 </script>
 
 </body>

@@ -7,7 +7,13 @@ searchConfig = {
     defaultSearchMeta: true,
     defaultSearchMode: 'infix', // Possible values: prefix, infix
     defaultCaseSensitive: false,
+
+    minQueryLength: 1,
     maxMatches: 1000,
+    // Return a SVG element used for visually marking boxes with content matching a search
+    createMarker: function(x, y, width, height, lineWidth) {
+        return'<rect x="{0}" y="{1}" width="{2}" height="{3}" class="search_marker" style="stroke-width:{4};fill:transparent;stroke:{5}" />\n'.format(x, y, width, height, lineWidth*2, "#8888ff");
+    }
 }
 
 // https://stackoverflow.com/questions/610406/javascript-equivalent-to-printf-string-format
@@ -22,24 +28,16 @@ String.prototype.format = function() {
 
 
 var svg = null;
-var diffusor = null;
 var svgString = '';
 var homeBounds = null;
+var aspectRatio = null;
 function createSVGOverlay() {
     homeBounds = myDragon.viewport.getHomeBounds();
     /* Must be before the svg so that it is positioned underneath */
-    diffusor = document.createElement("div");
-    diffusor.id = "diffusor-overlay";
-    myDragon.addOverlay({
-        element: diffusor,
-        location: homeBounds
-    });
-
     svg = document.createElement("div");
     svg.id = "svg-overlay";
     myDragon.addOverlay({
         element: svg,
-//        location: new OpenSeadragon.Rect(0, 0, 1.05, 1)
         location: homeBounds
     });
     svgString = '';
@@ -47,27 +45,18 @@ function createSVGOverlay() {
 createSVGOverlay();
 
 function clearSVGOverlay() {
-    if (diffusor) {
-        svgString = '';
-        updateSVGOverlay('');
-        diffusor.style.opacity = 0.0;
-    } else {
-        createSVGOverlay();
-    }
+    svgString = '';
+    updateSVGOverlay('');
 }
 console.log("HomeBounds: " + JSON.stringify(myDragon.viewport.getHomeBounds()));
 
 var jprops = overlays.jprops;
-console.log("jprops: " + JSON.stringify(jprops));
+var rawAspectRatio = (jprops.rowCount*jprops.rawH)/(jprops.colCount*jprops.rawW);
+console.log("jprops: " + JSON.stringify(jprops) + ", aspect ratio: " + rawAspectRatio);
 function updateSVGOverlay(svgXML) {
 
     svgString += svgXML;
-    svg.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:10;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="{0} {1} {2} {3}">{4}</svg>'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height, svgString);
-
-    //    svg.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:10;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="{0} {1} {2} {3}">{4}</svg>'.format(0, 0, 1, 1, svgString);
-    
-//    svg.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:10;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="0 0 ' + jprops.colCount + ' ' + jprops.rowCount + '">' + svgString + '</svg>';
-    diffusor.style.opacity = 0.8;
+    svg.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:1;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="{0} {1} {2} {3}">{4}</svg>'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height, svgString);
 }
 
 function addBoxes(boxIDs) {
@@ -94,10 +83,10 @@ function getBox(boxID) {
     //boxW *= xFactor;
     //boxH *= yFactor;
     x = x / jprops.colCount;
-    y = y / jprops.rowCount * 0.923;
-    boxH *= 0.923;
+    y = y / jprops.rowCount * rawAspectRatio;
+    boxH *= rawAspectRatio;
     
-    return'<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:transparent;stroke-width:{4};stroke:{5}" />\n'.format(x, y, boxW, boxH, lineWidth, "#8888ff");
+    return searchConfig.createMarker(x, y, boxW, boxH, lineWidth);
 }
 
 for (var i = 0 ; i < 15 ; i++) {
@@ -112,6 +101,7 @@ for (var i = 0 ; i < 15 ; i++) {
 function clearSearch() {
     console.log("Clearing previous search result")
     clearSVGOverlay();
+    searchMatchesElement.innerHTML = '? hits';
 }
 
 // Returns { matchCount: int, matches: [index*] }
@@ -119,6 +109,10 @@ function searchAndDisplay(query, searchImage = searchConfig.defaultSearchImage, 
     clearSearch();
     var result = simpleSearch(query, searchImage, searchPath, searchMeta, searchMode, caseSensitive);
     addBoxes(result.matches);
+    console.log("Here " + searchMatchesElement);
+    if (searchMatchesElement) {
+        searchMatchesElement.innerHTML = result.matchCount + ' hits';
+    }
     return result;
 }
 
@@ -174,19 +168,56 @@ function simpleSearch(query, searchImage = searchConfig.defaultSearchImage, sear
     return { matchCount: matchCount, matches: matches };
 }
 
+var typeCallback = null;
+function typeEventHandler(e) {
+    var query = e.target.value;
+
+    // Cancel previously issued query
+    if (typeCallback != null) {
+        window.cancelAnimationFrame(typeCallback);
+    }
+    fixedSearchElement.selectedIndex = 0;
+    
+    typeCallback = window.requestAnimationFrame(function(timestamp) {
+        if (query.length < searchConfig.minQueryLength) {
+            clearSearch();
+        } else {
+            searchAndDisplay(query);
+        }
+    });
+}
+    
+var fixedSearchElement =  document.getElementById('fixed_search');
+var freeSearchElement =  document.getElementById('free_search');
+var searchMatchesElement = document.getElementById('search_matches');
 function enableSearch() {
     // Optional drop down with predefined searches
-    if (document.getElementById('fixed_search')) {
+    if (fixedSearchElement) {
+        fixedSearchElement.selectedIndex = 0;
         console.log("Enabling predefined searches");
-        document.getElementById('fixed_search').onchange = function() {
+        fixedSearchElement.onchange = function() {
             if (this.value == 'clear') {
                 clearSearch();
+                if (freeSearchElement) {
+                    freeSearchElement.value = '';
+                }
             } else {
                 searchAndDisplay(this.value);
+                if (freeSearchElement) {
+                    freeSearchElement.value = this.value;
+                }
             }
         }
     } else {
         console.log("Unable to locate select-element 'fixed_search': Predefined searches will not be available");
+    }
+    if (freeSearchElement) {
+        console.log("Enabling user defined searches");
+        freeSearchElement.value = '';
+        freeSearchElement.addEventListener('input', typeEventHandler);
+        freeSearchElement.addEventListener('propertychange', typeEventHandler); // for IE8
+    } else {
+        console.log("Unable to locate input-element 'free_search': User defined searches will not be available");
     }
 }
 enableSearch();
