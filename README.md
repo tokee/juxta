@@ -25,7 +25,7 @@ OpenSeadragon and the mouse-over code has been tested with IE10, Firefox, Chrome
   `./juxta.sh images.dat mycollage`
 
 3. View the collage in a browser
- `firefox mycollage.html`
+ `firefox mycollage/index.html`
 
 But! This will produce something with poor choice in colors, clumsy layout and no links to the full images. You probably want to tweak all that: `juxta.sh` is the core script, intended to be called with options geared towards different use cases. If you want to use it as gallery creator, check the "Recursive image gallery" section below.
 
@@ -91,6 +91,21 @@ Sample call:
 ```shell
 find myimagefolder -iname "*.jpg" > someimages.dat
 IMAGE_SORT=similarity GENERATE_TSNE_PREVIEW_IMAGE=true ./juxta.sh someimages similarity
+```
+
+## Image search support
+The base template includes support for simple search and marking of matching images, based on
+image name and metadata. This does not work well for large (100.000+) collages as the search
+data is held in browser memory and the search is primitive (iterative scan). It will likely
+crash the browser with millions of images.
+
+In order to ensure that all relevant search data is cached, it is necessary to add the parameter
+`ASYNC_META_SIDE=9000` (9000 is just a suitable large number) when calling juxta.
+
+Sample call:
+```shell
+find myimagefolder -iname "*.jpg" > someimages.dat
+ASYNC_META_SIDE=9000 ./juxta.sh someimages searchable
 ```
 
 
