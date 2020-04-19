@@ -115,6 +115,14 @@ find myimagefolder -iname "*.jpg" > someimages.dat
 ASYNC_META_SIDE=9000 ./juxta.sh someimages searchable
 ```
 
+In order to enable search for previously generated collages, the script `adjust_meta.js` has
+been provided. Simply execute it with the path of the collage and it will perform most of the
+necessary adjustments and documentation on how to add the input field.
+
+Sample call:
+```shell
+./adjust_meta.js myoldcollage
+```
 
 ## Keyboard shortcuts
 
