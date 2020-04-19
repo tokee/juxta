@@ -177,6 +177,38 @@ adjust_collage_setup() {
     sed -i "s/asyncMetaSide: *[0-9]*/asyncMetaSide: $ASYNC_META_SIDE/" "$COLLAGE/index.html"
 }
 
+copy_support_files() {
+    local DF="$COLLAGE/resources/search_support.js"
+    if [[ ! -s "$DF" ]]; then
+        echo "  - Copying search_support.js to $COLLAGE/resources/"
+        cp "${BASH_SOURCE%/*}/web/search_support.js" "$DF"
+    else
+        echo "  - Skiping copying of search_support.js as it is already present at $COLLAGE/resources/"
+    fi
+}
+
+print_finish_message() {
+    cat<<EOF
+
+Finished adjusting metadata file layout for ${COLLAGE}.
+If this was done to enable search, add the following HTML-snippet somewhere
+in $COLLAGE/index.html:
+
+  <input type="text" placeholder="Search query" id="free_search" title="Search query" />
+  <span id="search_matches">? hits</span>
+
+and add the follow snippet at the bottom, just before just before </body>:
+
+  <!-- Must be included after creation of OpenSeadragon viewer -->
+  <script src="resources/search_support.js"></script>
+  <script>
+    // See resources/search_support.js for all options
+    searchConfig.minQueryLength = 2;
+  </script>
+EOF
+    
+}
+
 ###############################################################################
 # CODE
 ###############################################################################
@@ -186,4 +218,5 @@ check_parameters "$@"
 create_meta_files
 adjust_previous_options
 adjust_collage_setup
-echo "Finished adjusting metadata file layout for $COLLAGE"
+copy_support_files
+print_finish_message
