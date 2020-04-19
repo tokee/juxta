@@ -16,9 +16,9 @@
 : ${COLLAGE:="$1"}
 : ${ASYNC_META_SIDE:=100000000} # Effectively infinite
 
-: ${INCLUDE_ORIGIN:="N/A"}
-: ${ASYNC_META_SIDE:="N/A"}
-: ${RAW_IMAGE_COLS:="N/A"}
+# Will (hopefully) be filled later on by data from the existing collage
+: ${INCLUDE_ORIGIN:=""}
+: ${RAW_IMAGE_COLS:=""}
 
 function usage() {
     cat <<EOF
@@ -60,13 +60,14 @@ check_parameters() {
         usage 4
     fi
     if [[ -s "$COLLAGE/previous_options.conf" ]]; then
+        echo "  - Sourcing previous options from $COLLAGE/previous_options.conf"
         source "$COLLAGE/previous_options.conf"
     fi
-    if [[ "$INCLUDE_ORIGIN" == "N/A" ]]; then
+    if [[ ".$INCLUDE_ORIGIN" == "." ]]; then
         echo "Warning: Unable to determine if INCLUDE_ORIGIN was originally true or false. Going with the default 'true', but if that yields unexpected results, try re-running with INCLUDE_ORIGIN=false instead"
         INCLUDE_ORIGIN="true"
     fi
-    if [[ "$RAW_IMAGE_COLS" == "N/A" ]]; then
+    if [[ ".$RAW_IMAGE_COLS" == "." ]]; then
         if [[ "$(wc -l < "$COLLAGE/imagelist.dat")" -le "$ASYNC_META_SIDE" ]]; then
             # Does not matter what RAW_IMAGE_COLS was as everything will be a single file
             RAW_IMAGE_COLS="$ASYNC_META_SIDE"
@@ -156,6 +157,26 @@ create_meta_files() {
     cat "$DEST/meta/0_0.json" >> "$DEST/resources/overlays_preload.js"
 }
 
+adjust_previous_options() {
+    if [[ ! -s "$COLLAGE/previous_options.conf" ]]; then
+        echo "Warning: Cannot update non-existing $COLLAGE/previous_options.conf (not critical)"
+        return
+    fi
+    echo "  - Setting INCLUDE_ORIGIN=$INCLUDE_ORIGIN and RAW_IMAGE_COLS=$RAW_IMAGE_COLS in $COLLAGE/previous_options.conf"
+    sed -i "s/INCLUDE_ORIGIN:=\"[a-z]*\"/INCLUDE_ORIGIN:=\"$INCLUDE_ORIGIN\"/" "$COLLAGE/previous_options.conf"
+    sed -i "s/ASYNC_META_SIDE:=\"[0-9]*\"/ASYNC_META_SIDE:=\"$ASYNC_META_SIDE\"/" "$COLLAGE/previous_options.conf"
+}
+
+adjust_collage_setup() {
+    if [[ ! -s "$COLLAGE/collage_setup.js" ]]; then
+        >&2 echo "Warning: Cannot update non-existing $COLLAGE/collage_setup.js"
+        usage 5
+    fi
+    echo "  - Setting asyncMetaSide: $ASYNC_META_SIDE in $COLLAGE/collage_setup.js and $COLLAGE/index.html"
+    sed -i "s/asyncMetaSide: *[0-9]*/asyncMetaSide: $ASYNC_META_SIDE/" "$COLLAGE/collage_setup.js"
+    sed -i "s/asyncMetaSide: *[0-9]*/asyncMetaSide: $ASYNC_META_SIDE/" "$COLLAGE/index.html"
+}
+
 ###############################################################################
 # CODE
 ###############################################################################
@@ -163,3 +184,6 @@ create_meta_files() {
 check_parameters "$@"
 
 create_meta_files
+adjust_previous_options
+adjust_collage_setup
+echo "Finished adjusting metadata file layout for $COLLAGE"
