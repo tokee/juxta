@@ -176,7 +176,9 @@ function typeEventHandler(e) {
     if (typeCallback != null) {
         window.cancelAnimationFrame(typeCallback);
     }
-    fixedSearchElement.selectedIndex = 0;
+    if (fixedSearchElement) {
+        fixedSearchElement.selectedIndex = 0;
+    }
     
     typeCallback = window.requestAnimationFrame(function(timestamp) {
         if (query.length < searchConfig.minQueryLength) {
