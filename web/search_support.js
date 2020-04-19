@@ -145,7 +145,7 @@ function simpleSearch(query, searchImage = searchConfig.defaultSearchImage, sear
         } else {
             meta = full;
         }
-        if (typeof(result.meta) == 'undefined') { // Happens for single images without metadata
+        if (typeof(meta) == 'undefined') { // Happens for single images without metadata
             meta = '';
         }
         if (!caseSensitive) {
