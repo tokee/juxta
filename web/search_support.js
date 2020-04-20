@@ -1,6 +1,9 @@
 // Provides basic search functionality for juxta
 // Must be included _after_ the dropdown selector on the web page
 
+// TODO: Path-search
+// TODO: Last 2 matches
+
 searchConfig = {
     defaultSearchImage: true,
     defaultSearchPath: false,
@@ -10,9 +13,12 @@ searchConfig = {
 
     minQueryLength: 1,
     maxMatches: 1000,
+    overlayOpacity: 0.5,
     // Return a SVG element used for visually marking boxes with content matching a search
     createMarker: function(x, y, width, height, lineWidth) {
-        return'<rect x="{0}" y="{1}" width="{2}" height="{3}" class="search_marker" style="stroke-width:{4};fill:transparent;stroke:{5}" />\n'.format(x, y, width, height, lineWidth*2, "#8888ff");
+        // We're creating part of a mask (black = visible, white = blocked. Gradients possible!
+        // https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Clipping_and_masking
+        return'<rect x="{0}" y="{1}" width="{2}" height="{3}" fill="rgb(0, 0, 0)" />\n'.format(x, y, width, height);
     }
 }
 
@@ -54,9 +60,22 @@ var jprops = overlays.jprops;
 var rawAspectRatio = (jprops.rowCount*jprops.rawH)/(jprops.colCount*jprops.rawW);
 console.log("jprops: " + JSON.stringify(jprops) + ", aspect ratio: " + rawAspectRatio);
 function updateSVGOverlay(svgXML) {
-
     svgString += svgXML;
-    svg.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:1;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="{0} {1} {2} {3}">{4}</svg>'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height, svgString);
+
+    var svgFinal = '';
+    svgFinal += '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:1;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="{0} {1} {2} {3}">\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height);
+    if (svgXML != '') {
+        svgFinal += '<defs>\n'
+        svgFinal += '<mask id="multi-clip">\n';
+        svgFinal += '<rect x="0" y="0" width="1" height="1" style="fill:rgba(255, 255, 255, 100)" />\n';
+        svgFinal += svgString;
+        svgFinal += '</mask>\n'
+        svgFinal += '</defs>\n';
+        svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:rgb(255, 255, 255)" opacity="{4}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height, searchConfig.overlayOpacity);
+    }
+    svgFinal += '</svg>';
+    
+    svg.innerHTML = svgFinal;
 }
 
 function addBoxes(boxIDs) {
@@ -109,7 +128,6 @@ function searchAndDisplay(query, searchImage = searchConfig.defaultSearchImage, 
     clearSearch();
     var result = simpleSearch(query, searchImage, searchPath, searchMeta, searchMode, caseSensitive);
     addBoxes(result.matches);
-    console.log("Here " + searchMatchesElement);
     if (searchMatchesElement) {
         searchMatchesElement.innerHTML = result.matchCount + ' hits';
     }
