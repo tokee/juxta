@@ -1,8 +1,6 @@
 // Provides basic search functionality for juxta
 // Must be included _after_ the dropdown selector on the web page
 
-// TODO: Path-search
-
 searchConfig = {
     defaultSearchImage: true,
     defaultSearchPath: false,
@@ -33,7 +31,6 @@ String.prototype.format = function() {
 
 var jprops = overlays.jprops;
 var rawAspectRatio = (jprops.rowCount*jprops.rawH)/(jprops.colCount*jprops.rawW);
-//console.log("jprops: " + JSON.stringify(jprops) + ", aspect ratio: " + rawAspectRatio);
 
 var svgBase = null;
 var svg = null;
