@@ -3,6 +3,7 @@
 
 // TODO: Path-search
 // TODO: Last 2 matches
+// Mark 0 hits
 
 searchConfig = {
     defaultSearchImage: true,
@@ -32,7 +33,11 @@ String.prototype.format = function() {
     return formatted;
 };
 
+var jprops = overlays.jprops;
+var rawAspectRatio = (jprops.rowCount*jprops.rawH)/(jprops.colCount*jprops.rawW);
+//console.log("jprops: " + JSON.stringify(jprops) + ", aspect ratio: " + rawAspectRatio);
 
+var svgBase = null;
 var svg = null;
 var svgString = '';
 var homeBounds = null;
@@ -44,37 +49,35 @@ function createSVGOverlay() {
     svg.id = "svg-overlay";
     myDragon.addOverlay({
         element: svg,
-        location: homeBounds
+//        location: homeBounds
+        location: new OpenSeadragon.Rect(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio)
     });
     svgString = '';
+    svgBase = '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:1;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="{0} {1} {2} {3}">\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio);
 }
 createSVGOverlay();
 
 function clearSVGOverlay() {
     svgString = '';
-    updateSVGOverlay('');
+    svg.innerHTML = svgBase + '</svg>';
 }
 console.log("HomeBounds: " + JSON.stringify(myDragon.viewport.getHomeBounds()));
 
-var jprops = overlays.jprops;
-var rawAspectRatio = (jprops.rowCount*jprops.rawH)/(jprops.colCount*jprops.rawW);
-console.log("jprops: " + JSON.stringify(jprops) + ", aspect ratio: " + rawAspectRatio);
 function updateSVGOverlay(svgXML) {
     svgString += svgXML;
 
     var svgFinal = '';
-    svgFinal += '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;z-index:1;margin:0;padding:0;top:0;left:0;width:100%;height:100%" viewBox="{0} {1} {2} {3}">\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height);
+    svgFinal += svgBase;
     if (svgXML != '') {
         svgFinal += '<defs>\n'
         svgFinal += '<mask id="multi-clip">\n';
-        svgFinal += '<rect x="0" y="0" width="1" height="1" style="fill:rgba(255, 255, 255, 100)" />\n';
+        svgFinal += '<rect x="0" y="0" width="1" height="{0}" style="fill:rgba(255, 255, 255, 100)" />\n'.format(rawAspectRatio);
         svgFinal += svgString;
         svgFinal += '</mask>\n'
         svgFinal += '</defs>\n';
-        svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:rgb(255, 255, 255)" opacity="{4}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height, searchConfig.overlayOpacity);
+        svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:rgb(255, 255, 255)" opacity="{4}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio, searchConfig.overlayOpacity);
     }
     svgFinal += '</svg>';
-    
     svg.innerHTML = svgFinal;
 }
 
