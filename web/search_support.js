@@ -2,8 +2,6 @@
 // Must be included _after_ the dropdown selector on the web page
 
 // TODO: Path-search
-// TODO: Last 2 matches
-// Mark 0 hits
 
 searchConfig = {
     defaultSearchImage: true,
@@ -68,15 +66,13 @@ function updateSVGOverlay(svgXML) {
 
     var svgFinal = '';
     svgFinal += svgBase;
-    if (svgXML != '') {
-        svgFinal += '<defs>\n'
-        svgFinal += '<mask id="multi-clip">\n';
-        svgFinal += '<rect x="0" y="0" width="1" height="{0}" style="fill:rgba(255, 255, 255, 100)" />\n'.format(rawAspectRatio);
-        svgFinal += svgString;
-        svgFinal += '</mask>\n'
-        svgFinal += '</defs>\n';
-        svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:rgb(255, 255, 255)" opacity="{4}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio, searchConfig.overlayOpacity);
-    }
+    svgFinal += '<defs>\n'
+    svgFinal += '<mask id="multi-clip">\n';
+    svgFinal += '<rect x="0" y="0" width="1" height="{0}" style="fill:rgba(255, 255, 255, 100)" />\n'.format(rawAspectRatio);
+    svgFinal += svgString;
+    svgFinal += '</mask>\n'
+    svgFinal += '</defs>\n';
+    svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:rgb(255, 255, 255)" opacity="{4}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio, searchConfig.overlayOpacity);
     svgFinal += '</svg>';
     svg.innerHTML = svgFinal;
 }
