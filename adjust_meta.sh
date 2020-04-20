@@ -16,6 +16,23 @@
 : ${COLLAGE:="$1"}
 : ${ASYNC_META_SIDE:=100000000} # Effectively infinite
 
+# Holds a list of imagepath/imagenames with metadata. The list will be merged
+# with the existing image list for the collage, replacing the metadata for
+# matching images in that list.
+# This will not change the number of images or the order of the images in the
+# imagelist for the collage.
+# The format for imagepath/imagename and metadata is
+#
+# myimages/someimage123.jpg|Metadata for image 123
+# myimages/someimage127.jpg
+# myimages/someimage134.jpg|Only metadata for some images
+#
+# IMPORTANT: Not implemented yet!
+: ${ENRICHED:=""}
+# If enriched is defined, the path is ignored when matching the images with
+# metadata.
+: ${ENRICHED_IGNORE_PATH:="true"}
+
 # Will (hopefully) be filled later on by data from the existing collage
 : ${INCLUDE_ORIGIN:=""}
 : ${RAW_IMAGE_COLS:=""}
@@ -59,12 +76,13 @@ check_parameters() {
         >&2 echo "Unable to adjust meta data layout"
         usage 4
     fi
+    echo "  - Located imagelist with $(wc -l < "$COLLAGE/imagelist.dat") images at $COLLAGE/imagelist.dat"
     if [[ -s "$COLLAGE/previous_options.conf" ]]; then
         echo "  - Sourcing previous options from $COLLAGE/previous_options.conf"
         source "$COLLAGE/previous_options.conf"
     fi
     if [[ ".$INCLUDE_ORIGIN" == "." ]]; then
-        echo "Warning: Unable to determine if INCLUDE_ORIGIN was originally true or false. Going with the default 'true', but if that yields unexpected results, try re-running with INCLUDE_ORIGIN=false instead"
+        echo "Warning: Unable to determine if INCLUDE_ORIGIN was originally true or false. Going with the default 'true'. If that yields unexpected results, try re-running with INCLUDE_ORIGIN=false instead"
         INCLUDE_ORIGIN="true"
     fi
     if [[ ".$RAW_IMAGE_COLS" == "." ]]; then
@@ -87,6 +105,73 @@ check_parameters() {
 # FUNCTIONS
 ################################################################################
 
+#
+# Splits the given imagelist infor tabulated format:
+# sequence_number path image path/image |metadata
+tabify_imagelist() {
+    local IN="$1"
+    COUNTER=0
+    while read -r LINE; do
+        if [[ "." == ".$LINE" ]]; then
+            continue
+        fi
+        
+        if [[ "$LINE" =~ ^([^|]*)[|](.*)$ ]]; then
+            local PATHFILE="${BASH_REMATCH[1]}"
+            local META="${BASH_REMATCH[2]}"
+        else
+            local PATHFILE="$LINE"
+            local META=""
+        fi
+        
+        if [[ "$PATHFILE" =~ ^(.*/)([^/]*)$ ]]; then
+            local FPATH="${BASH_REMATCH[1]}"
+            local FNAME="${BASH_REMATCH[2]}"
+        else
+            local FPATH=""
+            local FNAME="$PATHFILE"
+        fi
+        
+        echo "$COUNTER"$'\t'"$FPATH"$'\t'"$FNAME"$'\t'"$PATHFILE"$'\t'"$META"
+
+        COUNTER=$(( COUNTER+1 ))
+    done < "$IN"
+}
+
+#
+# Merges the given ENRICHED list with the existing image list for the collage,
+# replacing the metadata for  matching images in that list.
+enrich_metadata() {
+    if [[ -z "$ENRICHED" ]]; then
+        echo "  - Skipping enrichment of metadata as no ENRICHED is defined"
+        return
+    fi
+
+    local S=$(mktemp)
+    local D=$(mktemp)
+    local DS=$(mktemp)
+
+    if [[ "true" == "$ENRICHED_IGNORE_PATH" ]]; then
+        local SORT_KEY=3,3
+        tabify_imagelist "$ENRICHED" | LC_ALL=c sort -t $'\t' -k3,3 > "$S"
+        tabify_imagelist "$COLLAGE/imagelist.dat" | LC_ALL=c sort -t $'\t' -k3,3 > "$D"
+        LC_ALL=c join -t $'\t' -j 3 -a 2 -o 2.1,2.2,2.3,2.5,1.5 "$S" "$D" > "$DS"
+    else
+        local SORT_KEY=4,4
+        tabify_imagelist "$ENRICHED" | LC_ALL=c sort -t $'\t' -k4,4 > "$S"
+        tabify_imagelist "$COLLAGE/imagelist.dat" | LC_ALL=c sort -t $'\t' -k4,4 > "$D"
+        LC_ALL=c join -t $'\t' -j 4 -a 2 -o 2.1,2.2,2.3,2.5,1.5 "$S" "$D" > "$DS"
+    fi
+
+    while IFS=  read -r LINE; do
+        local META=$(cut -d$'\t' -f5 <<< "$LINE")  # Primary
+        local FALLBACK=$(cut -d$'\t' -f4 <<< "$LINE") # Fallbac
+        : ${META:="$FALLBACK"}
+        echo "$(cut -d$'\t' -f2,3 | tr -d $'\t')|$META"
+    done < <(sort -n < "$DS")
+    
+    rm "$S" "$D" "$DS"
+}
 
 #
 # Creates callback-files with filenames and/or meta-data for the source images,
@@ -94,6 +179,7 @@ check_parameters() {
 #
 # This must be kept in sync with the same method in juxta.sh
 # TODO: Copy it from juxta.sh upon program run to ensure it is in sync.
+# TODO: Get PRE & POST
 #
 create_meta_files() {
     echo "  - Creating meta files"
@@ -182,8 +268,11 @@ copy_support_files() {
     if [[ ! -s "$DF" ]]; then
         echo "  - Copying search_support.js to $COLLAGE/resources/"
         cp "${BASH_SOURCE%/*}/web/search_support.js" "$DF"
+    elif [[ "." != ".$(diff "${BASH_SOURCE%/*}/web/search_support.js" "$COLLAGE/resources/search_support.js")" ]]; then
+        echo "  - Copying search_support.js to $COLLAGE/resources/ as it was outdated"
+        cp "${BASH_SOURCE%/*}/web/search_support.js" "$DF"
     else
-        echo "  - Skiping copying of search_support.js as it is already present at $COLLAGE/resources/"
+        echo "  - Skipping copying of search_support.js as it is already present at $COLLAGE/resources/"
     fi
 }
 
@@ -205,6 +294,17 @@ and add the follow snippet at the bottom, just before just before </body>:
     // See resources/search_support.js for all options
     searchConfig.minQueryLength = 2;
   </script>
+
+
+This script changed the following files:
+
+$COLLAGE/index.html
+$COLLAGE/meta/*
+$COLLAGE/collage_setup.js
+$COLLAGE/previous_options.conf
+$COLLAGE/resources/overlays_preload.sh
+$COLLAGE/resources/search_support.sh
+$( if [[ ! -z "$ENRICHED" ]]; then echo "$COLLAGE/imagelist.dat"; fi)
 EOF
     
 }
@@ -215,6 +315,7 @@ EOF
 
 check_parameters "$@"
 
+#enrich_metadata
 create_meta_files
 adjust_previous_options
 adjust_collage_setup
