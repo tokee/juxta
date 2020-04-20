@@ -172,9 +172,9 @@ function simpleSearch(query, searchImage = searchConfig.defaultSearchImage, sear
         }
 
         
-        if ((searchImage && (searchMode == 'prefix' && image.startsWith(query)) || (searchMode == 'infix' && image.includes(query))) ||
-            (searchPath && (searchMode == 'prefix' && path.startsWith(query)) || (searchMode == 'infix' && path.includes(query))) ||
-            (searchMeta && (searchMode == 'prefix' && meta.startsWith(query)) || (searchMode == 'infix' && meta.includes(query)))) {
+        if ((searchImage && ((searchMode == 'prefix' && image.startsWith(query)) || (searchMode == 'infix' && image.includes(query)))) ||
+            (searchPath && ((searchMode == 'prefix' && path.startsWith(query)) || (searchMode == 'infix' && path.includes(query)))) ||
+            (searchMeta && ((searchMode == 'prefix' && meta.startsWith(query)) || (searchMode == 'infix' && meta.includes(query))))) {
             matchCount++;
             if (matchCount <= searchConfig.maxMatches) {
                 matches.push(index);
