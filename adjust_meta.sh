@@ -15,6 +15,7 @@
 
 : ${COLLAGE:="$1"}
 : ${ASYNC_META_SIDE:=100000000} # Effectively infinite
+: ${CREATE_BACKUP:="true"}
 
 # Holds a list of imagepath/imagenames with metadata. The list will be merged
 # with the existing image list for the collage, replacing the metadata for
@@ -105,6 +106,19 @@ check_parameters() {
 # FUNCTIONS
 ################################################################################
 
+create_backup() {
+    if [[ ".true" != ".$CREATE_BACKUP" ]]; then
+        echo "  - Skipping backup as CREATE_BACKUP==$CREATE_BACKUP"
+        return
+    fi
+    local ZIP="meta_backup_$(date +%Y%m%d-%H%M).zip"
+    echo "  - Creating backup $COLLAGE/$ZIP"
+    pushd "$COLLAGE" > /dev/null
+    zip -qr "$ZIP" collage_setup.js index.html meta/* previous_options.conf resources/overlays_preload.sh resources/search_support.sh imagelist.dat
+    popd > /dev/null
+}
+
+
 #
 # Splits the given imagelist infor tabulated format:
 # sequence_number path image path/image |metadata
@@ -140,17 +154,18 @@ tabify_imagelist() {
 
 #
 # Merges the given ENRICHED list with the existing image list for the collage,
-# replacing the metadata for  matching images in that list.
+# replacing the metadata for matching images in that list.
 enrich_metadata() {
     if [[ -z "$ENRICHED" ]]; then
         echo "  - Skipping enrichment of metadata as no ENRICHED is defined"
         return
     fi
+    echo "  - Enriching $COLLAGE/imagelist.dat ($OL entries) with $ENRICHED"
 
     local S=$(mktemp)
     local D=$(mktemp)
     local DS=$(mktemp)
-
+    
     if [[ "true" == "$ENRICHED_IGNORE_PATH" ]]; then
         local SORT_KEY=3,3
         tabify_imagelist "$ENRICHED" | LC_ALL=c sort -t $'\t' -k3,3 > "$S"
@@ -163,15 +178,82 @@ enrich_metadata() {
         LC_ALL=c join -t $'\t' -j 4 -a 2 -o 2.1,2.2,2.3,2.5,1.5 "$S" "$D" > "$DS"
     fi
 
+    echo -n "" > "$COLLAGE/imagelist_enriched.dat"
     while IFS=  read -r LINE; do
         local META=$(cut -d$'\t' -f5 <<< "$LINE")  # Primary
         local FALLBACK=$(cut -d$'\t' -f4 <<< "$LINE") # Fallbac
         : ${META:="$FALLBACK"}
-        echo "$(cut -d$'\t' -f2,3 | tr -d $'\t')|$META"
+        echo -n "$(cut -d$'\t' -f2,3 <<< "$LINE" | tr -d $'\t')" >> "$COLLAGE/imagelist_enriched.dat"
+        if [[ ! -z "$META" ]]; then
+            echo "|$META" >> "$COLLAGE/imagelist_enriched.dat"
+        else
+            echo "" >> "$COLLAGE/imagelist_enriched.dat"
+        fi
     done < <(sort -n < "$DS")
+
+    local OL=$(wc -l < "$COLLAGE/imagelist.dat")
+    local EL=$(wc -l < "$COLLAGE/imagelist_enriched.dat")
+    if [[ "$OL" -ne "$EL" ]]; then
+        >&2 echo "Error: Enriching $COLLAGE/imagelist.dat ($OL entries) with $ENRICHED produced $COLLAGE/imagelist_enriched.dat ($EL entries). The mismatch between the number of entries means that imagelist_enriched.dat will not be used"
+    else
+        echo "  - Replacing $COLLAGE/imagelist.dat $COLLAGE/imagelist_enriched.dat (storing old imagelist.dat as $COLLAGE/imagelist.dat.old)"
+        mv "$COLLAGE/imagelist.dat" "$COLLAGE/imagelist.dat.old"
+        cp "$COLLAGE/imagelist_enriched.dat" "$COLLAGE/imagelist.dat"
+    fi
     
     rm "$S" "$D" "$DS"
 }
+
+#
+# Calculates prefix & postfix used for packing by create_meta_files
+#
+# This must be kept in sync with store_collage_setup in juxta.sh
+#
+calculate_pre_and_post() {
+    # Derive shared pre- and post-fix for all images for light image compression
+    local BASELINE="$(head -n 1 "$DEST/imagelist.dat" | cut -d'|' -f1)"
+    local LENGTH=${#BASELINE}
+    PRE=$LENGTH
+    POST=$LENGTH
+    local POST_STR=$BASELINE
+    local ANY_META=false
+    while read IMAGE; do
+        IFS=$'|' TOKENS=($IMAGE)
+        local IPATH=${TOKENS[0]}
+        local IMETA=${TOKENS[1]}
+        unset IFS
+        if [[ "." != ".$IMETA" ]]; then
+            ANY_META=true
+        fi
+        #echo "**** ${BASELINE:0:$PRE} $BASELINE $LENGTH $PRE"
+        #echo "$IMAGE"
+        while [[ "$PRE" -gt 0 && ".${IPATH:0:$PRE}" != ".${BASELINE:0:$PRE}" ]]; do
+            PRE=$((PRE-1))
+        done
+
+        local CLENGTH=${#IPATH}
+        local CSTART=$(( CLENGTH-POST ))
+        while [[ "$POST" -gt 0 && ".${POST_STR}" != ".${IPATH:$CSTART}" ]]; do
+            #echo "*p* $POST  ${POST_STR} != ${IPATH:$CSTART:$CLENGTH}"
+            POST=$(( POST-1 ))
+
+            local PSTART=$(( LENGTH-POST ))
+            POST_STR=${BASELINE:$PSTART}
+            local CSTART=$(( CLENGTH-POST ))
+        done
+
+        #echo "pre=$PRE post=$POST post_str=$POST_STR $IMAGE"
+        if [[ "$PRE" -eq "0" && "$POST" -eq "$LENGTH" ]]; then
+            #echo "break"
+            break
+        fi
+    done < "$DEST/imagelist.dat"
+    IMAGE_PATH_PREFIX=${BASELINE:0:$PRE}
+    IMAGE_PATH_POSTFIX=${POST_STR}
+#    echo "Pre $PRE '$IMAGE_PATH_PREFIX', post $POST '$IMAGE_PATH_POSTFIX'"
+}
+
+
 
 #
 # Creates callback-files with filenames and/or meta-data for the source images,
@@ -179,7 +261,6 @@ enrich_metadata() {
 #
 # This must be kept in sync with the same method in juxta.sh
 # TODO: Copy it from juxta.sh upon program run to ensure it is in sync.
-# TODO: Get PRE & POST
 #
 create_meta_files() {
     echo "  - Creating meta files"
@@ -261,6 +342,14 @@ adjust_collage_setup() {
     echo "  - Setting asyncMetaSide: $ASYNC_META_SIDE in $COLLAGE/collage_setup.js and $COLLAGE/index.html"
     sed -i "s/asyncMetaSide: *[0-9]*/asyncMetaSide: $ASYNC_META_SIDE/" "$COLLAGE/collage_setup.js"
     sed -i "s/asyncMetaSide: *[0-9]*/asyncMetaSide: $ASYNC_META_SIDE/" "$COLLAGE/index.html"
+    echo "  - Setting prefix: '$IMAGE_PATH_PREFIX' and postfix: '$IMAGE_PATH_POSTFIX' in $COLLAGE/collage_setup.js and $COLLAGE/index.html"
+    local SAFE_PREFIX="$(sed 's%/%\\/%g' <<< "$IMAGE_PATH_PREFIX")"
+    sed -i "s/prefix: *\"[^\"]*\"/prefix: \"${SAFE_PREFIX}\"/" "$COLLAGE/index.html"
+    sed -i "s/prefix: *\"[^\"]*\"/prefix: \"${SAFE_PREFIX}\"/" "$COLLAGE/collage_setup.js"
+    local SAFE_POSTFIX="$(sed 's%/%\\/%g' <<< "$IMAGE_PATH_POSTFIX")"
+    sed -i "s/postfix: *\"[^\"]*\"/postfix: \"${SAFE_POSTFIX}\"/" "$COLLAGE/index.html"
+    sed -i "s/postfix: *\"[^\"]*\"/postfix: \"${SAFE_POSTFIX}\"/" "$COLLAGE/collage_setup.js"
+
 }
 
 copy_support_files() {
@@ -298,9 +387,9 @@ and add the follow snippet at the bottom, just before just before </body>:
 
 This script changed the following files:
 
+$COLLAGE/collage_setup.js
 $COLLAGE/index.html
 $COLLAGE/meta/*
-$COLLAGE/collage_setup.js
 $COLLAGE/previous_options.conf
 $COLLAGE/resources/overlays_preload.sh
 $COLLAGE/resources/search_support.sh
@@ -315,9 +404,15 @@ EOF
 
 check_parameters "$@"
 
-#enrich_metadata
+create_backup
+
+enrich_metadata
+
+calculate_pre_and_post
 create_meta_files
+
 adjust_previous_options
 adjust_collage_setup
 copy_support_files
+
 print_finish_message
