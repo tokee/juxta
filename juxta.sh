@@ -612,7 +612,7 @@ store_collage_setup() {
         local CSTART=$(( CLENGTH-POST ))
         while [[ "$POST" -gt 0 && ".${POST_STR}" != ".${IPATH:$CSTART}" ]]; do
             #echo "*p* $POST  ${POST_STR} != ${IPATH:$CSTART:$CLENGTH}"
-            local POST=$(( POST-1 ))
+            POST=$(( POST-1 ))
 
             local PSTART=$(( LENGTH-POST ))
             POST_STR=${BASELINE:$PSTART}
