@@ -11,6 +11,7 @@ searchConfig = {
     minQueryLength: 1,
     maxMatches: 1000,
     overlayOpacity: 0.5,
+    overlayColor: "#ffffff",
     // Return a SVG element used for visually marking boxes with content matching a search
     createMarker: function(x, y, width, height, lineWidth) {
         // We're creating part of a mask (black = visible, white = blocked. Gradients possible!
@@ -60,7 +61,7 @@ console.log("HomeBounds: " + JSON.stringify(myDragon.viewport.getHomeBounds()));
 
 function updateSVGOverlay(svgXML) {
     svgString += svgXML;
-
+    console.log("Overlay color: " + searchConfig.overlayColor);
     var svgFinal = '';
     svgFinal += svgBase;
     svgFinal += '<defs>\n'
@@ -69,7 +70,7 @@ function updateSVGOverlay(svgXML) {
     svgFinal += svgString;
     svgFinal += '</mask>\n'
     svgFinal += '</defs>\n';
-    svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:rgb(255, 255, 255)" opacity="{4}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio, searchConfig.overlayOpacity);
+    svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:{4}" opacity="{5}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio, searchConfig.overlayColor, searchConfig.overlayOpacity);
     svgFinal += '</svg>';
     svg.innerHTML = svgFinal;
 }
