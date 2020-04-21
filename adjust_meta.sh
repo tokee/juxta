@@ -160,7 +160,7 @@ enrich_metadata() {
         echo "  - Skipping enrichment of metadata as no ENRICHED is defined"
         return
     fi
-    echo "  - Enriching $COLLAGE/imagelist.dat ($OL entries) with $ENRICHED"
+    echo "  - Enriching $COLLAGE/imagelist.dat ($(wc -l < "$COLLAGE/imagelist.dat") entries) with $ENRICHED"
 
     local S=$(mktemp)
     local D=$(mktemp)
