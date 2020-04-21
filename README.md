@@ -52,7 +52,7 @@ Processing can be controlled by setting environment variables. Most important op
 
  * RAW_W / RAW_H: The size of the fully zoomed individual images, measured in tiles. RAW_W=4 and RAW_H=3 means `(4*256)x(3*256)` = 1024x768 pixels. Default is 4 and 3.
  * BACKGROUND: 6-digit hex for the color to use as background. Default is cccccc.
- * THREADS: The number of threads to use when generating the tiles at full zoom level. Default is 1.
+ * THREADS: The number of threads to use when generating the tiles at full zoom level. Default is 3.
  * TILE_FORMAT: png or jpg. Default is jpg.
 
 Processing a bunch of photos of file size 500KB or more could be done with
