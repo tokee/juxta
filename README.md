@@ -7,24 +7,6 @@ Each source image can have associated meta-data, which is displayed on mouse-ove
  * https://ruebot.net/visualizations/wm/ (6,104,790 * 0.5 MPixel twitter images - 3 TeraPixel)
  * https://ruebot.net/45-images/ (17,525,913 * 0.25 MPixel twitter images - 4 TeraPixel)
 
-## Technical notes
-juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel image file. The tile generation is threaded and localized to the individual source images. This means that memory overhead is independent of the total collage size. The difference between generating a collage of 10 vs. 10 million images is only CPU time. Associated meta-data are stored in chunks and only requested on mouse-over, keeping browser page-open time and memory requirements independent of collage size.
-
-As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`, if `jpg` is used as tile format. The artefacts from the JPEG compression compounds, although the effect is mitigated by down scaling.
-
-The repeated `4 tiles → join → scale(¼) → 1 tile` processing means that tile-edge-artefacts compounds, potentially resulting in visible horizontal and vertical lines at some zoom levels. This is most visible when using images that fits the tiles well, as it brings the edges of the images closer together.
-
-The script is restart-friendly as it skips already generated tiles.
-
-Processing 24,000 ~1MPixel images on a laptop using 2 threads took 2½ hour and resulted in ~390,000 tiles for a total of 6.4GB with a 19GPixel canvas size (138240x138240 pixel). As scaling is practically linear `O(n+log2(sqrt(n)))`, a collage from 1 million such images would take ~4 days.
-
-The theoretical limits for collage size / source image count are dictated by bash & JavaScripts max integers. The bash-limit depends on system, but should be 2⁶³ on most modern systems. For JavaScript it is 2⁵³. Think yotta-pixels.
-
-The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size of `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see [issue #5](https://github.com/tokee/juxta/issues/5)); but that is solvable, should the case arise.
-
-Depending on browser, mouse-over meta-data will only work for the upper left images of the collage, when opening the collage from the local file system. This is by design (see CORS). It should work for all browsers when accessing the collage through a webserver.
-
-
 ## Requirements
  * bash and friends (unzip, sed, tr...)
  * ImageMagic
@@ -47,6 +29,16 @@ OpenSeadragon and the mouse-over code has been tested with IE10, Firefox, Chrome
 
 But! This will produce something with poor choice in colors, clumsy layout and no links to the full images. You probably want to tweak all that: `juxta.sh` is the core script, intended to be called with options geared towards different use cases. If you want to use it as gallery creator, check the "Recursive image gallery" section below.
 
+
+## Keyboard shortcuts
+It is possible to navigate using the keyboard instead of mouse or touch:
+
+- Arrow keys pans
+- CTRL+arrows pans a full screen (in a hackish way - this should be improved)
+- Pressing a number key (1-9) ensures that that number of images is visible and optimally zoomed
+- Pressing CTRL+number ensures that 2^number of images (1-512) is visible and optimally zoomed
+
+
 ## Advanced
 Processing can be controlled by setting environment variables. Most important options are
 
@@ -68,6 +60,7 @@ BACKGROUND=ffffff RAW_W=1 RAW_H=1 THREADS=2 TILE_FORMAT=png ./juxta.sh clipart.d
 ```
 
 There are a lot of secondary options, which are all documented in the `juxta.sh`-script.
+
 
 ## Image similarity sort
 juxta supports image similarity sort using Python3 with keras and imagenet. This is a rather heavy
@@ -124,17 +117,9 @@ Sample call:
 ./adjust_meta.js myoldcollage
 ```
 
-## Keyboard shortcuts
-
-- Arrow keys pans
-- CTRL+arrows pans a full screen (in a hackish way - this should be improved)
-- Pressing a number key (1-9) ensures that that number of images is visible and optimally zoomed
-- Pressing CTRL+number ensures that 2^number of images (1-512) is visible and optimally zoomed
-
 ## Demos
 
 ### Recursive image gallery
-
 The script `demo_gallery.sh` performs a recursive descend from a starting folder, creating
 a collage in each folder that contains images, as well as links to sub-folders with images.
 The files are stored in sub-folders named `.juxta` and an `index.html` file is created in
@@ -144,7 +129,6 @@ each folder. Sample run of the script:
 ```
 
 ### Covers
-
 The script `demo_coverbrowser.sh` fetches images from coverbrowser.com and generates a collage
 with linkback to the image pages at coverbrowser. *Important note:* The covers are not released
 in the public domain or under a CC-license. If a collage of the covers is to be exposed to the
@@ -155,7 +139,6 @@ public, be sure to check that it is legal under local copyright laws. Sample run
 The cover-collections can be browsed at http://coverbrowser.com/
 
 ### Image collection at rijksmuseum.nl
-
 The script `demo_rijksmuseum.sh` fetches openly available images from rijksmuseum.nl and generates a collage
 with linkback to the image pages at the museum. In order to run the script, a *free key* must be requested
 from the museum. Details at http://rijksmuseum.github.io/ - with that key a sample run is
@@ -166,7 +149,6 @@ where the URL is copy-pasted from a search at the Rijksmuseum.
 
 
 ### Historical image collection at kb.dk
-
 The script `demo_kb.sh` fetches openly available images from kb.dk and generates a collage
 with linkback to the image pages at kb.dk. Sample run of the script:
 ```shell
@@ -179,7 +161,6 @@ MAX_IMAGES=20 ./demo_kb_kort.sh create subject208
 ```
 
 ### Paired images at kb.dk
-
 Some of the images at [kb.dk](https://www.kb.dk/) comes in pairs, notably postcards where both the front and the back are scanned.
 The script `demo_kb_dual.sh` fetches such image pairs and creates to collages that are displayed using a loupe effect. Sample run of the script:
 ```shell
@@ -202,7 +183,6 @@ RAW_W=1 RAW_H=1 ./demo_scale.sh 1000
 ```
 
 ### Twitter images
-
 The script `demo_twitter.sh` takes a list of tweet-IDs, locates all images from the tweets and
 creates a collage with links back to the original tweets. The script downloads all the images
 before using juxta to create the collage and is restart-friendly.
@@ -249,6 +229,23 @@ overlays.createFooter = function(x, y, image, meta) {
 
    It is of course advisable to start with a few hundred images to see that everything works as intended.  
 
+## Technical notes
+juxta generates tiles for use with OpenSeadragon. One tile = one 256x256 pixel image file. The tile generation is threaded and localized to the individual source images. This means that memory overhead is independent of the total collage size. The difference between generating a collage of 10 vs. 10 million images is only CPU time. Associated meta-data are stored in chunks and only requested on mouse-over, keeping browser page-open time and memory requirements independent of collage size.
+
+As each tile on zoom level `n` is created from 4 tiles on zoom level `n+1`, this means `JPEG → scale(¼) → JPEG`, if `jpg` is used as tile format. The artefacts from the JPEG compression compounds, although the effect is mitigated by down scaling.
+
+The repeated `4 tiles → join → scale(¼) → 1 tile` processing means that tile-edge-artefacts compounds, potentially resulting in visible horizontal and vertical lines at some zoom levels. This is most visible when using images that fits the tiles well, as it brings the edges of the images closer together.
+
+The script is restart-friendly as it skips already generated tiles.
+
+Processing 24,000 ~1MPixel images on a laptop using 2 threads took 2½ hour and resulted in ~390,000 tiles for a total of 6.4GB with a 19GPixel canvas size (138240x138240 pixel). As scaling is practically linear `O(n+log2(sqrt(n)))`, a collage from 1 million such images would take ~4 days.
+
+The theoretical limits for collage size / source image count are dictated by bash & JavaScripts max integers. The bash-limit depends on system, but should be 2⁶³ on most modern systems. For JavaScript it is 2⁵³. Think yotta-pixels.
+
+The practical limit is determined primarily by the number of inodes on the file system. Check with `df -i` under *nix. With the default raw image size of `RAW_W=4 RAW_H=3` (1024x768 pixels), each source image will result in ~17 files, so a system with 100M free inodes can hold a collage with 5M images. Rule of thumb: Do check if there are enough free inodes when creating collages of millions of images. There is a gradual performance degradation when moving beyond hundreds of millions of images (see [issue #5](https://github.com/tokee/juxta/issues/5)); but that is solvable, should the case arise.
+
+Depending on browser, mouse-over meta-data will only work for the upper left images of the collage, when opening the collage from the local file system. This is by design (see CORS). It should work for all browsers when accessing the collage through a webserver.
+
 ## Performance and scaling
 The script `demo_scale.sh` creates a few sample images and a collage of arbitrary size by repeating those images. Except for the source images being disk cached, this should should be quite representative of a real-data collage.
 
@@ -265,7 +262,6 @@ The script `demo_scale.sh` creates a few sample images and a collage of arbitrar
 This was measured after [issue #5](https://github.com/tokee/juxta/issues/5) (limit the number of files/folder) was completed. As can be seen, performance is linear with the number of images.
 
 ### Upper limit
-
 As stated in the technical notes section, the practical limit to juxta scale is dictated by the file system. To sanity-check this, a sample collage with 5 million images was generated with `RAW_W=1 RAW_H=1 ./demo_scale.sh 5000000` (using the default 3 threads). On an i5 desktop this took 31 hours @ 45 images/second. The resulting collage displayed without problems, including meta-data for the individual images.
 
 ### Scale vs. compatibility
@@ -292,3 +288,4 @@ juxta is very much "hope you hit a stable version at git clone" at the moment, s
 /juxta.sh -r mycollage
 ```
 Running with `-r` ensures that the tile files are not touched by juxta. However, for this to work properly, it is essential that all tile-related parameters, such as `RAW_W` and `RAW_H`, are set to the same as the original call to juxta. The only safe parameters to tweak on an upgrade are `TEMPLATE`, `ASYNC_META_SIDE`, `ASYNC_META_CACHE`, `OSD_VERSION`, `OSD_ZIP` & `OSD_URL`.
+
