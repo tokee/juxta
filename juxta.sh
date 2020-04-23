@@ -681,9 +681,18 @@ resolve_dimensions() {
             RAW_IMAGE_COLS=1
         fi
         RAW_IMAGE_ROWS=$((IMAGE_COUNT/RAW_IMAGE_COLS))
+        # Adjust up
         if [[ $(( RAW_IMAGE_COLS*RAW_IMAGE_ROWS )) -lt "$IMAGE_COUNT" ]]; then
             RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS+1 ))
         fi
+        # Trim vertical
+        while [[ $(( RAW_IMAGE_COLS* (RAW_IMAGE_ROWS-1) )) -ge "$IMAGE_COUNT" ]]; do
+            RAW_IMAGE_ROWS=$(( RAW_IMAGE_ROWS-1 ))
+        done
+        # Trim horizontal
+        while [[ $(( (RAW_IMAGE_COLS-1)*RAW_IMAGE_ROWS )) -ge "$IMAGE_COUNT" ]]; do
+            RAW_IMAGE_COLS=$(( RAW_IMAGE_COLS-1 ))
+        done
     fi
 
     CANVAS_PIXEL_W=$((RAW_IMAGE_COLS*RAW_W*TILE_SIDE))
