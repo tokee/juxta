@@ -29,6 +29,10 @@ pushd ${BASH_SOURCE%/*} > /dev/null
 # If true, a mini collage of the image positioned by normalised t-SNE coordinates is created. Mostly used
 # to check how well RasterFairy positioned the images on the main collage.
 : ${GENERATE_TSNE_PREVIEW_IMAGE:="false"}
+# The dimensionality reduction it two-phase: A cheap PCA phase and a heavy t-SNE phase.
+# The PCA_COMPONENTS states the first reduction. Decreasing this speeds things up, at
+# the cost of poorer result and vice versa.
+: ${PCA_COMPONENTS:="300"}
 
 : ${PYTHON:=$(which python3)}
 : ${PYTHON:=$(which python)}
@@ -180,7 +184,7 @@ perform_analysis() {
     else
         local PREVIEW=""
     fi
-    python3 ${SCRIPT_HOME}/imagenet_tsne_rasterfairy.py --render_tsne="$PREVIEW" --images ${T_ONLY_PATHS} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} --output=${OUT_FULL} | tee "$T_GRID"
+    python3 ${SCRIPT_HOME}/imagenet_tsne_rasterfairy.py --render_tsne="$PREVIEW" --images ${T_ONLY_PATHS} --grid_width=${RAW_IMAGE_COLS} --grid_height=${RAW_IMAGE_ROWS} --output=${OUT_FULL} --components=${PCA_COMPONENTS} | tee "$T_GRID"
     GRID=$(grep "Stored result" "$T_GRID" | grep -o " [0-9]*x[0-9]*" | tr -d \  )
     rm "$T_GRID" "$T_ONLY_PATHS"
 

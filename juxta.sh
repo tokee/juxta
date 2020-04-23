@@ -115,6 +115,11 @@ popd > /dev/null
 # t-SNE coordinates is created. Mostly used to check how well RasterFairy positioned the
 # images on the main collage.
 : ${GENERATE_TSNE_PREVIEW_IMAGE:="false"}
+# Only relevant when IMAGE_SORT=similarity
+# The dimensionality reduction it two-phase: A cheap PCA phase and a heavy t-SNE phase.
+# The PCA_COMPONENTS states the first reduction. Decreasing this speeds things up, at
+# the cost of poorer result and vice versa.
+: ${PCA_COMPONENTS:="300"}
 
 # If true, structures are provided for resolving the source image belonging to the
 # tiles that are hovered. This can be used to provide download-links to the source
@@ -720,7 +725,7 @@ sort_if_needed() {
     elif [[ "rainbow" == "$IMAGE_SORT" ]]; then
         ${JUXTA_HOME}/rainbow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
     elif [[ "similarity" == "$IMAGE_SORT" ]]; then
-        GENERATE_TSNE_PREVIEW_IMAGE=${GENERATE_TSNE_PREVIEW_IMAGE} RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS ${JUXTA_HOME}/tensorflow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
+        GENERATE_TSNE_PREVIEW_IMAGE=${GENERATE_TSNE_PREVIEW_IMAGE} RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS PCA_COMPONENTS=${PCA_COMPONENTS} ${JUXTA_HOME}/tensorflow_sort.sh "$DEST/imagelist.dat" "$SORT_DAT"
     else
         >&2 echo "Error: Unknown IMAGE_SORT '$IMAGE_SORT'"
         usage 21
