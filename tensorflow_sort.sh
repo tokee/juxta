@@ -199,7 +199,7 @@ perform_analysis() {
 
 convert_to_list() {
     jq -r .path < "$OUT_FULL" > "$OUT"
-    echo "RAW_IMAGE_COLS=$GX RAW_IMAGE_ROWS=$GY ./juxta.sh \"$OUT\" \"$RENDER\""
+    echo "RAW_IMAGE_COLS=$GX RAW_IMAGE_ROWS=$GY ./juxta.sh \"$OUT\" \"mycollage\""
 }
 
 # The OUT contains the images in the correct order, but without metadata

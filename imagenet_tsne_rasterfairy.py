@@ -97,7 +97,7 @@ def analyze(image_paths, output, penultimate_layer):
     for index, path in enumerate(image_paths):
         img = load_image(path, input_shape);
         if img is not None:
-            print(" - Analyzing %d/%d: %s " % ((index+1),len(image_paths), path))
+            print(" - Analyzing %d/%d: %s " % ((index+1),len(image_paths), path), flush=True)
             features = feat_extractor.predict(img)
             penultimate_features.append(features[0][0]) # 4096 dimensional
             prediction_features.append(features[1][0]) # 1000 dimensional
@@ -105,7 +105,7 @@ def analyze(image_paths, output, penultimate_layer):
             predictions = decode_predictions(features[1], top=10)[0]
             predictionss.append(predictions)
         else:
-            print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path))
+            print(" - Image not available %d/%d: %s" % ((index+1),len(image_paths), path), flush=True)
 
     return acceptable_image_paths, penultimate_features, prediction_features, predictionss
 
@@ -147,11 +147,12 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
     image_count = len(penultimate_features)
     # TODO: Shouldn't we just skip the PCA-step if there are less images than pca_components?
     components = min(pca_components, image_count)
-    print(" - Running PCA on %d images with %d components..." % (image_count, components))
+    print(" - Running PCA on %d images with %d components..." % (image_count, components), flush=True)
     features = np.array(penultimate_features)
     pca = PCA(n_components=components)
     pca_result = pca.fit_transform(features)
 
+    print(" - Running t-SNE on %d images with perplexity=%d, learning_rate=%d, n_iter=%d..." % (image_count, perplexity, learning_rate, 300), flush=True)
     tsne = TSNE(n_components=2, verbose=1, perplexity=perplexity, learning_rate=learning_rate, n_iter=300)
     tsne_raws = tsne.fit_transform(np.array(pca_result))
 
@@ -172,6 +173,7 @@ def reduce(penultimate_features, perplexity, learning_rate, pca_components, scal
 # A grid layout is needed by RasterFairy to produce a grid of non-overlapping images.
 #
 def calculate_grid(image_count, grid_width, grid_height, aspect_ratio):
+    print(" - Checking grid for %d images with parameters grid_width=%s, grid_height=%s, aspect_ratio=%s..." % (image_count, grid_width, grid_height, aspect_ratio), flush=True)
     if (grid_width == 0 and grid_height == 0):
         print(" - Neither grid_width nor grid_height is specified. Calculating with intended aspect ratio " + str(aspect_ratio) + ":1")
         grid_height = int(math.sqrt(image_count/aspect_ratio))
@@ -198,7 +200,7 @@ def calculate_grid(image_count, grid_width, grid_height, aspect_ratio):
         if (grid_width*grid_height < image_count):
             grid_width += 1
         print(" - grid_height==" + str(grid_height) + ", calculated grid_width==" + str(grid_width))
-    print(" - The " + str(image_count) + " images will be represented on a " + str(grid_width) + "x" + str(grid_height) + " grid")
+    print(" - The " + str(image_count) + " images will be represented on a " + str(grid_width) + "x" + str(grid_height) + " grid", flush=True)
 
     return grid_width, grid_height
 
@@ -209,7 +211,7 @@ def calculate_grid(image_count, grid_width, grid_height, aspect_ratio):
 # gridifying is needed for juxta as it operates in a grid-oriented world.
 #
 def gridify(tsne_norm_int, grid_width, grid_height):
-    print(" - Calling RasterFairy for " + str(len(tsne_norm_int)) + " images to a " + str(grid_width) + "x" + str(grid_height) + " grid")
+    print(" - Calling RasterFairy for " + str(len(tsne_norm_int)) + " images to a " + str(grid_width) + "x" + str(grid_height) + " grid", flush=True)
     tsne = np.array(tsne_norm_int)
     grid, gridShape = rasterfairy.transformPointCloud2D(tsne, target=(grid_width, grid_height))
     return grid
@@ -281,7 +283,7 @@ def store(merged, penultimate_layer, grid_width, grid_height, output):
     out.write("\n")
     out.close()
 
-    print("Stored result in '" + output + "', generate collage with grid dimensions " + str(grid_width) + "x" + str(grid_height))
+    print("Stored result in '" + output + "', generate collage with grid dimensions " + str(grid_width) + "x" + str(grid_height), flush=True)
 
 #
 # Generate a collage with the given images at the raw 2D positions produced by the reduce method.
@@ -293,13 +295,13 @@ def render(merged, render_tsne, render_width, render_height, render_part_width, 
     if (render_tsne == ''):
         return
 
-    print(" - Generating collage from raw t-SNE coordinates to " + render_tsne)
+    print(" - Generating collage from raw t-SNE coordinates to " + render_tsne, flush=True)
     tsne_image = PILImage.new('RGBA', (render_width, render_height))
     for element in merged:
         path = element['path']
         norm = element['position_norm']
         
-        print("   - " + path)
+        print("   - " + path, flush=True)
         img = PILImage.open(path)
         divisor = max(img.width/render_part_width, img.height/render_part_height)
         img = img.resize( (int(img.width/divisor), int(img.height/divisor)), PILImage.LANCZOS)
