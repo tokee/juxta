@@ -10,13 +10,18 @@ searchConfig = {
 
     minQueryLength: 1,
     maxMatches: 1000,
-    overlayOpacity: 0.5,
-    overlayColor: "#ffffff",
+    overlayOpacity: 0.4,
+    overlayColor: "#000000",
     // Return a SVG element used for visually marking boxes with content matching a search
-    createMarker: function(x, y, width, height, lineWidth) {
+    createMarkerMask: function(x, y, width, height, lineWidth) {
         // We're creating part of a mask (black = visible, white = blocked. Gradients possible!
         // https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Clipping_and_masking
-        return'<rect x="{0}" y="{1}" width="{2}" height="{3}" fill="rgb(0, 0, 0)" />\n'.format(x, y, width, height);
+        return'<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:#000000" />\n'.format(x, y, width, height);
+    },
+    // Return a SVG element used for visually marking boxes that has been manually marked
+    createManualMarker: function(x, y, width, height, lineWidth) {
+        // As opposed to the createMarkerMask, this is not part of a mask
+        return'<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:none;stroke-width:{4};stroke:#ffff00" />\n'.format(x, y, width, height, lineWidth*6);
     }
 }
 
@@ -38,8 +43,10 @@ var svg = null;
 var svgString = '';
 var homeBounds = null;
 var aspectRatio = null;
+var relativeLineWidth = null;
 function createSVGOverlay() {
     homeBounds = myDragon.viewport.getHomeBounds();
+    relativeLineWidth = 0.01 * 1 / Math.min(jprops.colCount, jprops.rowCount);
     /* Must be before the svg so that it is positioned underneath */
     svg = document.createElement("div");
     svg.id = "svg-overlay";
@@ -57,11 +64,10 @@ function clearSVGOverlay() {
     svgString = '';
     svg.innerHTML = svgBase + '</svg>';
 }
-console.log("HomeBounds: " + JSON.stringify(myDragon.viewport.getHomeBounds()));
+//console.log("HomeBounds: " + JSON.stringify(myDragon.viewport.getHomeBounds()));
 
 function updateSVGOverlay(svgXML) {
     svgString += svgXML;
-    console.log("Overlay color: " + searchConfig.overlayColor);
     var svgFinal = '';
     svgFinal += svgBase;
     svgFinal += '<defs>\n'
@@ -71,6 +77,7 @@ function updateSVGOverlay(svgXML) {
     svgFinal += '</mask>\n'
     svgFinal += '</defs>\n';
     svgFinal += '<rect x="{0}" y="{1}" width="{2}" height="{3}" style="fill:{4}" opacity="{5}" mask="url(#multi-clip)" />\n'.format(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio, searchConfig.overlayColor, searchConfig.overlayOpacity);
+    svgFinal += svgManualMarkers;
     svgFinal += '</svg>';
     svg.innerHTML = svgFinal;
 }
@@ -90,10 +97,9 @@ function getBox(boxID) {
     y = Math.floor(boxID / jprops.colCount);
     boxW = 1 / jprops.colCount;
     boxH = 1 / jprops.rowCount;
-    lineWidth = 0.01 * 1 / Math.min(jprops.colCount, jprops.rowCount);
  
-   xFactor = homeBounds.width+homeBounds.x;
-    yFactor = homeBounds.height+homeBounds.y;
+//    xFactor = homeBounds.width+homeBounds.x;
+//    yFactor = homeBounds.height+homeBounds.y;
     
 //    console.log("box={0], x={1}, y={2}, xFactor={3}, yFactor={4}".format(boxID, x, y, xFactor, yFactor));
     //boxW *= xFactor;
@@ -102,7 +108,7 @@ function getBox(boxID) {
     y = y / jprops.rowCount * rawAspectRatio;
     boxH *= rawAspectRatio;
     
-    return searchConfig.createMarker(x, y, boxW, boxH, lineWidth);
+    return searchConfig.createMarkerMask(x, y, boxW, boxH, relativeLineWidth);
 }
 
 for (var i = 0 ; i < 15 ; i++) {
@@ -238,4 +244,112 @@ function enableSearch() {
     }
 }
 enableSearch();
+
+// ---------------------------------------------------------------------------------------------------------------
+// Manual mark support below
+// ---------------------------------------------------------------------------------------------------------------
+
+var svgManualMarkers = '';
+function createSVGManualMarkerOverlay() {
+    svgManualMarkers = document.createElement("div");
+    svgManualMarkers.id = "svg-manual-marker-overlay";
+    myDragon.addOverlay({
+        element: svgManualMarkers,
+        location: new OpenSeadragon.Rect(homeBounds.x, homeBounds.y, homeBounds.width, homeBounds.height*rawAspectRatio)
+    });
+}
+createSVGManualMarkerOverlay();
+
+function updateSVGManualMarkerOverlay(markerXML) {
+    var svgFinal = '';
+    svgFinal += svgBase;
+    svgFinal += markerXML;
+    svgFinal += '</svg>';
+//    console.log(svgFinal);
+    svgManualMarkers.innerHTML = svgFinal;
+}
+
+var manualMarkers = {};
+
+refreshManualMarkerSVG = function() {
+    markerXML = '';
+    for (var markerID in manualMarkers) {
+        markerXML += manualMarkers[markerID];
+    }
+    updateSVGManualMarkerOverlay(markerXML);
+}
+
+exportManualMarkers = function() {
+    if (!jprops.metaIncludesOrigin) {
+        console.error("Unable to export selected images as metadata does not include origin");
+        return;
+    }
+    var metaCache = overlays.metaCache[0];
+    if (metaCache.status != 'ready') {
+        console.error("Error: Cannot export manual markers as no overlays.metaCache is available");
+        return
+    }
+    if (metaCache.source != "0_0.json") {
+        console.error("Error: overlays.metaCache[0].source == '" + metaCache.source + "'. It should be '0_0.json'. Make sure to set ASYNC_META_SIDE to more than the number of horizontal and vertical images in the collage when rendering");
+        return;
+    }
+
+    console.log("Listing " + Object.keys(manualMarkers).length + " manually selected images:");
+    for (var markerID in manualMarkers) {
+        [rawX, rawY] = markerID.split('_');
+        var index = Number(rawY)*jprops.colCount+Number(rawX);
+        var full = metaCache.meta[index];
+        var path = metaCache.prefix + full.split('|')[0] + metaCache.postfix;
+        console.log(path);
+    }
+}
+
+handleMark = function(rawX, rawY) {
+    var markerID = rawX + '_' + rawY;
+
+    boxW = 1 / jprops.colCount;
+    boxH = 1 / jprops.rowCount;
+ 
+    x = rawX / jprops.colCount;
+    y = rawY / jprops.rowCount * rawAspectRatio;
+    boxH *= rawAspectRatio;
+
+    if (manualMarkers[markerID]) {
+        delete manualMarkers[markerID];
+    } else {
+        manualMarkers[markerID] = searchConfig.createManualMarker(x, y, boxW, boxH, relativeLineWidth);
+    }
+    refreshManualMarkerSVG();
+}    
+
+manualClick = function (e) {
+    if (e.button != 2) {
+        return;
+    }
+    handleMark(currentImageGridX(), currentImageGridY());
+}
+manualKey = function (e) {
+    e = e.originalEvent;
+    console.log(e.keyCode);
+    switch (e.keyCode) {
+    case 67: // c
+        manualMarkers = {};
+        refreshManualMarkerSVG();
+        break;
+    case 69: // e
+        exportManualMarkers();
+        break;
+    case 77: // m
+        handleMark(overlays.result.x, overlays.result.y);
+        break;
+    }
+}
+function enableManualMark() {
+    myDragon.addHandler('canvas-nonprimary-press', manualClick);
+    myDragon.addHandler('canvas-key', manualKey);
+    overlays.dragonbox.addEventListener('contextmenu', event => event.preventDefault());
+}
+enableManualMark();
+
+
 
