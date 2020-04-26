@@ -33,11 +33,13 @@ But! This will produce something with poor choice in colors, clumsy layout and n
 ## Keyboard shortcuts
 It is possible to navigate using the keyboard instead of mouse or touch:
 
-- Arrow keys pans
-- CTRL+arrows pans a full screen (in a hackish way - this should be improved)
-- Pressing a number key (1-9) ensures that that number of images is visible and optimally zoomed
-- Pressing CTRL+number ensures that 2^number of images (1-512) is visible and optimally zoomed
-
+- `Arrow key` pans
+- `CTRL+arrow key` pans a full screen (in a hackish way - this should be improved)
+- `Number key (1-9)` ensures that that number of images is visible and optimally zoomed
+- `CTRL+number key` ensures that 2^number of images (1-512) is visible and optimally zoomed
+- `m` marks an image visually (same as right click with mouse)
+- `c` clears all marks
+- `e` exports a list of marked images to the browser console
 
 ## Advanced
 Processing can be controlled by setting environment variables. Most important options are
