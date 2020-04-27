@@ -812,7 +812,8 @@ sort_if_needed() {
         if [[ "." != ".$(diff "$ORG_IMG" "$SORT_IMG")" ]]; then
             >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE did not contain the same files as $DEST/imagelist.dat. diff (only first 10 lines) is"
             diff "$ORG_IMG" "$SORT_IMG" | >&2 head -n 10
-            rm "$ORG_IMG" "$SORT_IMG"
+            >&2 echo "The two temporary diff files, which should have been equal, were $ORG_IMG and $SORT_IMG"
+            #rm "$ORG_IMG" "$SORT_IMG"
             usage 68
         fi
         rm "$ORG_IMG" "$SORT_IMG"
