@@ -762,8 +762,6 @@ apply_order() {
     local D=$(mktemp)
     local DS=$(mktemp)
 
-
-    local SORT_KEY=4,4
     tabify_imagelist "$ORDER_FILE" | LC_ALL=c sort -t $'\t' -k3,3 > "$S"
     tabify_imagelist "$IMAGE_FILE" | LC_ALL=c sort -t $'\t' -k3,3 > "$D"
     # sequence_number path image path/image |metadata
@@ -775,6 +773,27 @@ apply_order() {
     rm "$S" "$D" "$DS"
 }
 
+get_order_subset() {
+    local IMAGE_FILE="$1"
+    local ORDER_FILE="$2"
+
+    local I=$(mktemp)
+    local O=$(mktemp)
+    local IO=$(mktemp)
+
+    tabify_imagelist "$IMAGE_FILE" | LC_ALL=c sort -t $'\t' -k3,3 > "$I"
+    tabify_imagelist "$ORDER_FILE" | LC_ALL=c sort -t $'\t' -k3,3 > "$O"
+    # sequence_number path image path/image |metadata
+    LC_ALL=c join -t $'\t' -j 3 -o 2.4 "$I" "$O" > "$IO"
+    if [[ $(wc -l < "$IO") -ne $(wc -l < "$IMAGE_FILE") ]]; then
+        >&2 echo "Error: Using IMAGE_SORT_SOURCE=$IMAGE_SORT_SOURCE resulted in $(wc -l < "$IO") images instead of $(wc -l "$IMAGE_FILE"). Offending file is $IO"
+        rm "$I" "$O"
+        usage 68
+    fi
+    cat "$IO"
+    rm "$I" "$O" "$IO"
+}
+        
 # If IMAGE_SORT is defined, re-ordering of the image list is activated
 # Valid values are 'none', 'intensity', 'rainbow' and 'similarity'
 sort_if_needed() {
@@ -806,24 +825,7 @@ sort_if_needed() {
     local TMP_ALT_SOURCE=$(mktemp)
     if [[ ! -z "$IMAGE_SORT_SOURCE" ]]; then
         echo "   - Using $IMAGE_SORT_SOURCE for sorting"
-        local ORG_IMG=$(mktemp)
-        local SORT_IMG=$(mktemp)
-        if [[ "-1" == "$MAX_IMAGES" ]]; then
-            local MI="cat"
-        else
-            local MI="head -n $MAX_IMAGES"
-        fi
-        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$DEST/imagelist.dat"  | $MI > "$ORG_IMG"
-        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$IMAGE_SORT_SOURCE"  | $MI > "$SORT_IMG"
-        if [[ "." != ".$(diff "$ORG_IMG" "$SORT_IMG")" ]]; then
-            >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE did not contain the same files as $DEST/imagelist.dat. diff (only first 10 lines) is"
-            diff "$ORG_IMG" "$SORT_IMG" | >&2 head -n 10
-            >&2 echo "The two temporary diff files, which should have been equal, were $ORG_IMG and $SORT_IMG"
-            #rm "$ORG_IMG" "$SORT_IMG"
-            usage 68
-        fi
-        rm "$ORG_IMG" "$SORT_IMG"
-        cat "$IMAGE_SORT_SOURCE" | $MI > "$TMP_ALT_SOURCE"
+        get_order_subset "$DEST/imagelist.dat" "$IMAGE_SORT_SOURCE" > "$TMP_ALT_SOURCE"
         CONCRETE_SORT_SOURCE="$TMP_ALT_SOURCE"
     fi
 
@@ -846,7 +848,7 @@ sort_if_needed() {
     # Apply the sort order to the display images if needed
     if [[ ! -z "$IMAGE_SORT_SOURCE" ]]; then
         local TMP_SORT=$(mktemp)
-        apply_order "$IMAGE_SORT_SOURCE" "$DEST/imagelist.dat" > "$TMP_SORT"
+        apply_order "$SORT_DAT" "$DEST/imagelist.dat" > "$TMP_SORT"
         if [[ $(wc -l < "$TMP_SORT") -ne $(wc -l < "$DEST/imagelist.dat") ]]; then
             >&2 echo "Error: Attempting to apply IMAGE_SORT_SOURCE=$IMAGE_SORT_SOURCE failed. Resulting sorted file content was"
             >&2 cat "$TMP_SORT"
