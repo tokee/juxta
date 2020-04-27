@@ -137,6 +137,12 @@ popd > /dev/null
 : ${ASYNC_META_SIDE:=50}
 # The number of meta-data-chunks to keep cached in the browser.
 : ${ASYNC_META_CACHE:=10}
+# Alias for ASYNC_META_SIDE=<veryhighnumber>
+# Effectively forces the metadata to be fully held in browser memory, thereby making it
+# possible to search.
+# Warning: If the amount of metadata is large (and/or there are many images, where "many"
+# is 100.000+), this might be too heavy for the browser.
+: ${FORCE_SEARCH:="false"}
 
 # If 'dzi', image tiles are stored in folders fully compatible with DZI, directly usable
 # OpenSeadragon and similar. This is highly recommended as long as the number of tiles
@@ -933,7 +939,7 @@ sanitize_input() {
             usage 69
         fi
     fi
-    
+
     IMAGE_LIST="$1"
     echo " - Starting processing of $IMAGE_LIST into $DEST"
     if [[ "-r" == "$IMAGE_LIST" ]]; then
@@ -1051,6 +1057,14 @@ sanitize_input() {
         fi
         rm $T
     fi
+    if [[ "true" == "$FORCE_SEARCH" ]]; then
+        echo "  - Setting ASYNC_META_SIDE=100000000 as FORCE_SEARCH==true"
+        if [[ "$ICOUNTER" -gt 100000 ]]; then
+            echo "    - WARNING: There are $ICOUNTER images. This might be too heavy for search in the browser"
+        fi
+        ASYNC_META_SIDE=100000000
+    fi
+    
     export FOLDER_LAYOUT
     export LIMIT_FOLDER_SIDE
 }

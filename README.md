@@ -102,12 +102,12 @@ data is held in browser memory and the search is primitive (iterative scan). It 
 crash the browser with millions of images.
 
 In order to ensure that all relevant search data is cached, it is necessary to add the parameter
-`ASYNC_META_SIDE=9000` (9000 is just a suitable large number) when calling juxta.
+`FORCE_SEARCH` when calling juxta.
 
 Sample call:
 ```shell
 find myimagefolder -iname "*.jpg" > someimages.dat
-ASYNC_META_SIDE=9000 ./juxta.sh someimages searchable
+FORCE_SEARCH=true ./juxta.sh someimages searchable
 ```
 
 In order to enable search for previously generated collages, the script `adjust_meta.js` has
