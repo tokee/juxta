@@ -803,12 +803,18 @@ sort_if_needed() {
 
     # Check if the sort should be done on alternative versions of the images
     local CONCRETE_SORT_SOURCE="$DEST/imagelist.dat"
+    local TMP_ALT_SOURCE=$(mktemp)
     if [[ ! -z "$IMAGE_SORT_SOURCE" ]]; then
         echo "   - Using $IMAGE_SORT_SOURCE for sorting"
         local ORG_IMG=$(mktemp)
         local SORT_IMG=$(mktemp)
-        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$DEST/imagelist.dat" | LC_ALL=c sort > "$ORG_IMG"
-        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$IMAGE_SORT_SOURCE" | LC_ALL=c sort > "$SORT_IMG"
+        if [[ "-1" == "$MAX_IMAGES" ]]; then
+            local MI="cat"
+        else
+            local MI="head -n $MAX_IMAGES"
+        fi
+        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$DEST/imagelist.dat" | LC_ALL=c sort | $MI > "$ORG_IMG"
+        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$IMAGE_SORT_SOURCE" | LC_ALL=c sort | $MI > "$SORT_IMG"
         if [[ "." != ".$(diff "$ORG_IMG" "$SORT_IMG")" ]]; then
             >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE did not contain the same files as $DEST/imagelist.dat. diff (only first 10 lines) is"
             diff "$ORG_IMG" "$SORT_IMG" | >&2 head -n 10
@@ -817,7 +823,8 @@ sort_if_needed() {
             usage 68
         fi
         rm "$ORG_IMG" "$SORT_IMG"
-        CONCRETE_SORT_SOURCE="$IMAGE_SORT_SOURCE"
+        cat "$IMAGE_SORT_SOURCE" | $MI > "$TMP_ALT_SOURCE"
+        CONCRETE_SORT_SOURCE="$TMP_ALT_SOURCE"
     fi
 
     # Perform the sort
@@ -848,6 +855,7 @@ sort_if_needed() {
         fi
         mv "$TMP_SORT" "$SORT_DAT"
     fi
+    rm "$TMP_ALT_SOURCE"
     echo "   - Overwriting $DEST/imagelist.dat with $IMAGE_SORT sorted $SORT_DAT"
     cp "$SORT_DAT" "$DEST/imagelist.dat"
 }
