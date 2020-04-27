@@ -813,8 +813,8 @@ sort_if_needed() {
         else
             local MI="head -n $MAX_IMAGES"
         fi
-        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$DEST/imagelist.dat" | LC_ALL=c sort | $MI > "$ORG_IMG"
-        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$IMAGE_SORT_SOURCE" | LC_ALL=c sort | $MI > "$SORT_IMG"
+        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$DEST/imagelist.dat"  | $MI > "$ORG_IMG"
+        sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$IMAGE_SORT_SOURCE"  | $MI > "$SORT_IMG"
         if [[ "." != ".$(diff "$ORG_IMG" "$SORT_IMG")" ]]; then
             >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE did not contain the same files as $DEST/imagelist.dat. diff (only first 10 lines) is"
             diff "$ORG_IMG" "$SORT_IMG" | >&2 head -n 10
