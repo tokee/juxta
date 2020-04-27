@@ -810,7 +810,7 @@ sort_if_needed() {
         sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$DEST/imagelist.dat" | LC_ALL=c sort > "$ORG_IMG"
         sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$IMAGE_SORT_SOURCE" | LC_ALL=c sort > "$SORT_IMG"
         if [[ "." != ".$(diff "$ORG_IMG" "$SORT_IMG")" ]]; then
-            >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE dod not contain the same files as $DEST/imagelist.dat. diff (only first 10 lines) is"
+            >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE did not contain the same files as $DEST/imagelist.dat. diff (only first 10 lines) is"
             diff "$ORG_IMG" "$SORT_IMG" | >&2 head -n 10
             rm "$ORG_IMG" "$SORT_IMG"
             usage 68
@@ -825,8 +825,7 @@ sort_if_needed() {
     elif [[ "rainbow" == "$IMAGE_SORT" ]]; then
         ${JUXTA_HOME}/rainbow_sort.sh "$CONCRETE_SORT_SOURCE" "$SORT_DAT"
     elif [[ "similarity" == "$IMAGE_SORT" ]]; then
-#        GENERATE_TSNE_PREVIEW_IMAGE=${GENERATE_TSNE_PREVIEW_IMAGE} RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS PCA_COMPONENTS=${PCA_COMPONENTS} ${JUXTA_HOME}/tensorflow_sort.sh "$CONCRETE_SORT_SOURCE" "$SORT_DAT"
-        sort "$CONCRETE_SORT_SOURCE" > "$SORT_DAT"
+        GENERATE_TSNE_PREVIEW_IMAGE=${GENERATE_TSNE_PREVIEW_IMAGE} RAW_IMAGE_COLS=$RAW_IMAGE_COLS RAW_IMAGE_ROWS=$RAW_IMAGE_ROWS PCA_COMPONENTS=${PCA_COMPONENTS} ${JUXTA_HOME}/tensorflow_sort.sh "$CONCRETE_SORT_SOURCE" "$SORT_DAT"
     else
         >&2 echo "Error: Unknown IMAGE_SORT '$IMAGE_SORT'"
         usage 21
