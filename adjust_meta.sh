@@ -121,7 +121,9 @@ create_backup() {
 
 #
 # Splits the given imagelist infor tabulated format:
-# sequence_number path image path/image |metadata
+# sequence_number path image path/image metadata
+#
+# Synchronized from juxta.sh
 tabify_imagelist() {
     local IN="$1"
     COUNTER=0
