@@ -810,8 +810,8 @@ sort_if_needed() {
         sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$DEST/imagelist.dat" | LC_ALL=c sort > "$ORG_IMG"
         sed -e 's%^.*/\([^/]*\)$%\1%' -e 's/[|].*$//' < "$IMAGE_SORT_SOURCE" | LC_ALL=c sort > "$SORT_IMG"
         if [[ "." != ".$(diff "$ORG_IMG" "$SORT_IMG")" ]]; then
-            >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE dod not contain the same files as $DEST/imagelist.dat. diff is"
-            >&2 diff "$ORG_IMG" "$SORT_IMG"
+            >&2 echo "Error: IMAGE_SORT_SOURCE==$IMAGE_SORT_SOURCE dod not contain the same files as $DEST/imagelist.dat. diff (only first 10 lines) is"
+            diff "$ORG_IMG" "$SORT_IMG" | >&2 head -n 10
             rm "$ORG_IMG" "$SORT_IMG"
             usage 68
         fi
