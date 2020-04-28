@@ -765,7 +765,7 @@ apply_order() {
     tabify_imagelist "$ORDER_FILE" | LC_ALL=c sort -t $'\t' -k3,3 > "$S"
     tabify_imagelist "$IMAGE_FILE" | LC_ALL=c sort -t $'\t' -k3,3 > "$D"
     # sequence_number path image path/image |metadata
-    LC_ALL=c join -t $'\t' -j 3 -o 2.1,1.2,1.3,2.5 "$S" "$D" > "$DS"
+    LC_ALL=c join -t $'\t' -j 3 -o 1.1,2.2,2.3,2.5 "$S" "$D" > "$DS"
 
     # Only write a |-devider if metadata are present
     LC_ALL=c sort -n < "$DS" | sed -e 's/^\([^\t]*\)\t\([^\t]*\)\t\([^\t]*\)\t\([^\t]\+\)$/\2\3|\4/' -e 's/^\([^\t]*\)\t\([^\t]*\)\t\([^\t]*\)\t$/\2\3/'
