@@ -30,10 +30,10 @@ function precise(x) {
 }
 
 overlays.afterCallback = function(x, y, boxX, boxY, boxWidth, boxHeight, validPos, image, meta) {
-    var viewportBounds = myDragon.viewport.getBounds();
+   var viewportBounds = myDragon.viewport.getBounds();
     var state = 'x:' + precise(viewportBounds.x) + ',y:' + precise(viewportBounds.y) +
         ',w:' + precise(viewportBounds.width) + ',h:' + precise(viewportBounds.height) +
-        ',tileX:' + x + ',tileY:' + y + ',tile:' + image;
+        ',tileX:' + x + ',tileY:' + y + ',tile:' + image.substring(image.lastIndexOf('/')+1).replace(/\.[^/.]+$/, "");
     if (window.history.replaceState) {
         newLoc = window.location.href.replace(/#.*/, "") + '#' + state;
         window.history.replaceState({ }, document.title, newLoc);
